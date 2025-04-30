@@ -1,5 +1,5 @@
 import { defineConfig } from 'astro/config';
-import node from "@astrojs/node";
+// Removed unused node import
 import vercel from "@astrojs/vercel/serverless";
 
 import react from "@astrojs/react";

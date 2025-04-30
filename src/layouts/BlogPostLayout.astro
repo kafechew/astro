@@ -1,0 +1,22 @@
+---
+// component import
+import type { ActionError } from "astro:actions";
+import PostHeader from "../components/PostHeader.astro";
+import MainLayout from "./MainLayout.astro";
+import blogsData from "../utils/blogs";
+
+const { frontmatter } = Astro.props;
+const { index, date, category, image } = frontmatter;
+const {title , description } = blogsData[index];
+const author = blogsData[index]["created by"];
+---
+
+<MainLayout {title} {description}>
+  <PostHeader {title} {description} {date} {category} {image} {author} />
+  <div class="post-content">
+    <div class="content">
+        <slot />
+    </div>
+    <div class="sidebar"></div>
+  </div>
+</MainLayout>

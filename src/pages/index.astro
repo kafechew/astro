@@ -1,0 +1,13 @@
+---
+import Layout from '../layouts/Layout.astro';
+import BlogList from '../components/BlogList';
+---
+
+<Layout title="Blog Application">
+	<main>
+		<BlogList client:only="react" />
+	</main>
+</Layout>
+
+<style is:global>
+

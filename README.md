@@ -1,4 +1,4 @@
-# Astro + Permit.io RBAC Example: Secure Blog Application test
+# Astro + Permit.io RBAC Example: Secure Blog Application
 
 This project demonstrates how to implement Role-Based Access Control (RBAC) in an Astro web application using Permit.io. It features a simple blog application where users with different roles (Admin, Employee) have varying levels of access to read, update, and delete blog posts.
 

@@ -140,6 +140,32 @@ Navigate to `http://localhost:4321` in your browser.
 
 The application will load, and the `BlogList` component will fetch permissions via the `/api/getPermissions.json` route when you attempt to edit or delete posts.
 
+## Deployment to Vercel
+
+This project is configured for deployment to Vercel using the `@astrojs/vercel/serverless` adapter.
+
+1.  **Prerequisites:**
+    *   Ensure your code is pushed to a GitHub/GitLab/Bitbucket repository.
+    *   Sign up for a free [Vercel account](https://vercel.com/signup) and connect it to your Git provider.
+
+2.  **Import Project:**
+    *   On your Vercel dashboard, click "Add New..." -> "Project".
+    *   Select the repository containing this project.
+
+3.  **Configure Project:**
+    *   **Root Directory:** Vercel needs to know the code is in the `astro/` subdirectory. Click "Edit" next to "Root Directory" and set it to `astro`.
+    *   **Framework Preset:** Vercel should automatically detect "Astro".
+    *   **Build & Output Settings:** These should be detected automatically (Build Command: `npm run build`, Output Directory: `.vercel/output`). You typically don't need to change these.
+    *   **Node.js Version:** The required Node.js version ("18.x") is specified in `package.json` and should be used automatically by Vercel.
+    *   **Environment Variables:**
+        *   Expand the "Environment Variables" section.
+        *   Add a variable with the **Name** `PERMIT_TOKEN` and paste your Permit.io API Key into the **Value** field.
+        *   Ensure it's available for all environments.
+
+4.  **Deploy:**
+    *   Click the "Deploy" button. Vercel will build and deploy your site.
+
+5.  **Access:** Once complete, Vercel will provide the URL for your live deployment.
 ## How RBAC is Implemented
 
 *   **API Route (`src/pages/api/getPermissions.json.js`):** This server-side route uses the Permit SDK (`permit.check()`) to determine the permissions for the currently hardcoded user (`demo-user` within the `blog-tenant`) regarding the `Blog` resource. In a real application, you would replace the hardcoded user key with the identifier of the logged-in user.

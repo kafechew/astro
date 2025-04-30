@@ -285,7 +285,7 @@ button {
     user-select: none;
   }
 
-  & (svg) {
+  & svg { /* Removed parentheses around svg */
     height: var(--fs-md);
     width: var(--fs-md);
   }

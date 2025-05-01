@@ -84,50 +84,62 @@
     const selectedUserId = userIdSelect.value;
     console.log(`QnaForm: User ID changed to ${selectedUserId}. Dispatching event.`); // Log for debugging
     // Dispatch a custom event that bubbles up
-    form.dispatchEvent(new CustomEvent('useridchange', {
-      detail: { userId: selectedUserId },
-      bubbles: true,
-      composed: true // Allows event to cross shadow DOM boundaries if needed
-    }));
+    if (form) {
+      form.dispatchEvent(new CustomEvent('useridchange', {
+        detail: { userId: selectedUserId },
+        bubbles: true,
+        composed: true // Allows event to cross shadow DOM boundaries if needed
+      }));
+    }
   });
   // --- End of added event listener ---
-  form.addEventListener('submit', async (event) => {
-    event.preventDefault(); // Prevent default form submission
+  if (form) {
+    form.addEventListener('submit', async (event) => {
+      event.preventDefault(); // Prevent default form submission
 
-    const userId = userIdSelect.value; // Get value from select dropdown
-    const documentTag = documentTagInput.value;
-    const question = questionInput.value;
+      const userId = userIdSelect.value; // Get value from select dropdown
+      const documentTag = documentTagInput.value;
+      const question = questionInput.value;
 
-    if (!documentTag || !question) {
-        responseArea.textContent = 'Please fill in both Document Tag and Question.';
-        responseArea.classList.add('error');
-        return;
-    }
-
-    responseArea.textContent = 'Loading...';
-    responseArea.classList.remove('error'); // Clear previous errors
-
-    try {
-      const response = await fetch('/api/askQna.json', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ userId, question, documentTag }),
-      });
-
-      const responseJson = await response.json();
-
-      if (response.ok && responseJson.success) {
-        responseArea.textContent = responseJson.answer;
-      } else {
-        responseArea.textContent = `Error: ${responseJson.error || 'Unauthorized or API error.'}`;
-        responseArea.classList.add('error');
+      if (!documentTag || !question) {
+          if (responseArea) {
+            responseArea.textContent = 'Please fill in both Document Tag and Question.';
+            responseArea.classList.add('error');
+          }
+          return;
       }
-    } catch (error) {
-      console.error('Fetch error:', error);
-      responseArea.textContent = 'Failed to fetch response. Check the console for details.';
-      responseArea.classList.add('error');
-    }
-  });
+
+      if (responseArea) {
+        responseArea.textContent = 'Loading...';
+        responseArea.classList.remove('error'); // Clear previous errors
+      }
+
+      try {
+        const response = await fetch('/api/askQna.json', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ userId, question, documentTag }),
+        });
+
+        const responseJson = await response.json();
+
+        if (responseArea) {
+          if (response.ok && responseJson.success) {
+            responseArea.textContent = responseJson.answer;
+          } else {
+            responseArea.textContent = `Error: ${responseJson.error || 'Unauthorized or API error.'}`;
+            responseArea.classList.add('error');
+          }
+        }
+      } catch (error) {
+        console.error('Fetch error:', error);
+        if (responseArea) {
+          responseArea.textContent = 'Failed to fetch response. Check the console for details.';
+          responseArea.classList.add('error');
+        }
+      }
+    });
+  }
 </script>

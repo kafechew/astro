@@ -8,5 +8,7 @@ import react from "@astrojs/react";
 export default defineConfig({
   output: "server",
   adapter: vercel(),
-  integrations: [react()]
+  integrations: [react()],
+  // Explicitly point to the root tsconfig.json
+  tsconfigPath: './tsconfig.json'
 });

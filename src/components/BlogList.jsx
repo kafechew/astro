@@ -2,12 +2,12 @@ import { useState, useEffect } from 'react'; // Only import necessary hooks
 import blogsData from '../utils/blogs.js';
 // Removed user import, userId will come from props
 
-export default function BlogList() { // Removed userId prop
+export default function BlogList({ initialUserId }) { // Accept initialUserId prop
   const [updatingState, setUpdatingState] = useState({});
   const [blogListState, setBlogListState] = useState(blogsData);
   const [permissions, setPermissions] = useState({ update: false, delete: false });
   // Internal state for the current user ID, initialized (e.g., to adminuser)
-  const [currentUserId, setCurrentUserId] = useState('adminuser');
+  const [currentUserId, setCurrentUserId] = useState(initialUserId || 'adminuser'); // Initialize with prop or fallback
 
   // Effect to listen for window events and update internal state
   useEffect(() => {

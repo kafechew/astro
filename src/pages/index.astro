@@ -2,7 +2,7 @@
 import Layout from '../layouts/Layout.astro';
 import BlogList from '../components/BlogList';
 import QnaForm from '../components/QnaForm.astro'; // Import the new component
-const initialUserId = 'adminuser'; // Define initial user ID
+const initialUserId = 'newuser'; // Define initial user ID
 ---
 
 <Layout title="Blog Application">
@@ -10,7 +10,7 @@ const initialUserId = 'adminuser'; // Define initial user ID
 		{/* Add id, client:load, and pass initial userId */}
 		{/* Add id, client:load, pass initial userId, and set initial key */}
 		{/* Removed key attribute, userId prop remains for initial load */}
-		<BlogList client:load />
+		<BlogList client:load initialUserId={initialUserId} />
 		{/* Removed the previous script block */}
 		<hr style="margin: 2rem 0;" /> {/* Add a separator */}
 		<h2>Ask a Question</h2>

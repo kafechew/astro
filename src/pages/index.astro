@@ -1,7 +1,8 @@
 ---
 import Layout from '../layouts/Layout.astro';
 import BlogList from '../components/BlogList';
-import QnaForm from '../components/QnaForm.astro'; // Import the new component
+import QnaForm from '../components/QnaForm.astro';
+import UserSelector from '../components/UserSelector.astro'; // Import the UserSelector component
 const initialUserId = 'newuser'; // Define initial user ID
 ---
 
@@ -10,6 +11,7 @@ const initialUserId = 'newuser'; // Define initial user ID
 		{/* Add id, client:load, and pass initial userId */}
 		{/* Add id, client:load, pass initial userId, and set initial key */}
 		{/* Removed key attribute, userId prop remains for initial load */}
+		<UserSelector client:load /> {/* Add the UserSelector component */}
 		<BlogList client:load initialUserId={initialUserId} />
 		{/* Removed the previous script block */}
 		<hr style="margin: 2rem 0;" /> {/* Add a separator */}
@@ -20,7 +22,15 @@ const initialUserId = 'newuser'; // Define initial user ID
 	<script>
 		document.addEventListener('useridchange', (event) => {
 			const newUserId = (event as CustomEvent).detail.userId;
-			console.log(`index.astro: Relaying useridchange for ${newUserId} via window event.`);
+			console.log(`index.astro: Relaying useridchange for ${newUserId} via window event and updating hidden input.`);
+
+			// Update the hidden input in QnaForm
+			const userIdInput = document.getElementById('currentUserIdInput') as HTMLInputElement;
+			if (userIdInput) {
+				userIdInput.value = newUserId;
+			}
+
+			// Relay the event for BlogList or other listeners
 			window.dispatchEvent(new CustomEvent('windowUserIdChange', {
 				detail: { userId: newUserId }
 			}));

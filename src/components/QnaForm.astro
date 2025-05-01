@@ -79,6 +79,18 @@
   const documentTagInput = document.getElementById('documentTag') as HTMLInputElement;
   const questionInput = document.getElementById('question') as HTMLTextAreaElement;
 
+// --- Add event listener for userId change ---
+  userIdSelect.addEventListener('change', () => {
+    const selectedUserId = userIdSelect.value;
+    console.log(`QnaForm: User ID changed to ${selectedUserId}. Dispatching event.`); // Log for debugging
+    // Dispatch a custom event that bubbles up
+    form.dispatchEvent(new CustomEvent('useridchange', {
+      detail: { userId: selectedUserId },
+      bubbles: true,
+      composed: true // Allows event to cross shadow DOM boundaries if needed
+    }));
+  });
+  // --- End of added event listener ---
   form.addEventListener('submit', async (event) => {
     event.preventDefault(); // Prevent default form submission
 

@@ -1,40 +1,65 @@
 import { useState, useEffect } from 'react'; // Only import necessary hooks
 import blogsData from '../utils/blogs.js';
-import user from "../utils/user.json"; // Assuming user.json contains the user key
+// Removed user import, userId will come from props
 
-export default function BlogList() {
+export default function BlogList() { // Removed userId prop
   const [updatingState, setUpdatingState] = useState({});
-  // Removed unused deletingState
   const [blogListState, setBlogListState] = useState(blogsData);
-  const [permissions, setPermissions] = useState({ update: false, delete: false }); // Store permissions
+  const [permissions, setPermissions] = useState({ update: false, delete: false });
+  // Internal state for the current user ID, initialized (e.g., to adminuser)
+  const [currentUserId, setCurrentUserId] = useState('adminuser');
 
-  // Fetch permissions when the component mounts
+  // Effect to listen for window events and update internal state
+  useEffect(() => {
+    const handleUserChange = (event) => {
+      const newUserId = event.detail.userId;
+      console.log(`BlogList: Received windowUserIdChange event with userId: ${newUserId}`);
+      setCurrentUserId(newUserId);
+    };
+
+    window.addEventListener('windowUserIdChange', handleUserChange);
+
+    // Cleanup listener on component unmount
+    return () => {
+      window.removeEventListener('windowUserIdChange', handleUserChange);
+    };
+  }, []); // Empty dependency array: run only once on mount
+
+  // Effect to fetch permissions based on internal currentUserId state
   useEffect(() => {
     const fetchPermissions = async () => {
+      // Use internal currentUserId state
+      if (!currentUserId) {
+        console.log("BlogList: No currentUserId, setting default permissions.");
+        setPermissions({ update: false, delete: false });
+        return;
+      }
+
       try {
+        console.log(`BlogList: Fetching permissions for currentUserId: ${currentUserId}`);
+        const cacheBuster = Date.now();
         // Fetch update permission
-        // Use relative path for API route within the same origin
-        const updateRes = await fetch(`/api/getPermissions.json?id=${user.key}&operation=update`);
+        const updateRes = await fetch(`/api/getPermissions.json?id=${currentUserId}&operation=update&_=${cacheBuster}`);
         if (!updateRes.ok) throw new Error(`Update permission fetch failed: ${updateRes.status}`);
         const updateData = await updateRes.json();
         const canUpdate = updateData.status === "permitted";
 
         // Fetch delete permission
-        const deleteRes = await fetch(`/api/getPermissions.json?id=${user.key}&operation=delete`);
-         if (!deleteRes.ok) throw new Error(`Delete permission fetch failed: ${deleteRes.status}`);
+        const deleteRes = await fetch(`/api/getPermissions.json?id=${currentUserId}&operation=delete&_=${cacheBuster}`);
+        if (!deleteRes.ok) throw new Error(`Delete permission fetch failed: ${deleteRes.status}`);
         const deleteData = await deleteRes.json();
         const canDelete = deleteData.status === "permitted";
 
+        console.log(`BlogList: Permissions received for ${currentUserId}: Update=${canUpdate}, Delete=${canDelete}`);
         setPermissions({ update: canUpdate, delete: canDelete });
       } catch (error) {
-        console.error("Error fetching permissions:", error);
-        // Handle error state if needed, default to no permissions
+        console.error(`BlogList: Error fetching permissions for currentUserId ${currentUserId}:`, error);
         setPermissions({ update: false, delete: false });
       }
     };
 
     fetchPermissions();
-  }, []); // Empty dependency array: fetch permissions once on mount
+  }, [currentUserId]); // Dependency array includes internal currentUserId
 
   // --- Modified Functions using fetched permissions ---
 

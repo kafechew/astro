@@ -1,12 +1,31 @@
 ---
 import Layout from '../layouts/Layout.astro';
 import BlogList from '../components/BlogList';
+import QnaForm from '../components/QnaForm.astro'; // Import the new component
+const initialUserId = 'adminuser'; // Define initial user ID
 ---
 
 <Layout title="Blog Application">
-	<main>
-		<BlogList client:only="react" />
+	<main id="main-content"> {/* Added ID */}
+		{/* Add id, client:load, and pass initial userId */}
+		{/* Add id, client:load, pass initial userId, and set initial key */}
+		{/* Removed key attribute, userId prop remains for initial load */}
+		<BlogList client:load id="blog-list" userId={initialUserId} />
+		{/* Removed the previous script block */}
+		<hr style="margin: 2rem 0;" /> {/* Add a separator */}
+		<h2>Ask a Question</h2>
+		<QnaForm /> {/* Add the QnA form component */}
 	</main>
+	{/* New script to relay event via window */}
+	<script>
+		document.addEventListener('useridchange', (event) => {
+			const newUserId = event.detail.userId;
+			console.log(`index.astro: Relaying useridchange for ${newUserId} via window event.`);
+			window.dispatchEvent(new CustomEvent('windowUserIdChange', {
+				detail: { userId: newUserId }
+			}));
+		});
+	</script>
 </Layout>
 
 <style is:global>

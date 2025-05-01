@@ -1,0 +1,57 @@
+<!-- src/components/UserSelector.astro -->
+<style>
+  .user-selector-container {
+    position: absolute;
+    top: 1rem;
+    right: 1rem;
+    z-index: 10;
+    background: white;
+    padding: 0.5rem;
+    border-radius: 4px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+  }
+  .user-selector-container label {
+    display: block;
+    margin-bottom: 0.25rem;
+    font-size: 0.9rem;
+    font-weight: bold;
+  }
+  .user-selector-container select {
+    padding: 0.25rem;
+    border-radius: 3px;
+    border: 1px solid #ccc;
+  }
+  .user-selector-container small {
+    display: block;
+    font-size: 0.8rem;
+    color: #666;
+    margin-top: 0.25rem;
+  }
+</style>
+
+<div class="user-selector-container">
+  <label for="userId">Select User ID:</label>
+  <select id="userId" name="userId">
+    <option value="adminuser">adminuser (Admin Role)</option>
+    <option value="admin">admin (admin Role)</option>
+    <option value="newuser" selected>newuser (basic Role)</option>
+  </select>
+  <small>Select user for permission testing.</small>
+</div>
+
+<script>
+  const userIdSelect = document.getElementById('userId') as HTMLSelectElement;
+
+  if (userIdSelect) {
+    userIdSelect.addEventListener('change', () => {
+      const selectedUserId = userIdSelect.value;
+      console.log(`UserSelector: User ID changed to ${selectedUserId}. Dispatching event.`); // Log for debugging
+      // Dispatch a custom event that bubbles up
+      userIdSelect.dispatchEvent(new CustomEvent('useridchange', {
+        detail: { userId: selectedUserId },
+        bubbles: true,
+        composed: true // Allows event to cross shadow DOM boundaries if needed
+      }));
+    });
+  }
+</script>

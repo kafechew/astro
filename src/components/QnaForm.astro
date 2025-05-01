@@ -48,18 +48,15 @@
 </style>
 
 <form id="qnaForm">
-  <div>
-    <label for="userId">Select User ID:</label>
-    <select id="userId" name="userId">
-      <option value="adminuser">adminuser (Admin Role)</option>
-      <option value="admin">admin (admin Role)</option>
-      <option value="newuser">newuser (basic Role)</option>
-    </select>
-    <small>Select user for permission testing.</small>
-  </div>
+  <input type="hidden" id="currentUserIdInput" name="userId" value="newuser"> <!-- User ID is now set globally -->
   <div style="margin-top: 1rem;">
     <label for="documentTag">Document Tag:</label>
-    <input type="text" id="documentTag" name="documentTag" required>
+    <select id="documentTag" name="documentTag" required>
+      <option value="" disabled selected>Select a Topic</option>
+      <option value="Bitcoin">Bitcoin</option>
+      <option value="Hermit Philosophy">Hermit Philosophy</option>
+      <option value="PermitIO">PermitIO</option>
+    </select>
   </div>
   <div style="margin-top: 1rem;">
     <label for="question">Question:</label>
@@ -75,29 +72,17 @@
 <script>
   const form = document.getElementById('qnaForm');
   const responseArea = document.getElementById('responseArea');
-  const userIdSelect = document.getElementById('userId') as HTMLSelectElement; // Changed to SelectElement
-  const documentTagInput = document.getElementById('documentTag') as HTMLInputElement;
+  // userIdSelect is removed as the element is now in UserSelector.astro
+  const documentTagInput = document.getElementById('documentTag') as HTMLSelectElement;
   const questionInput = document.getElementById('question') as HTMLTextAreaElement;
 
-// --- Add event listener for userId change ---
-  userIdSelect.addEventListener('change', () => {
-    const selectedUserId = userIdSelect.value;
-    console.log(`QnaForm: User ID changed to ${selectedUserId}. Dispatching event.`); // Log for debugging
-    // Dispatch a custom event that bubbles up
-    if (form) {
-      form.dispatchEvent(new CustomEvent('useridchange', {
-        detail: { userId: selectedUserId },
-        bubbles: true,
-        composed: true // Allows event to cross shadow DOM boundaries if needed
-      }));
-    }
-  });
-  // --- End of added event listener ---
+  // Event listener for userId change removed, handled in UserSelector.astro and index.astro
   if (form) {
     form.addEventListener('submit', async (event) => {
       event.preventDefault(); // Prevent default form submission
 
-      const userId = userIdSelect.value; // Get value from select dropdown
+      const userIdInput = document.getElementById('currentUserIdInput') as HTMLInputElement;
+      const userId = userIdInput ? userIdInput.value : 'newuser'; // Get value from hidden input
       const documentTag = documentTagInput.value;
       const question = questionInput.value;
 

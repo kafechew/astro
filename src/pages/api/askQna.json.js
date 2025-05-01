@@ -56,7 +56,12 @@ export const POST = async ({ request }) => {
     if (permitted) {
       try {
         // 5. Construct prompt and call Gemini service
-        const prompt = `Regarding document tag '${documentTag}': ${question}`;
+        const prompt = `You are an assistant focused on answering questions strictly related to the topic: '${documentTag}'.
+First, determine if the following question is related to '${documentTag}'.
+- If the question IS related to '${documentTag}', answer it based on your knowledge of that topic.
+- If the question IS NOT related to '${documentTag}', respond ONLY with the text: "Not related." Do not provide any other explanation or answer.
+
+Question: "${question}"`;
         console.log(`Sending prompt to Gemini: "${prompt}"`);
         const answer = await getGeminiResponse(prompt);
         console.log(`Received answer from Gemini: "${answer}"`);

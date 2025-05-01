@@ -19,13 +19,6 @@ let blogsData = [
         "created by" : "adminuser1@gmail.com",
         "img" : "/images/halfcut-pokemon-WrUGh2DXfiw-unsplash.jpg",
         "path" : "/blog/third"
-    },
-    {
-        "title" : "fourth blog",
-        "description" : "Lorem, ipsum dolor sit amet consectetur adipisicing elit. Labore similique nulla earum accusamus veniam facere culpa ipsa, placeat autem harum impedit porro debitis molestiae blanditiis deserunt dignissimos veritatis! Dicta, nam?",
-        "created by" : "adminuser1@gmail.com",
-        "img" : "/images/janis-fasel-gmLhKk7Djhk-unsplash.jpg",
-        "path" : "/blog/fourth"
     }
 ]
 

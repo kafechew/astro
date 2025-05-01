@@ -42,9 +42,10 @@
 <script>
   const userIdSelect = document.getElementById('userId');
 
-  if (userIdSelect) {
+  // Check if the element exists and is an HTMLSelectElement
+  if (userIdSelect instanceof HTMLSelectElement) {
     userIdSelect.addEventListener('change', () => {
-      const selectedUserId = userIdSelect.value;
+      const selectedUserId = userIdSelect.value; // Now type-safe
       console.log(`UserSelector: User ID changed to ${selectedUserId}. Dispatching event.`); // Log for debugging
       // Dispatch a custom event that bubbles up
       userIdSelect.dispatchEvent(new CustomEvent('useridchange', {

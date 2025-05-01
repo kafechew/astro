@@ -1,0 +1,121 @@
+---
+// No server-side logic needed for this basic form component
+---
+<style>
+  #qnaForm label {
+    display: block;
+    margin-bottom: 0.5rem;
+    font-weight: bold;
+  }
+  #qnaForm input[type="text"],
+  #qnaForm textarea {
+    width: 100%;
+    padding: 0.5rem;
+    margin-bottom: 1rem;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    box-sizing: border-box; /* Include padding and border in the element's total width and height */
+  }
+  #qnaForm textarea {
+    min-height: 100px;
+    resize: vertical;
+  }
+  #qnaForm button {
+    padding: 0.75rem 1.5rem;
+    background-color: #007bff;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 1rem;
+  }
+  #qnaForm button:hover {
+    background-color: #0056b3;
+  }
+  #responseArea {
+    margin-top: 1rem;
+    padding: 1rem;
+    border: 1px solid #eee;
+    border-radius: 4px;
+    background-color: #f9f9f9;
+    min-height: 50px;
+    white-space: pre-wrap; /* Preserve whitespace and line breaks */
+  }
+  .error {
+    color: red;
+    font-weight: bold;
+  }
+</style>
+
+<form id="qnaForm">
+  <div>
+    <label for="userId">Select User ID:</label>
+    <select id="userId" name="userId">
+      <option value="adminuser">adminuser (Admin Role)</option>
+      <option value="admin">admin (admin Role)</option>
+      <option value="newuser">newuser (basic Role)</option>
+    </select>
+    <small>Select user for permission testing.</small>
+  </div>
+  <div style="margin-top: 1rem;">
+    <label for="documentTag">Document Tag:</label>
+    <input type="text" id="documentTag" name="documentTag" required>
+  </div>
+  <div style="margin-top: 1rem;">
+    <label for="question">Question:</label>
+    <textarea id="question" name="question" required></textarea>
+  </div>
+  <button type="submit">Ask Question</button>
+</form>
+
+<div id="responseArea">
+  <!-- Response or errors will be displayed here -->
+</div>
+
+<script>
+  const form = document.getElementById('qnaForm');
+  const responseArea = document.getElementById('responseArea');
+  const userIdSelect = document.getElementById('userId') as HTMLSelectElement; // Changed to SelectElement
+  const documentTagInput = document.getElementById('documentTag') as HTMLInputElement;
+  const questionInput = document.getElementById('question') as HTMLTextAreaElement;
+
+  form.addEventListener('submit', async (event) => {
+    event.preventDefault(); // Prevent default form submission
+
+    const userId = userIdSelect.value; // Get value from select dropdown
+    const documentTag = documentTagInput.value;
+    const question = questionInput.value;
+
+    if (!documentTag || !question) {
+        responseArea.textContent = 'Please fill in both Document Tag and Question.';
+        responseArea.classList.add('error');
+        return;
+    }
+
+    responseArea.textContent = 'Loading...';
+    responseArea.classList.remove('error'); // Clear previous errors
+
+    try {
+      const response = await fetch('/api/askQna.json', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ userId, question, documentTag }),
+      });
+
+      const responseJson = await response.json();
+
+      if (response.ok && responseJson.success) {
+        responseArea.textContent = responseJson.answer;
+      } else {
+        responseArea.textContent = `Error: ${responseJson.error || 'Unauthorized or API error.'}`;
+        responseArea.classList.add('error');
+      }
+    } catch (error) {
+      console.error('Fetch error:', error);
+      responseArea.textContent = 'Failed to fetch response. Check the console for details.';
+      responseArea.classList.add('error');
+    }
+  });
+</script>

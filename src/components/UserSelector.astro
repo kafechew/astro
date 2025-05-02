@@ -1,14 +1,10 @@
 <!-- src/components/UserSelector.astro -->
 <style>
   .user-selector-container {
-    position: absolute;
-    top: 1rem;
-    right: 1rem;
-    z-index: 10;
-    background: white;
-    padding: 0.5rem;
-    border-radius: 4px;
-    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    /* Removed absolute positioning, background, padding, shadow */
+    /* These are now handled by Navbar or default browser styles */
+    padding: 0; /* Explicitly remove padding */
+    border-radius: 4px; /* Keep radius for select maybe */
   }
   .user-selector-container label {
     display: block;
@@ -30,14 +26,13 @@
 </style>
 
 <div class="user-selector-container">
-  <label for="userId">Select User (Role):</label>
   <select id="userId" name="userId">
     <option value="newuser" selected>New User (basic)</option>
     <option value="editor">Editor (editor)</option>
     <option value="canaskonly">Ask only (qna)</option>
     <option value="admin">Admin (admin)</option>
   </select>
-  <small>for permission testing.</small>
+  <small>Select User (Role) for permission testing.</small>
 </div>
 
 <script>

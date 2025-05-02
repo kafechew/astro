@@ -2,22 +2,18 @@
 import MainLayout from '../layouts/MainLayout.astro'; // Use MainLayout which includes global styles
 import BlogList from '../components/BlogList';
 import QnaForm from '../components/QnaForm.astro';
-import UserSelector from '../components/UserSelector.astro'; // Import the UserSelector component
+// UserSelector is now part of Navbar via MainLayout
 const initialUserId = 'newuser'; // Define initial user ID
 ---
 
 <MainLayout title="Blog Application"> {/* Use MainLayout */}
 	{/* Removed container, main-content will now be the grid container */}
 	<main id="main-content">
-		{/* User Selector spans across the top */}
-		<div class="user-selector-area">
-			<UserSelector />
-		</div>
+		{/* User Selector area removed, it's now in Navbar */}
 
 		{/* Main content area (QnA) */}
 		<div class="main-content-area">
 			<section class="qna-section">
-				<h2 class="h2 mb-md">HermitAI</h2> {/* Added .h2 class and margin */}
 				<QnaForm /> {/* Add the QnA form component */}
 			</section>
 		</div>
@@ -52,11 +48,11 @@ const initialUserId = 'newuser'; // Define initial user ID
 	#main-content {
 		display: grid;
 		grid-template-columns: minmax(0, 3fr) minmax(0, 1fr); /* Main column 3x wider than sidebar */
-		grid-template-rows: auto 1fr; /* Row for user selector, row for main/sidebar */
+		grid-template-rows: 1fr; /* Only one row for main/sidebar */
 		grid-template-areas:
-			"user user"
-			"main sidebar";
+			"main sidebar"; /* User area removed */
 		gap: var(--space-lg);
+		margin-top: var(--space-lg); /* Add margin to top since user selector area is gone */
 		width: 100%;
 		max-width: 1600px; /* Optional: Limit max width */
 		margin-inline: auto; /* Center the grid container */
@@ -64,10 +60,7 @@ const initialUserId = 'newuser'; // Define initial user ID
 		align-items: start; /* Align items to the top */
 	}
 
-	.user-selector-area {
-		grid-area: user;
-		margin-bottom: var(--space-md); /* Add some space below selector */
-	}
+	/* .user-selector-area styles removed */
 
 	.main-content-area {
 		grid-area: main;
@@ -86,17 +79,15 @@ const initialUserId = 'newuser'; // Define initial user ID
 	@media (max-width: 1200px) { /* Stack columns on smaller screens */
 		#main-content {
 			grid-template-columns: 1fr; /* Single column */
-			grid-template-rows: auto auto auto; /* Rows for user, main, sidebar */
+			grid-template-rows: auto auto; /* Rows for main, sidebar */
 			grid-template-areas:
-				"user"
 				"main"
-				"sidebar";
+				"sidebar"; /* User area removed */
 			gap: var(--space-md); /* Reduce gap */
+			margin-top: var(--space-md); /* Add margin to top */
 		}
 
-		.user-selector-area {
-			margin-bottom: var(--space-sm);
-		}
+		/* .user-selector-area styles removed */
 	}
 
 	/* Remove body centering for this page if needed, although grid centering might suffice */

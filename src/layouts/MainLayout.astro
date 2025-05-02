@@ -1,6 +1,8 @@
 ---
 // component import
 import MainHead from "./MainHead.astro";
+import Navbar from "../components/Navbar.astro"; // Import Navbar
+import Footer from "../components/Footer.astro"; // Import Footer
 
 // style import
 import "../styles/global.css";
@@ -14,8 +16,27 @@ const {
 <html lang="en">
   <MainHead {title} {description} />
   <body>
+    <Navbar /> {/* Add Navbar */}
     <main>
       <slot> Default Text</slot>
     </main>
+    <Footer /> {/* Add Footer */}
   </body>
 </html>
+
+<style>
+  /* Override global body centering for Navbar and Footer */
+  body > :global(nav), /* Target Navbar directly under body */
+  body > :global(footer) { /* Target Footer directly under body */
+    width: 100%;
+    place-self: stretch; /* Make them stretch to fill the grid cell width */
+  }
+
+  /* Ensure main content still respects container/centering if needed */
+  /* (This might need adjustment based on desired main content layout) */
+  main {
+     width: 100%; /* Allow main to take full width if its content dictates */
+     /* max-width: 1600px; /* Example: Re-apply max-width if needed */
+     /* margin-inline: auto; /* Example: Re-apply centering if needed */
+  }
+</style>

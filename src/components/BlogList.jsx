@@ -30,13 +30,13 @@ export default function BlogList({ initialUserId }) { // Accept initialUserId pr
     const fetchPermissions = async () => {
       // Use internal currentUserId state
       if (!currentUserId) {
-        console.log("BlogList: No currentUserId, setting default permissions.");
+        console.log("HermitAI: No currentUserId, setting default permissions.");
         setPermissions({ update: false, delete: false });
         return;
       }
 
       try {
-        console.log(`BlogList: Fetching permissions for currentUserId: ${currentUserId}`);
+        console.log(`HermitAI: Fetching permissions for currentUserId: ${currentUserId}`);
         const cacheBuster = Date.now();
         // Fetch update permission
         const updateRes = await fetch(`/api/getPermissions.json?id=${currentUserId}&operation=update&_=${cacheBuster}`);
@@ -50,10 +50,16 @@ export default function BlogList({ initialUserId }) { // Accept initialUserId pr
         const deleteData = await deleteRes.json();
         const canDelete = deleteData.status === "permitted";
 
-        console.log(`BlogList: Permissions received for ${currentUserId}: Update=${canUpdate}, Delete=${canDelete}`);
+        // Fetch ask permission
+        const askRes = await fetch(`/api/getPermissions.json?id=${currentUserId}&operation=ask&_=${cacheBuster}`);
+        if (!askRes.ok) throw new Error(`Ask permission fetch failed: ${askRes.status}`);
+        const askData = await askRes.json();
+        const canAsk = askData.status === "permitted";
+
+        console.log(`HermitAI: Permissions received for ${currentUserId}: Update=${canUpdate}, Delete=${canDelete}, Ask=${canAsk}`);
         setPermissions({ update: canUpdate, delete: canDelete });
       } catch (error) {
-        console.error(`BlogList: Error fetching permissions for currentUserId ${currentUserId}:`, error);
+        console.error(`HermitAI: Error fetching permissions for currentUserId ${currentUserId}:`, error);
         setPermissions({ update: false, delete: false });
       }
     };

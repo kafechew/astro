@@ -33,8 +33,8 @@ export const POST = async ({ request }) => {
     }
 
     // 2. Define Permit.io check parameters
-    // Use existing 'read' action on 'Blog' resource within 'blog-tenant'
-    const action = 'read';
+    // Use new 'ask' action on 'Blog' resource within 'blog-tenant'
+    const action = 'ask';
     const resource = {
       type: 'Blog',       // Use existing 'Blog' resource type
       key: documentTag,   // The specific blog/document tag
@@ -45,7 +45,7 @@ export const POST = async ({ request }) => {
     console.log(`Checking permission for user ${userId} to perform ${action} on resource ${JSON.stringify(resource)}`);
     // Workaround for Cloud PDP limitation: Check permission on the resource *type* ('Blog')
     // instead of the specific instance (resource.key).
-    // This checks if the user can 'read' *any* 'Blog' in 'blog-tenant'.
+    // This checks if the user can 'ask' Gemini in 'blog-tenant'.
     // For specific instance checks (ReBAC), a local Docker PDP is required.
     const resourceTypeCheck = { type: resource.type, tenant: resource.tenant };
     console.log(`Checking permission for user ${userId} to perform ${action} on resource type ${JSON.stringify(resourceTypeCheck)} (Cloud PDP workaround)`);

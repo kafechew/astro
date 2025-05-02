@@ -107,8 +107,6 @@ export default function BlogList({ initialUserId }) { // Accept initialUserId pr
 
   return (
     <>
-      <h1 style={{ textAlign: 'center' }}>HermitAI</h1>
-      <p style={{ textAlign: 'center', color: '#adA9B5' }}>Fine-Grained AI Access Control, API-First Auth & Permissions with Permit.io, Astro & Gemini</p>
       {/* Use flexWrap: 'wrap' for responsiveness */}
       <section style={{ display: 'flex', flexWrap: 'wrap', gap: '20px', justifyContent: 'center' }}>
         {blogListState.map((blog) => {

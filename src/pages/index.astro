@@ -1,22 +1,32 @@
 ---
-import Layout from '../layouts/Layout.astro';
+import MainLayout from '../layouts/MainLayout.astro'; // Use MainLayout which includes global styles
 import BlogList from '../components/BlogList';
 import QnaForm from '../components/QnaForm.astro';
 import UserSelector from '../components/UserSelector.astro'; // Import the UserSelector component
 const initialUserId = 'newuser'; // Define initial user ID
 ---
 
-<Layout title="Blog Application">
-	<main id="main-content"> {/* Added ID */}
-		{/* Add id, client:load, and pass initial userId */}
-		{/* Add id, client:load, pass initial userId, and set initial key */}
-		{/* Removed key attribute, userId prop remains for initial load */}
-		<UserSelector /> {/* Removed client:load - Astro components don't need it */}
-		<BlogList client:load initialUserId={initialUserId} />
-		{/* Removed the previous script block */}
-		<hr style="margin: 2rem 0;" /> {/* Add a separator */}
-		<h2>Ask a Question</h2>
-		<QnaForm /> {/* Add the QnA form component */}
+<MainLayout title="Blog Application"> {/* Use MainLayout */}
+	{/* Removed container, main-content will now be the grid container */}
+	<main id="main-content">
+		{/* User Selector spans across the top */}
+		<div class="user-selector-area">
+			<UserSelector />
+		</div>
+
+		{/* Main content area (QnA) */}
+		<div class="main-content-area">
+			<section class="qna-section">
+				<h2 class="h2 mb-md">HermitAI</h2> {/* Added .h2 class and margin */}
+				<QnaForm /> {/* Add the QnA form component */}
+			</section>
+		</div>
+
+		{/* Sidebar area (Blog List) */}
+		<div class="sidebar-area">
+			<BlogList client:load initialUserId={initialUserId} />
+		</div>
+
 	</main>
 	{/* New script to relay event via window */}
 	<script>
@@ -36,7 +46,66 @@ const initialUserId = 'newuser'; // Define initial user ID
 			}));
 		});
 	</script>
-</Layout>
+</MainLayout> {/* Use MainLayout */}
 
-<style is:global>
+<style>
+	#main-content {
+		display: grid;
+		grid-template-columns: minmax(0, 3fr) minmax(0, 1fr); /* Main column 3x wider than sidebar */
+		grid-template-rows: auto 1fr; /* Row for user selector, row for main/sidebar */
+		grid-template-areas:
+			"user user"
+			"main sidebar";
+		gap: var(--space-lg);
+		width: 100%;
+		max-width: 1600px; /* Optional: Limit max width */
+		margin-inline: auto; /* Center the grid container */
+		padding: 0; /* Remove all padding */
+		align-items: start; /* Align items to the top */
+	}
 
+	.user-selector-area {
+		grid-area: user;
+		margin-bottom: var(--space-md); /* Add some space below selector */
+	}
+
+	.main-content-area {
+		grid-area: main;
+	}
+
+	.sidebar-area {
+		grid-area: sidebar;
+		font-size: var(--fs-sm); /* Reduce font size for sidebar content */
+		/* Optional: Add background or border for visual separation */
+		/* background-color: hsl(var(--muted)); */
+		/* padding: var(--space-md); */
+		/* border-radius: var(--radius-md); */
+	}
+
+	/* Responsive adjustments */
+	@media (max-width: 1200px) { /* Stack columns on smaller screens */
+		#main-content {
+			grid-template-columns: 1fr; /* Single column */
+			grid-template-rows: auto auto auto; /* Rows for user, main, sidebar */
+			grid-template-areas:
+				"user"
+				"main"
+				"sidebar";
+			gap: var(--space-md); /* Reduce gap */
+		}
+
+		.user-selector-area {
+			margin-bottom: var(--space-sm);
+		}
+	}
+
+	/* Remove body centering for this page if needed, although grid centering might suffice */
+	/* body {
+		place-items: initial;
+	} */
+
+	/* Remove separator style if it exists and is no longer needed */
+	.separator {
+		display: none;
+	}
+</style>

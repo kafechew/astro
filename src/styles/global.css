@@ -47,11 +47,12 @@ h6 {
   --accent--dark: var(--_hue) 50% 50%;
   --muted--dark: var(--_hue) 20% 2%;
 
-  --bkg: var(--bkg--light);
-  --txt: var(--txt--light);
-  --accent: var(--accent--light);
-  --muted: var(--muted--light);
-  color-scheme: light;
+  /* Default to dark theme */
+  --bkg: var(--bkg--dark);
+  --txt: var(--txt--dark);
+  --accent: var(--accent--dark);
+  --muted: var(--muted--dark);
+  color-scheme: dark;
 
   /* dynamic spacing adapted from utopia.fyi */
   --space-2xs: clamp(0.31rem, calc(0.18rem + 0.65vw), 0.69rem);
@@ -285,7 +286,7 @@ button {
     user-select: none;
   }
 
-  & (svg) {
+  & svg { /* Corrected syntax: removed parentheses */
     height: var(--fs-md);
     width: var(--fs-md);
   }
@@ -626,4 +627,298 @@ header {
 
 .sidebar [aria-label="Blog categories"]{
   margin-block: 0;
+}
+/* Utility Classes */
+.mb-lg {
+  margin-bottom: var(--space-lg);
+}
+
+.mb-md {
+  margin-bottom: var(--space-md);
+}
+
+/* Separator Style */
+.separator {
+  border: none;
+  border-top: 1px solid hsl(var(--txt) / 0.2); /* Subtle line */
+  width: 100%;
+}
+
+/* QnA Section Style */
+.qna-section {
+  padding: var(--space-lg);
+  background-color: hsl(var(--muted)); /* Use muted background */
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-sm);
+}
+
+/* Specific adjustments for QnA Form elements if needed */
+.qna-section form {
+  display: grid;
+  gap: var(--space-md);
+}
+
+.qna-section label {
+  font-weight: bold;
+  font-size: var(--fs-sm);
+}
+
+.qna-section textarea,
+.qna-section button {
+  padding: var(--space-sm);
+  border-radius: var(--radius-sm);
+  border: 1px solid hsl(var(--txt) / 0.3);
+  font-size: var(--fs-md);
+}
+
+.qna-section textarea {
+  min-height: 100px;
+  resize: vertical;
+}
+
+.qna-section button {
+  background-color: hsl(var(--accent));
+  color: hsl(var(--bkg));
+  border: none;
+  cursor: pointer;
+  transition: opacity var(--transition-ease-fast);
+  justify-self: start; /* Align button to the left */
+  width: auto; /* Override default button width */
+  height: auto; /* Override default button height */
+  padding: var(--space-xs) var(--space-md); /* Adjust padding */
+}
+
+.qna-section button:hover {
+  opacity: 0.8;
+}
+
+.qna-section #qna-response {
+  margin-top: var(--space-md);
+  padding: var(--space-md);
+  background-color: hsl(var(--bkg)); /* Slightly different background for response */
+  border-radius: var(--radius-sm);
+  border: 1px solid hsl(var(--txt) / 0.1);
+}
+/* QnA Markdown Styling Enhancements */
+#qna-answer {
+  margin-top: var(--space-md);
+  padding: var(--space-md);
+  background-color: hsl(var(--muted)); /* Subtle background */
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-sm);
+}
+
+#qna-answer > *:first-child {
+  margin-top: 0;
+}
+
+#qna-answer > *:last-child {
+  margin-bottom: 0;
+}
+
+#qna-answer h1,
+#qna-answer h2,
+#qna-answer h3,
+#qna-answer h4,
+#qna-answer h5,
+#qna-answer h6 {
+  margin-top: var(--space-md);
+  margin-bottom: var(--space-sm);
+  line-height: var(--lh-1-1);
+  color: hsl(var(--accent)); /* Use accent color for headings */
+}
+
+#qna-answer h1 { font-size: var(--fs-xl); }
+#qna-answer h2 { font-size: var(--fs-lg); }
+#qna-answer h3 { font-size: var(--fs-md); } /* Adjusted base size */
+#qna-answer h4 { font-size: calc(var(--fs-md) * .9); }
+#qna-answer h5 { font-size: calc(var(--fs-md) * .8); }
+#qna-answer h6 { font-size: calc(var(--fs-md) * .7); }
+
+#qna-answer p {
+  margin-bottom: var(--space-sm);
+  line-height: var(--lh-1-4);
+}
+
+#qna-answer ul,
+#qna-answer ol {
+  margin-bottom: var(--space-sm);
+  padding-left: var(--space-md); /* Indentation */
+}
+
+#qna-answer li {
+  margin-bottom: var(--space-2xs);
+}
+
+#qna-answer ul li::marker {
+ content: "• "; /* Simple bullet */
+ color: hsl(var(--accent));
+}
+
+#qna-answer ol {
+  list-style: decimal;
+}
+
+#qna-answer blockquote {
+  margin: var(--space-md) 0;
+  padding: var(--space-sm) var(--space-md);
+  border-left: var(--border-lg) solid hsl(var(--accent));
+  background-color: hsl(var(--bkg)); /* Slightly different background */
+  font-style: italic;
+  color: hsl(var(--txt) / 0.8); /* Muted text */
+}
+
+#qna-answer pre {
+  margin: var(--space-md) 0;
+  padding: var(--space-sm);
+  background-color: hsl(var(--bkg)); /* Darker background for code */
+  border: var(--border-sm) solid hsl(var(--txt) / 0.2);
+  border-radius: var(--radius-sm);
+  overflow-x: auto; /* Handle long lines */
+  font-family: monospace;
+  font-size: var(--fs-sm);
+  line-height: var(--lh-1-4);
+}
+
+#qna-answer code {
+  font-family: monospace;
+  background-color: hsl(var(--bkg) / 0.8);
+  padding: 0.1em 0.3em;
+  border-radius: var(--radius-sm);
+  font-size: 0.9em;
+}
+
+#qna-answer pre code {
+  background-color: transparent; /* Reset background for code inside pre */
+  padding: 0;
+  font-size: inherit; /* Inherit size from pre */
+  border-radius: 0;
+}
+
+#qna-answer a {
+  color: hsl(var(--accent));
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 2px;
+}
+
+#qna-answer a:hover {
+  color: hsl(var(--txt));
+  text-decoration-thickness: 2px;
+}
+
+#qna-answer hr {
+  border: none;
+  border-top: var(--border-sm) solid hsl(var(--txt) / 0.3);
+  margin: var(--space-lg) 0;
+}
+/* QnA Response Area Markdown Styling */
+#responseArea > *:first-child {
+  margin-top: 0; /* Remove top margin from the very first element */
+}
+
+#responseArea > *:last-child {
+  margin-bottom: 0; /* Remove bottom margin from the very last element */
+}
+
+#responseArea h1,
+#responseArea h2,
+#responseArea h3,
+#responseArea h4,
+#responseArea h5,
+#responseArea h6 {
+  margin-top: var(--space-md);
+  margin-bottom: var(--space-sm);
+  line-height: var(--lh-1-1);
+  font-weight: 600; /* Slightly less bold than main headings */
+}
+
+#responseArea h1 { font-size: var(--fs-xl); }
+#responseArea h2 { font-size: var(--fs-lg); }
+#responseArea h3 { font-size: calc(var(--fs-md) * 1.1); } /* Slightly larger than base */
+#responseArea h4 { font-size: var(--fs-md); }
+#responseArea h5 { font-size: var(--fs-sm); }
+#responseArea h6 { font-size: calc(var(--fs-sm) * 0.9); }
+
+#responseArea p {
+  margin-bottom: var(--space-sm);
+  line-height: var(--lh-1-4);
+}
+
+#responseArea ul,
+#responseArea ol {
+  margin-bottom: var(--space-sm);
+  padding-left: var(--space-md); /* Indentation */
+}
+
+#responseArea li {
+  margin-bottom: var(--space-xs);
+}
+
+#responseArea li > p { /* Handle paragraphs inside list items */
+  margin-bottom: var(--space-xs);
+}
+
+#responseArea strong {
+  font-weight: 700; /* Bold */
+}
+
+#responseArea em {
+  font-style: italic; /* Italic */
+}
+
+#responseArea code {
+  background-color: hsl(var(--muted)); /* Subtle background */
+  padding: 0.2em 0.4em;
+  margin: 0 0.2em;
+  font-size: 90%; /* Slightly smaller */
+  border-radius: var(--radius-sm);
+  font-family: monospace;
+}
+
+#responseArea pre {
+  background-color: hsl(var(--muted));
+  padding: var(--space-sm);
+  margin-bottom: var(--space-sm);
+  border-radius: var(--radius-md);
+  overflow-x: auto; /* Allow horizontal scrolling for long code */
+  font-family: monospace;
+  font-size: 90%;
+}
+
+#responseArea pre code {
+  background-color: transparent; /* Reset background for code inside pre */
+  padding: 0;
+  margin: 0;
+  font-size: inherit; /* Inherit size from pre */
+  border-radius: 0;
+}
+
+#responseArea blockquote {
+  margin-bottom: var(--space-sm);
+  padding: var(--space-sm);
+  padding-left: var(--space-md);
+  border-left: 4px solid hsl(var(--accent) / 0.5); /* Accent border */
+  color: hsl(var(--txt) / 0.8); /* Slightly muted text */
+  background-color: hsl(var(--muted) / 0.5);
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+}
+
+#responseArea blockquote p {
+  margin-bottom: var(--space-xs); /* Reduce margin for paragraphs in blockquote */
+}
+
+#responseArea hr {
+  border: none;
+  border-top: 1px solid hsl(var(--txt) / 0.2);
+  margin-block: var(--space-md);
+}
+
+#responseArea a {
+  color: hsl(var(--accent));
+  text-decoration: underline;
+}
+
+#responseArea a:hover {
+  opacity: 0.8;
 }

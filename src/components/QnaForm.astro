@@ -2,44 +2,52 @@
 // No server-side logic needed for this basic form component
 ---
 <style>
-  #qnaForm label {
-    display: block;
-    margin-bottom: 0.5rem;
-    font-weight: bold;
+  /* Minimalist form styles */
+  #qnaForm {
+    display: flex; /* Arrange items horizontally */
+    align-items: center; /* Align items vertically */
+    gap: 0.5rem; /* Space between items */
+    margin-bottom: 1rem; /* Space below the form */
   }
-  #qnaForm input[type="text"],
-  #qnaForm textarea {
-    width: 100%;
+  #qnaForm select,
+  #qnaForm textarea,
+  #qnaForm button {
     padding: 0.5rem;
-    margin-bottom: 1rem;
-    border: 1px solid #ccc;
+    border: 1px solid #ccc; /* Use theme variable later if needed */
     border-radius: 4px;
-    box-sizing: border-box; /* Include padding and border in the element's total width and height */
+    font-size: 1rem; /* Consistent font size */
+    margin: 0; /* Remove default margins */
+  }
+  #qnaForm select {
+    flex-grow: 0; /* Don't let select grow */
+    min-width: 150px; /* Give select a minimum width */
   }
   #qnaForm textarea {
-    min-height: 100px;
-    resize: vertical;
+    flex-grow: 1; /* Allow textarea to take remaining space */
+    resize: vertical; /* Allow vertical resize */
+    min-height: calc(1rem + 1rem + 2px); /* Match button height initially */
+    line-height: 1.2; /* Adjust line height for better text fit */
   }
   #qnaForm button {
-    padding: 0.75rem 1.5rem;
-    background-color: #007bff;
-    color: white;
+    flex-grow: 0; /* Don't let button grow */
+    background-color: hsl(var(--accent)); /* Use theme accent color */
+    color: hsl(var(--bkg)); /* Use theme background for text */
     border: none;
     border-radius: 4px;
     cursor: pointer;
     font-size: 1rem;
   }
   #qnaForm button:hover {
-    background-color: #0056b3;
+    opacity: 0.8; /* Use opacity for hover effect consistent with theme */
   }
   #responseArea {
     margin-top: 1rem;
-    padding: 1rem;
-    border: 1px solid #eee;
-    border-radius: 4px;
-    background-color: #f9f9f9;
+    padding: 1rem 1rem 1rem 0; /* Removed left padding */
+    /* border: 1px solid hsl(var(--txt) / 0.2); */ /* Use theme text color with alpha */
+    /* border-radius: 4px; */ /* Removed border radius as well */
+    /* background-color: hsl(var(--muted)); */ /* Use theme muted color */
     min-height: 50px;
-    white-space: pre-wrap; /* Preserve whitespace and line breaks */
+    /* white-space: pre-wrap; is removed as marked handles formatting */
   }
   .error {
     color: red;
@@ -49,20 +57,15 @@
 
 <form id="qnaForm">
   <input type="hidden" id="currentUserIdInput" name="userId" value="newuser"> <!-- User ID is now set globally -->
-  <div style="margin-top: 1rem;">
-    <label for="documentTag">Document Tag:</label>
-    <select id="documentTag" name="documentTag" required>
-      <option value="" disabled selected>Select a Topic</option>
-      <option value="Triune Brain Model, Hedohedonic treadmill & neurotransmitter">Triune Brain</option>
-      <option value="Modern Hermit Philosophy (physical health, mental mastery & irrelevant finance)">Hermit Philosophy</option>
-      <option value="Bitcoin, Lightning & LSP">Bitcoin</option>
-    </select>
-  </div>
-  <div style="margin-top: 1rem;">
-    <label for="question">Question:</label>
-    <textarea id="question" name="question" required></textarea>
-  </div>
-  <button type="submit">Ask Question</button>
+  <!-- Removed divs and labels -->
+  <select id="documentTag" name="documentTag" required>
+    <option value="" disabled selected>Select Topic...</option> <!-- Placeholder text -->
+    <option value="Triune Brain Model, Hedohedonic treadmill & neurotransmitter">Triune Brain</option>
+    <option value="Modern Hermit Philosophy (physical health, mental mastery & irrelevant finance)">Hermit Philosophy</option>
+    <option value="Bitcoin, Lightning & LSP">Bitcoin</option>
+  </select>
+  <textarea id="question" name="question" required placeholder="Ask a question..."></textarea> <!-- Placeholder text -->
+  <button type="submit">Ask</button> <!-- Shortened button text -->
 </form>
 
 <div id="responseArea">
@@ -70,12 +73,25 @@
 </div>
 
 <script>
+  import { marked } from 'marked'; // Import marked
+
   const form = document.getElementById('qnaForm');
   const responseArea = document.getElementById('responseArea');
   // userIdSelect is removed as the element is now in UserSelector.astro
   const documentTagInput = document.getElementById('documentTag') as HTMLSelectElement;
   const questionInput = document.getElementById('question') as HTMLTextAreaElement;
 
+// Add event listener for Enter key press on the textarea
+  if (questionInput) {
+    questionInput.addEventListener('keydown', (event) => {
+      // Check if Enter key was pressed without the Shift key
+      if (event.key === 'Enter' && !event.shiftKey) {
+        event.preventDefault(); // Prevent adding a newline
+        // Trigger the form submission
+        form?.requestSubmit(); // Use optional chaining in case form is null
+      }
+    });
+  }
   // Event listener for userId change removed, handled in UserSelector.astro and index.astro
   if (form) {
     form.addEventListener('submit', async (event) => {
@@ -112,7 +128,9 @@
 
         if (responseArea) {
           if (response.ok && responseJson.success) {
-            responseArea.textContent = responseJson.answer;
+            // Use marked to parse the markdown answer and set innerHTML
+            responseArea.innerHTML = marked.parse(responseJson.answer);
+            responseArea.classList.remove('error'); // Ensure error class is removed on success
           } else {
             responseArea.textContent = `Error: ${responseJson.error || 'Unauthorized or API error.'}`;
             responseArea.classList.add('error');

@@ -107,7 +107,8 @@ export default function BlogList({ initialUserId }) { // Accept initialUserId pr
 
   return (
     <>
-      <h1 style={{ textAlign: 'center' }}>Blog Org</h1>
+      <h1 style={{ textAlign: 'center' }}>HermitAI</h1>
+      <p style={{ textAlign: 'center', color: '#adA9B5' }}>Fine-Grained AI Access Control, API-First Auth & Permissions with Permit.io, Astro & Gemini</p>
       {/* Use flexWrap: 'wrap' for responsiveness */}
       <section style={{ display: 'flex', flexWrap: 'wrap', gap: '20px', justifyContent: 'center' }}>
         {blogListState.map((blog) => {
@@ -171,7 +172,7 @@ export default function BlogList({ initialUserId }) { // Accept initialUserId pr
                   }}
                   style={{ padding: '10px', backgroundColor: '#5a67d8', borderRadius: '5px', cursor: 'pointer', color: 'white' }}
                 >
-                  Read post
+                  Read
                 </span>
 
                 {/* Edit Button - Conditionally rendered based on fetched permissions */}
@@ -182,7 +183,7 @@ export default function BlogList({ initialUserId }) { // Accept initialUserId pr
                     }}
                     style={{ padding: '10px', backgroundColor: '#343C9B', borderRadius: '5px', cursor: 'pointer', color: 'white' }}
                   >
-                    Edit post
+                    Edit
                   </span>
                 )}
                  {/* Show "Editing..." text if currently editing this item */}
@@ -201,7 +202,7 @@ export default function BlogList({ initialUserId }) { // Accept initialUserId pr
                     }}
                     style={{ padding: '10px', backgroundColor: '#e53e3e', borderRadius: '5px', cursor: 'pointer', color: 'white' }}
                   >
-                    Delete post {/* Simple button text */}
+                    Delete {/* Simple button text */}
                   </span>
                 )}
               </section>

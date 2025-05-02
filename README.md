@@ -6,6 +6,7 @@ It showcases:
 1.  **Dynamic RBAC:** A blog where user permissions (Edit/Delete posts) change dynamically based on the selected user and their assigned role via Permit.io.
 2.  **AI-Powered Q&A with Authorization:** A Q&A interface where users ask Google Gemini questions about specific topics ("documents" identified by tags), with access controlled by Permit.io policies.
 
+<!-- TODO: Add screenshot of the application UI here -->
 ## Core Features
 
 *   **Permit.io RBAC:** Manages user permissions for blog actions (update, delete) and Q&A access (`ask`).
@@ -41,6 +42,8 @@ Managing user permissions directly within an application becomes complex as it s
 ├── src/
 │   ├── components/
 │   │   ├── BlogList.jsx       # React: Displays blogs, shows Edit/Delete based on permissions
+│   │   ├── Footer.astro       # Astro: Site footer
+│   │   ├── Navbar.astro       # Astro: Site navigation
 │   │   └── QnaForm.astro      # Astro: User selector & Gemini Q&A form
 │   ├── pages/
 │   │   ├── api/
@@ -79,7 +82,7 @@ Managing user permissions directly within an application becomes complex as it s
         *   *Blog Resource:* Grant `admin` all actions, `editor` `read`/`update`/`delete`, `basic` `read`.
         *   *Document Resource:* Grant `admin` and `qna` the `ask` action. (You can add more granular rules based on attributes if needed).
     *   **Tenant:** Create a tenant (e.g., `blog-tenant`).
-    *   **Users:** Create users (e.g., `admin`, `editor`, `newuser`, `canaskonly`) and assign them roles within the tenant. Match user keys to those in `src/components/QnaForm.astro`.
+    *   **Users:** Create users with keys matching those in `src/components/UserSelector.astro` (e.g., `admin`, `editor`, `canaskonly`, `newuser`) and assign them roles within the tenant.
     *   **Publish Changes.**
     *   *(Refer to [Permit.io Docs](https://docs.permit.io/) for detailed setup guidance)*
 
@@ -119,10 +122,10 @@ Managing user permissions directly within an application becomes complex as it s
 
 1.  Run the app (`npm run dev`).
 2.  Open `http://localhost:4321`.
-3.  **Blog:** Select different users (`adminuser`, `editoruser`, `basicuser`) and observe how the Edit/Delete buttons appear/disappear based on their assigned `Blog` permissions in Permit.io.
+3.  **Blog:** Select different users (`admin`, `editor`, `newuser`) and observe how the Edit/Delete buttons appear/disappear based on their assigned `Blog` permissions in Permit.io.
 4.  **Q&A:**
     *   Select a user *with* `ask` permission (e.g., `admin`, `canaskonly`). Enter a `Document Tag` (e.g., `bitcoin`, `hermit`, `brain`) and `Question`. You should get an AI answer.
-    *   Select a user *without* permission (e.g., `newuser`, `editor`). Ask the same question. You should get an "Unauthorized" error.
+    *   Select a user *without* permission (e.g., `editor`, `newuser`). Ask the same question. You should get an "Unauthorized" error.
 
 ## Deployment
 
@@ -133,7 +136,7 @@ This project is configured for Vercel serverless deployment (`@astrojs/vercel/se
 *   Push code to a Git provider (GitHub, GitLab, etc.).
 *   Import the project into your hosting platform (e.g., Vercel).
 *   **Configure Environment Variables:** Set `PERMIT_TOKEN` and `GEMINI_API_KEY` in your platform's settings.
-*   **Root Directory (if needed):** If your project is in a subdirectory, configure the Root Directory setting on your platform (Build Command: `npm run build`, Output Directory: `.vercel/output`).
+*   **Build Settings:** Ensure Build Command is `npm run build` and the Output Directory is `.vercel/output` (as configured in `astro.config.mjs`).
 *   Ensure the deployment environment uses Node.js v18+.
 
 ## Available Commands

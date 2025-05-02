@@ -88,7 +88,7 @@
       if (event.key === 'Enter' && !event.shiftKey) {
         event.preventDefault(); // Prevent adding a newline
         // Trigger the form submission
-        form?.requestSubmit(); // Use optional chaining in case form is null
+        (form as HTMLFormElement)?.requestSubmit(); // Use optional chaining in case form is null
       }
     });
   }
@@ -129,7 +129,7 @@
         if (responseArea) {
           if (response.ok && responseJson.success) {
             // Use marked to parse the markdown answer and set innerHTML
-            responseArea.innerHTML = marked.parse(responseJson.answer);
+            responseArea.innerHTML = await marked.parse(responseJson.answer);
             responseArea.classList.remove('error'); // Ensure error class is removed on success
           } else {
             responseArea.textContent = `Error: ${responseJson.error || 'Unauthorized or API error.'}`;

@@ -1,24 +1,24 @@
 let blogsData = [
     {
-        "title" : "first blog",
-        "description" : "Lorem, ipsum dolor sit amet consectetur adipisicing elit. Labore similique nulla earum accusamus veniam facere culpa ipsa, placeat autem harum impedit porro debitis molestiae blanditiis deserunt dignissimos veritatis! Dicta, nam?",
-        "created by" : "adminuser1@gmail.com",
-        "img" : "/images/akin-cakiner-9cIkK-hLD9k-unsplash.jpg",
-        "path" : "/blog/first"
+        "title" : "Triune Brain",
+        "description" : "We suffer not because we experience pain, but because we react to it blindly. When we see clearly how our three-layered brain creates suffering through its automatic patterns, we gain the the ability to witness these patterns without being controlled.",
+        "created by" : "Kai",
+        "img": "/images/robina-weermeijer-igwG8aIaypo-unsplash.jpg",
+        "path" : "/blog/brain"
     },
     {
-        "title" : "second blog",
-        "description" : "Lorem, ipsum dolor sit amet consectetur adipisicing elit. Labore similique nulla earum accusamus veniam facere culpa ipsa, placeat autem harum impedit porro debitis molestiae blanditiis deserunt dignissimos veritatis! Dicta, nam?",
-        "created by" : "adminuser1@gmail.com",
-        "img": "/images/don-h-emg8puH9Smc-unsplash.jpg",
-        "path" : "/blog/second"
+        "title" : "Hermit Philosophy",
+        "description" : "The modern hermit revolutes against the ceaseless noise, the compulsive consumption, the frantic pursuit of more. The three pillars, physical health, mental mastery, and irrelevant finance, form not just a philosophy but a practical architecture for living.",
+        "created by" : "Kai",
+        "img" : "/images/the-cleveland-museum-of-art-TPj7tYUKVcc-unsplash.jpg",
+        "path" : "/blog/hermit"
     },
     {
-        "title" : "third blog",
-        "description" : "Lorem, ipsum dolor sit amet consectetur adipisicing elit. Labore similique nulla earum accusamus veniam facere culpa ipsa, placeat autem harum impedit porro debitis molestiae blanditiis deserunt dignissimos veritatis! Dicta, nam?",
-        "created by" : "adminuser1@gmail.com",
-        "img" : "/images/halfcut-pokemon-WrUGh2DXfiw-unsplash.jpg",
-        "path" : "/blog/third"
+        "title" : "Bitcoin",
+        "description" : "Bitcoin, Lightning, and Liquidity Service Providers represent a new financial paradigm — one built on mathematical certainty rather than centralized trust. It's as secure as gold, as divisible as fiat, and faster than any payment system that came before.",
+        "created by" : "Kai",
+        "img" : "/images/dmytro-demidko-z4VuRg-ZOEg-unsplash.jpg",
+        "path" : "/blog/bitcoin"
     }
 ]
 

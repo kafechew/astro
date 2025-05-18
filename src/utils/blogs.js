@@ -19,6 +19,13 @@ let blogsData = [
         "created by" : "Kai",
         "img" : "/images/dmytro-demidko-z4VuRg-ZOEg-unsplash.jpg",
         "path" : "/blog/bitcoin"
+    },
+    {
+        "title" : "hermitONL Syllabus",
+        "description" : "Syllabus for the hermitONL course. This course is designed to help you understand the principles of hermit philosophy and how to apply them in your life.",
+        "created by" : "Kai",
+        "img" : "/images/dmytro-demidko-z4VuRg-ZOEg-unsplash.jpg",
+        "path" : "/blog/syllabus"
     }
 ]
 

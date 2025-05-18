@@ -1,56 +1,35 @@
 ---
 import MainLayout from '../layouts/MainLayout.astro'; // Use MainLayout which includes global styles
 import BlogList from '../components/BlogList';
-import QnaForm from '../components/QnaForm.astro';
-// UserSelector is now part of Navbar via MainLayout
-const initialUserId = 'newuser'; // Define initial user ID
+// import QnaForm from '../components/QnaForm.astro';
 ---
 
 <MainLayout title="HermitONL - Minimal Path to Freedom"> {/* Use MainLayout */}
 	{/* Removed container, main-content will now be the grid container */}
 	<main id="main-content">
-		{/* User Selector area removed, it's now in Navbar */}
 
 		{/* Main content area (QnA) */}
 		<div class="main-content-area">
 			<section class="qna-section">
-				<QnaForm /> {/* Add the QnA form component */}
+				{/* <QnaForm /> */}{/* Add the QnA form component */}
 			</section>
 		</div>
 
 		{/* Sidebar area (Blog List) */}
 		<div class="sidebar-area">
-			<BlogList client:load initialUserId={initialUserId} />
+			<BlogList client:load />
 		</div>
 
 	</main>
-	{/* New script to relay event via window */}
-	<script>
-		document.addEventListener('useridchange', (event) => {
-			const newUserId = (event as CustomEvent).detail.userId;
-			console.log(`index.astro: Relaying useridchange for ${newUserId} via window event and updating hidden input.`);
-
-			// Update the hidden input in QnaForm
-			const userIdInput = document.getElementById('currentUserIdInput') as HTMLInputElement;
-			if (userIdInput) {
-				userIdInput.value = newUserId;
-			}
-
-			// Relay the event for BlogList or other listeners
-			window.dispatchEvent(new CustomEvent('windowUserIdChange', {
-				detail: { userId: newUserId }
-			}));
-		});
-	</script>
 </MainLayout> {/* Use MainLayout */}
 
 <style>
 	#main-content {
 		display: grid;
-		grid-template-columns: minmax(0, 3fr) minmax(0, 1fr); /* Main column 3x wider than sidebar */
-		grid-template-rows: 1fr; /* Only one row for main/sidebar */
+		grid-template-columns: 1fr; /* Blog posts are now the main focus */
+		grid-template-rows: 1fr; /* Sidebar now takes full width */
 		grid-template-areas:
-			"main sidebar"; /* User area removed */
+			"sidebar"; /* QnA form removed, blog posts main focus */
 		gap: var(--space-lg);
 		margin-top: var(--space-lg); /* Add margin to top since user selector area is gone */
 		width: 100%;
@@ -79,10 +58,9 @@ const initialUserId = 'newuser'; // Define initial user ID
 	@media (max-width: 1200px) { /* Stack columns on smaller screens */
 		#main-content {
 			grid-template-columns: 1fr; /* Single column */
-			grid-template-rows: auto auto; /* Rows for main, sidebar */
+			grid-template-rows: auto; /* Blog posts are now the main focus */
 			grid-template-areas:
-				"main"
-				"sidebar"; /* User area removed */
+				"sidebar"; /* QnA form removed, blog posts main focus */
 			gap: var(--space-md); /* Reduce gap */
 			margin-top: var(--space-md); /* Add margin to top */
 		}

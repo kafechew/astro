@@ -1,13 +1,5 @@
 // src/pages/api/askQna.json.js
-import { Permit } from 'permitio';
 import { getGeminiResponse } from '../../services/geminiService.js';
-
-// Initialize Permit client
-// Ensure PERMIT_TOKEN is set in your environment variables
-const permit = new Permit({
-  token: import.meta.env.PERMIT_TOKEN,
-  pdp: 'https://cloudpdp.api.permit.io', // or your PDP address
-});
 
 export const POST = async ({ request }) => {
   try {
@@ -42,15 +34,8 @@ export const POST = async ({ request }) => {
     };
 
     // 3. Perform authorization check
-    console.log(`Checking permission for user ${userId} to perform ${action} on resource ${JSON.stringify(resource)}`);
-    // Workaround for Cloud PDP limitation: Check permission on the resource *type* ('Blog')
-    // instead of the specific instance (resource.key).
-    // This checks if the user can 'ask' Gemini in 'blog-tenant'.
-    // For specific instance checks (ReBAC), a local Docker PDP is required.
-    const resourceTypeCheck = { type: resource.type, tenant: resource.tenant };
-    console.log(`Checking permission for user ${userId} to perform ${action} on resource type ${JSON.stringify(resourceTypeCheck)} (Cloud PDP workaround)`);
-    const permitted = await permit.check(String(userId), action, resourceTypeCheck);
-    console.log(`Permission result (type level): ${permitted}`);
+    // const permitted = await permit.check(String(userId), action, resourceTypeCheck); // Permit.io check removed
+    const permitted = true; // Permit.io check removed, default to permitted
 
     // 4. Handle authorization result
     if (permitted) {
@@ -80,14 +65,14 @@ Question: "${question}"`;
       }
     } else {
       // 7. Return unauthorized response
-      console.log(`User ${userId} is not authorized.`);
+      // console.log(`User ${userId} is not authorized.`); // Permit.io log removed
       return new Response(
         JSON.stringify({ success: false, error: 'Unauthorized' }),
         { status: 403, headers: { 'Content-Type': 'application/json' } }
       );
     }
   } catch (error) {
-    // 8. Handle general errors (Permit SDK, etc.)
+    // 8. Handle general errors
     console.error('Error in askQna endpoint:', error);
     return new Response(
       JSON.stringify({ success: false, error: 'Internal Server Error' }),

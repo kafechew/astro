@@ -2,81 +2,81 @@ import { useState, useEffect } from 'react'; // Only import necessary hooks
 import blogsData from '../utils/blogs.js';
 // Removed user import, userId will come from props
 
-export default function BlogList({ initialUserId }) { // Accept initialUserId prop
+export default function BlogList() { // Removed initialUserId prop
   const [updatingState, setUpdatingState] = useState({});
   const [blogListState, setBlogListState] = useState(blogsData);
-  const [permissions, setPermissions] = useState({ update: false, delete: false });
+  // const [permissions, setPermissions] = useState({ update: false, delete: false }); // Removed permissions state
   // Internal state for the current user ID, initialized (e.g., to adminuser)
-  const [currentUserId, setCurrentUserId] = useState(initialUserId || 'adminuser'); // Initialize with prop or fallback
+  // const [currentUserId, setCurrentUserId] = useState('adminuser'); // Removed currentUserId state as it's not used for permissions anymore
 
   // Effect to listen for window events and update internal state
-  useEffect(() => {
-    const handleUserChange = (event) => {
-      const newUserId = event.detail.userId;
-      console.log(`BlogList: Received windowUserIdChange event with userId: ${newUserId}`);
-      setCurrentUserId(newUserId);
-    };
-
-    window.addEventListener('windowUserIdChange', handleUserChange);
-
-    // Cleanup listener on component unmount
-    return () => {
-      window.removeEventListener('windowUserIdChange', handleUserChange);
-    };
-  }, []); // Empty dependency array: run only once on mount
+  // useEffect(() => {
+  //   const handleUserChange = (event) => {
+  //     const newUserId = event.detail.userId;
+  //     console.log(`BlogList: Received windowUserIdChange event with userId: ${newUserId}`);
+  //     setCurrentUserId(newUserId);
+  //   };
+  //
+  //   window.addEventListener('windowUserIdChange', handleUserChange);
+  //
+  //   // Cleanup listener on component unmount
+  //   return () => {
+  //     window.removeEventListener('windowUserIdChange', handleUserChange);
+  //   };
+  // }, []); // Empty dependency array: run only once on mount
 
   // Effect to fetch permissions based on internal currentUserId state
-  useEffect(() => {
-    const fetchPermissions = async () => {
-      // Use internal currentUserId state
-      if (!currentUserId) {
-        console.log("HermitAI: No currentUserId, setting default permissions.");
-        setPermissions({ update: false, delete: false });
-        return;
-      }
+  // useEffect(() => {
+  //   const fetchPermissions = async () => {
+  //     // Use internal currentUserId state
+  //     if (!currentUserId) {
+  //       console.log("HermitAI: No currentUserId, setting default permissions.");
+  //       setPermissions({ update: false, delete: false });
+  //       return;
+  //     }
+  //
+  //     try {
+  //       console.log(`HermitAI: Fetching permissions for currentUserId: ${currentUserId}`);
+  //       const cacheBuster = Date.now();
+  //       // Fetch update permission
+  //       const updateRes = await fetch(`/api/getPermissions.json?id=${currentUserId}&operation=update&_=${cacheBuster}`);
+  //       if (!updateRes.ok) throw new Error(`Update permission fetch failed: ${updateRes.status}`);
+  //       const updateData = await updateRes.json();
+  //       const canUpdate = updateData.status === "permitted";
+  //
+  //       // Fetch delete permission
+  //       const deleteRes = await fetch(`/api/getPermissions.json?id=${currentUserId}&operation=delete&_=${cacheBuster}`);
+  //       if (!deleteRes.ok) throw new Error(`Delete permission fetch failed: ${deleteRes.status}`);
+  //       const deleteData = await deleteRes.json();
+  //       const canDelete = deleteData.status === "permitted";
+  //
+  //       // Fetch ask permission
+  //       const askRes = await fetch(`/api/getPermissions.json?id=${currentUserId}&operation=ask&_=${cacheBuster}`);
+  //       if (!askRes.ok) throw new Error(`Ask permission fetch failed: ${askRes.status}`);
+  //       const askData = await askRes.json();
+  //       const canAsk = askData.status === "permitted";
+  //
+  //       console.log(`HermitAI: Permissions received for ${currentUserId}: Update=${canUpdate}, Delete=${canDelete}, Ask=${canAsk}`);
+  //       setPermissions({ update: canUpdate, delete: canDelete }); // This would be set to true, true
+  //     } catch (error) {
+  //       console.error(`HermitAI: Error fetching permissions for currentUserId ${currentUserId}:`, error);
+  //       setPermissions({ update: false, delete: false });
+  //     }
+  //   };
+  //
+  //   fetchPermissions();
+  // }, [currentUserId]); // Dependency array includes internal currentUserId
 
-      try {
-        console.log(`HermitAI: Fetching permissions for currentUserId: ${currentUserId}`);
-        const cacheBuster = Date.now();
-        // Fetch update permission
-        const updateRes = await fetch(`/api/getPermissions.json?id=${currentUserId}&operation=update&_=${cacheBuster}`);
-        if (!updateRes.ok) throw new Error(`Update permission fetch failed: ${updateRes.status}`);
-        const updateData = await updateRes.json();
-        const canUpdate = updateData.status === "permitted";
-
-        // Fetch delete permission
-        const deleteRes = await fetch(`/api/getPermissions.json?id=${currentUserId}&operation=delete&_=${cacheBuster}`);
-        if (!deleteRes.ok) throw new Error(`Delete permission fetch failed: ${deleteRes.status}`);
-        const deleteData = await deleteRes.json();
-        const canDelete = deleteData.status === "permitted";
-
-        // Fetch ask permission
-        const askRes = await fetch(`/api/getPermissions.json?id=${currentUserId}&operation=ask&_=${cacheBuster}`);
-        if (!askRes.ok) throw new Error(`Ask permission fetch failed: ${askRes.status}`);
-        const askData = await askRes.json();
-        const canAsk = askData.status === "permitted";
-
-        console.log(`HermitAI: Permissions received for ${currentUserId}: Update=${canUpdate}, Delete=${canDelete}, Ask=${canAsk}`);
-        setPermissions({ update: canUpdate, delete: canDelete });
-      } catch (error) {
-        console.error(`HermitAI: Error fetching permissions for currentUserId ${currentUserId}:`, error);
-        setPermissions({ update: false, delete: false });
-      }
-    };
-
-    fetchPermissions();
-  }, [currentUserId]); // Dependency array includes internal currentUserId
-
-  // --- Modified Functions using fetched permissions ---
+  // --- Modified Functions ---
 
   async function editTodo(blog, newTitle) {
-    // Check permission using state
-    if (!permissions.update) {
-        console.warn("Permission denied by Permit.io: Cannot update blog post.");
-        alert("Permission Denied: You do not have permission to edit posts.");
-        setUpdatingState({ isTrue: false });
-        return;
-    }
+    // Permissions are now always true, so no check needed
+    // if (!permissions.update) { // Removed permission check
+    //     console.warn("Permission denied by Permit.io: Cannot update blog post.");
+    //     alert("Permission Denied: You do not have permission to edit posts.");
+    //     setUpdatingState({ isTrue: false });
+    //     return;
+    // }
     // Proceed with update locally (no API call needed here for the action itself)
     setBlogListState((bloglist) =>
       bloglist.map((blogitem) => {
@@ -90,13 +90,13 @@ export default function BlogList({ initialUserId }) { // Accept initialUserId pr
   }
 
   async function deleteTodo(blog) {
-    // Check permission using state
-     if (!permissions.delete) {
-        console.warn("Permission denied by Permit.io: Cannot delete blog post.");
-        alert("Permission Denied: You do not have permission to delete posts.");
-        // No need to setDeletingState as it's removed
-        return;
-    }
+    // Permissions are now always true, so no check needed
+    //  if (!permissions.delete) { // Removed permission check
+    //     console.warn("Permission denied by Permit.io: Cannot delete blog post.");
+    //     alert("Permission Denied: You do not have permission to delete posts.");
+    //     // No need to setDeletingState as it's removed
+    //     return;
+    // }
     // Proceed with deletion locally
     setBlogListState((currentBlogList) =>
       currentBlogList.filter((bloginfo) => bloginfo.title !== blog.title)
@@ -173,8 +173,8 @@ export default function BlogList({ initialUserId }) { // Accept initialUserId pr
                   Read
                 </span>
 
-                {/* Edit Button - Conditionally rendered based on fetched permissions */}
-                {permissions.update && !updatingState.isTrue && (
+                {/* Edit Button - Always rendered */}
+                {!updatingState.isTrue && (
                   <span
                     onClick={() => {
                       setUpdatingState({ isTrue: true, title: blog.title });
@@ -189,8 +189,8 @@ export default function BlogList({ initialUserId }) { // Accept initialUserId pr
                     <span style={{ padding: '10px', fontStyle: 'italic', color: '#ccc' }}>Editing...</span>
                  )}
 
-                {/* Delete Button - Conditionally rendered based on fetched permissions */}
-                {permissions.delete && (
+                {/* Delete Button - Always rendered */}
+                { (
                   <span
                     onClick={() => {
                       // Add confirmation dialog

@@ -1,12 +1,11 @@
 ---
-import UserSelector from './UserSelector.astro';
 ---
 
 <nav>
   <div class="nav-content">
     <h1 class="site-title"><a href="/" style="color: inherit; text-decoration: none;">HermitONL</a></h1>
     <div class="user-selector-wrapper">
-      <UserSelector />
+      
     </div>
   </div>
 </nav>
@@ -33,38 +32,5 @@ import UserSelector from './UserSelector.astro';
   /* Wrapper to contain the selector, allowing easier alignment */
   .user-selector-wrapper {
      /* Styles will be inherited or overridden by UserSelector's own styles if needed */
-     /* We need to override the absolute positioning from UserSelector */
-     /* This will be done in the next step by modifying UserSelector.astro */
   }
-
-  /* Target UserSelector's container *within* the Navbar to override positioning */
-  /* This uses a more specific selector */
-  nav :global(.user-selector-container) {
-    position: static !important; /* Override absolute positioning */
-    top: auto !important;
-    right: auto !important;
-    background: none !important; /* Remove background */
-    padding: 0 !important; /* Remove padding */
-    box-shadow: none !important; /* Remove shadow */
-    color: #ffffff; /* Ensure text is light */
-  }
-  nav :global(.user-selector-container label),
-  nav :global(.user-selector-container small) {
-    color: #cccccc; /* Lighter text for label/small */
-    margin-bottom: 0.1rem; /* Adjust spacing */
-    margin-top: 0;
-  }
-   nav :global(.user-selector-container label) {
-     /* Hide the label for a minimal look in the navbar */
-     display: none;
-   }
-  nav :global(.user-selector-container select) {
-    background-color: #333; /* Darker background for select */
-    color: #ffffff; /* Light text for select */
-    border: 1px solid #555; /* Darker border */
-    padding: 0.25rem 0.5rem;
-  }
-   nav :global(.user-selector-container small) {
-     display: none; /* Hide the 'for permission testing' text in navbar */
-   }
 </style>

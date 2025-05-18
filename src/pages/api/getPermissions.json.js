@@ -1,46 +1,34 @@
-import { Permit } from "permitio";
-
 export const GET = async ({request}) =>  {
-    
-    
-    const permit = new Permit({
-        // your API Key
-        token: import.meta.env.PERMIT_TOKEN,
-        pdp: "https://cloudpdp.api.permit.io",
-
-    });
-    
     const url = new URL(request.url);
     const params = new URLSearchParams(url.search);
 
     const id =  params.get("id") ;
     const operation = params.get("operation");
       
-    console.log(id);
-    console.log(operation);
+    // console.log(id); // Permit.io related log removed
+    // console.log(operation); // Permit.io related log removed
     let response;
 
     try{
-
-        const permitted = await permit.check( String(id) , String(operation) , {
-            type: "Blog",
-            tenant: "blog-tenant",
-            });
+        // const permitted = await permit.check( String(id) , String(operation) , { // Permit.io check removed
+        //     type: "Blog",
+        //     tenant: "blog-tenant",
+        //     });
 
         
-        if (permitted) {
+        // if (permitted) { // Permit.io check removed
             
-            response = {
-                "status" : "permitted"
-            }
-
-        } else {
-            
-            response = {
-                "status" : "not-permitted"
-            }
-
+        response = {
+            "status" : "permitted"
         }
+
+        // } else { // Permit.io check removed
+            
+        //     response = {
+        //         "status" : "not-permitted"
+        //     }
+
+        // }
 
         return new Response(JSON.stringify(response), {status :  200 })
         

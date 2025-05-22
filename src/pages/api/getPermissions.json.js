@@ -2,11 +2,11 @@ export const GET = async ({request}) =>  {
     const url = new URL(request.url);
     const params = new URLSearchParams(url.search);
 
-    const id =  params.get("id") ;
-    const operation = params.get("operation");
+    // const id =  params.get("id") ; // Unused
+    // const operation = params.get("operation"); // Unused
       
-    // console.log(id); // Permit.io related log removed
-    // console.log(operation); // Permit.io related log removed
+    // console.log(params.get("id")); // Permit.io related log removed
+    // console.log(params.get("operation")); // Permit.io related log removed
     let response;
 
     try{

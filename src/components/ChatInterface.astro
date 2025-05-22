@@ -7,11 +7,16 @@
 </div>
 
 <script>
-  const messageDisplayArea = document.getElementById('message-display-area');
-  const chatInput = document.getElementById('chat-input');
-  const sendButton = document.getElementById('send-button');
+  const messageDisplayArea = document.getElementById('message-display-area') as HTMLDivElement | null;
+  const chatInput = document.getElementById('chat-input') as HTMLInputElement | null;
+  const sendButton = document.getElementById('send-button') as HTMLButtonElement | null;
 
   async function sendMessage() {
+    if (!chatInput || !messageDisplayArea) {
+      console.error('Chat input or message display area not found');
+      return;
+    }
+
     const userInputText = chatInput.value.trim();
     if (userInputText === '') {
       return;
@@ -70,19 +75,27 @@
       const errorMessageDiv = document.createElement('div');
       errorMessageDiv.textContent = 'Error: Could not connect to the AI service.';
       errorMessageDiv.className = 'error-message';
-      messageDisplayArea.appendChild(errorMessageDiv);
+      if (messageDisplayArea) {
+        messageDisplayArea.appendChild(errorMessageDiv);
+      }
       console.error('Fetch error:', error);
     } finally {
-      messageDisplayArea.scrollTop = messageDisplayArea.scrollHeight;
+      if (messageDisplayArea) {
+        messageDisplayArea.scrollTop = messageDisplayArea.scrollHeight;
+      }
     }
   }
 
-  sendButton.addEventListener('click', sendMessage);
-  chatInput.addEventListener('keypress', function(event) {
-    if (event.key === 'Enter') {
-      sendMessage();
-    }
-  });
+  if (sendButton) {
+    sendButton.addEventListener('click', sendMessage);
+  }
+  if (chatInput) {
+    chatInput.addEventListener('keypress', function(event) {
+      if (event.key === 'Enter') {
+        sendMessage();
+      }
+    });
+  }
 </script>
 
 <style>

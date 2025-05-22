@@ -26,15 +26,15 @@ export const POST = async ({ request }) => {
 
     // 2. Define Permit.io check parameters
     // Use new 'ask' action on 'Blog' resource within 'blog-tenant'
-    const action = 'ask';
-    const resource = {
-      type: 'Blog',       // Use existing 'Blog' resource type
-      key: documentTag,   // The specific blog/document tag
-      tenant: 'blog-tenant', // Use existing 'blog-tenant'
-    };
+    // const action = 'ask'; // Unused
+    // const resource = { // Unused
+    //   type: 'Blog',       // Use existing 'Blog' resource type
+    //   key: documentTag,   // The specific blog/document tag
+    //   tenant: 'blog-tenant', // Use existing 'blog-tenant'
+    // };
 
     // 3. Perform authorization check
-    // const permitted = await permit.check(String(userId), action, resourceTypeCheck); // Permit.io check removed
+    // const permitted = await permit.check(String(userId), 'ask', { type: 'Blog', key: documentTag, tenant: 'blog-tenant' }); // Permit.io check removed
     const permitted = true; // Permit.io check removed, default to permitted
 
     // 4. Handle authorization result

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'; // Only import necessary hooks
+import { useState } from 'react'; // Only import necessary hooks
 import blogsData from '../utils/blogs.js';
 // Removed user import, userId will come from props
 

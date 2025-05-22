@@ -1,15 +1,86 @@
 <div id="chat-container">
   <div id="message-display-area"></div>
-  <div id="input-area" style="display: flex;">
-    <input type="text" id="chat-input" style="flex-grow: 1; padding: 8px;" placeholder="Type your message...">
-    <button id="send-button" style="padding: 8px 15px;">Send</button>
+  <div id="input-area">
+    <input type="text" id="chat-input" placeholder="Type your message...">
+    <button id="send-button">Send</button>
   </div>
 </div>
 
 <script>
-  const messageDisplayArea = document.getElementById('message-display-area') as HTMLDivElement | null;
-  const chatInput = document.getElementById('chat-input') as HTMLInputElement | null;
-  const sendButton = document.getElementById('send-button') as HTMLButtonElement | null;
+  import { marked } from 'marked';
+  
+  // Configure marked
+  marked.setOptions({
+    breaks: true,
+    gfm: true
+  });
+  
+  // Function to apply styles to elements
+  function applyStyles() {
+    const messageDisplayArea = document.getElementById('message-display-area');
+    const chatInput = document.getElementById('chat-input');
+    const sendButton = document.getElementById('send-button');
+    const inputArea = document.getElementById('input-area');
+    
+    // Style the input area
+    if (inputArea) {
+      inputArea.style.display = 'flex';
+      inputArea.style.marginTop = '10px';
+    }
+    
+    // Style the chat input
+    if (chatInput) {
+      chatInput.style.flexGrow = '1';
+      chatInput.style.border = '1px solid #ccc';
+      chatInput.style.borderRight = 'none';
+      chatInput.style.borderRadius = '8px 0 0 8px';
+      chatInput.style.padding = '10px';
+      chatInput.style.outline = 'none';
+      chatInput.style.fontSize = '14px';
+    }
+    
+    // Style the send button
+    if (sendButton) {
+      sendButton.style.backgroundColor = '#007bff';
+      sendButton.style.color = 'white';
+      sendButton.style.border = 'none';
+      sendButton.style.padding = '10px 20px';
+      sendButton.style.borderRadius = '0 8px 8px 0';
+      sendButton.style.cursor = 'pointer';
+      sendButton.style.fontWeight = 'bold';
+      sendButton.style.fontSize = '14px';
+      sendButton.style.height = 'auto';
+      sendButton.style.minWidth = '80px';
+      sendButton.style.display = 'flex';
+      sendButton.style.alignItems = 'center';
+      sendButton.style.justifyContent = 'center';
+      
+      // Add hover effect with event listeners
+      sendButton.addEventListener('mouseover', function() {
+        this.style.backgroundColor = '#0056b3';
+      });
+      
+      sendButton.addEventListener('mouseout', function() {
+        this.style.backgroundColor = '#007bff';
+      });
+      
+      sendButton.addEventListener('mousedown', function() {
+        this.style.backgroundColor = '#004085';
+      });
+      
+      sendButton.addEventListener('mouseup', function() {
+        this.style.backgroundColor = '#0056b3';
+      });
+    }
+  }
+  
+  // Apply styles immediately and also after a short delay to ensure DOM is fully loaded
+  applyStyles();
+  setTimeout(applyStyles, 100);
+  
+  const messageDisplayArea = document.getElementById('message-display-area');
+  const chatInput = document.getElementById('chat-input');
+  const sendButton = document.getElementById('send-button');
 
   async function sendMessage() {
     if (!chatInput || !messageDisplayArea) {
@@ -25,7 +96,16 @@
     // Display user's message
     const userMessageDiv = document.createElement('div');
     userMessageDiv.textContent = userInputText;
-    userMessageDiv.className = 'user-message'; // Apply user message style
+    userMessageDiv.style.backgroundColor = '#005cbf';
+    userMessageDiv.style.color = 'white';
+    userMessageDiv.style.alignSelf = 'flex-end';
+    userMessageDiv.style.marginLeft = 'auto';
+    userMessageDiv.style.marginRight = '10px';
+    userMessageDiv.style.maxWidth = '75%';
+    userMessageDiv.style.marginBottom = '10px';
+    userMessageDiv.style.padding = '10px 15px';
+    userMessageDiv.style.borderRadius = '15px 15px 0 15px';
+    userMessageDiv.style.wordWrap = 'break-word';
     messageDisplayArea.appendChild(userMessageDiv);
     chatInput.value = '';
     messageDisplayArea.scrollTop = messageDisplayArea.scrollHeight;
@@ -33,7 +113,12 @@
     // Add "Bot is typing..." indicator
     const botTypingDiv = document.createElement('div');
     botTypingDiv.textContent = 'Bot is typing...';
-    botTypingDiv.className = 'bot-typing-indicator';
+    botTypingDiv.style.textAlign = 'left';
+    botTypingDiv.style.fontStyle = 'italic';
+    botTypingDiv.style.color = '#777';
+    botTypingDiv.style.marginBottom = '8px';
+    botTypingDiv.style.padding = '8px 12px';
+    botTypingDiv.style.maxWidth = '75%';
     messageDisplayArea.appendChild(botTypingDiv);
     messageDisplayArea.scrollTop = messageDisplayArea.scrollHeight;
 
@@ -46,43 +131,139 @@
         body: JSON.stringify({ message: userInputText }),
       });
 
-      botTypingDiv.remove(); // Remove typing indicator once response starts processing
+      // Remove typing indicator
+      if (botTypingDiv.parentNode) {
+        botTypingDiv.remove();
+      }
 
       if (response.ok) {
         const data = await response.json();
         if (data.error) {
           const errorMessageDiv = document.createElement('div');
           errorMessageDiv.textContent = data.error;
-          errorMessageDiv.className = 'error-message';
+          errorMessageDiv.style.textAlign = 'left';
+          errorMessageDiv.style.color = 'red';
+          errorMessageDiv.style.fontStyle = 'italic';
+          errorMessageDiv.style.marginBottom = '8px';
+          errorMessageDiv.style.padding = '8px 12px';
+          errorMessageDiv.style.backgroundColor = '#ffebee';
+          errorMessageDiv.style.border = '1px solid red';
+          errorMessageDiv.style.borderRadius = '12px';
+          errorMessageDiv.style.maxWidth = '75%';
+          errorMessageDiv.style.wordWrap = 'break-word';
           messageDisplayArea.appendChild(errorMessageDiv);
         } else {
           const aiMessageDiv = document.createElement('div');
-          aiMessageDiv.textContent = data.reply;
-          aiMessageDiv.className = 'ai-message'; // Apply AI message style
+          aiMessageDiv.style.backgroundColor = '#3a3f44';
+          aiMessageDiv.style.color = 'white';
+          aiMessageDiv.style.alignSelf = 'flex-start';
+          aiMessageDiv.style.marginRight = 'auto';
+          aiMessageDiv.style.marginLeft = '10px';
+          aiMessageDiv.style.maxWidth = '75%';
+          aiMessageDiv.style.marginBottom = '10px';
+          aiMessageDiv.style.padding = '10px 15px';
+          aiMessageDiv.style.borderRadius = '15px 15px 15px 0';
+          aiMessageDiv.style.wordWrap = 'break-word';
+          aiMessageDiv.style.lineHeight = '1.5';
+
+          if (data.reply) {
+            //console.log("Raw AI reply:", data.reply);
+            
+            // Process the text with proper ordering to avoid conflicts
+            let formattedText = data.reply;
+            
+            // First, identify and temporarily mark code blocks to protect them
+            const codeBlocks = [];
+            formattedText = formattedText.replace(/```([\s\S]*?)```/g, function(match, code) {
+              const placeholder = `__CODE_BLOCK_${codeBlocks.length}__`;
+              codeBlocks.push(code);
+              return placeholder;
+            });
+            
+            // Now process regular markdown elements
+            
+            // Bold: **text**
+            formattedText = formattedText.replace(/\*\*([^*]+)\*\*/g, '<span style="font-weight: bold;">$1</span>');
+            
+            // Italic: *text*
+            formattedText = formattedText.replace(/\*([^*]+)\*/g, '<span style="font-style: italic;">$1</span>');
+            
+            // Inline code: `code`
+            formattedText = formattedText.replace(/`([^`]+)`/g, '<code style="font-family: monospace; background-color: #333740; color: #d0d0d0; padding: 0.2em 0.4em; border-radius: 3px; font-size: 0.9em;">$1</code>');
+            
+            // Horizontal rule: ---
+            formattedText = formattedText.replace(/^---$/gm, '<hr style="border: 0; border-top: 1px solid #555; margin: 1em 0;">');
+            
+            // Headers: # Header
+            formattedText = formattedText.replace(/^### (.*?)$/gm, '<h3 style="font-size: 1.1em; font-weight: bold; margin: 1em 0 0.5em 0;">$1</h3>');
+            formattedText = formattedText.replace(/^## (.*?)$/gm, '<h2 style="font-size: 1.3em; font-weight: bold; margin: 1em 0 0.5em 0;">$1</h2>');
+            formattedText = formattedText.replace(/^# (.*?)$/gm, '<h1 style="font-size: 1.5em; font-weight: bold; margin: 1em 0 0.5em 0;">$1</h1>');
+            
+            // Now restore code blocks with proper HTML
+            codeBlocks.forEach((code, index) => {
+              const placeholder = `__CODE_BLOCK_${index}__`;
+              formattedText = formattedText.replace(
+                placeholder, 
+                `<pre style="background-color: #282c34; color: #abb2bf; padding: 1em; border-radius: 5px; overflow-x: auto; margin: 1em 0; font-family: monospace; white-space: pre;">${code.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</pre>`
+              );
+            });
+            
+            // Paragraphs: Split by double newlines and wrap in <p> tags
+            formattedText = formattedText.replace(/\n\n/g, '</p><p style="margin: 0.75em 0;">');
+            
+            // Wrap the entire text in a paragraph if it doesn't start with a formatted element
+            if (!formattedText.startsWith('<h') && !formattedText.startsWith('<pre') && !formattedText.startsWith('<hr')) {
+              formattedText = '<p style="margin: 0.75em 0;">' + formattedText;
+            }
+            
+            // Close the last paragraph if needed
+            if (!formattedText.endsWith('</p>') && !formattedText.endsWith('</h1>') && !formattedText.endsWith('</h2>') && !formattedText.endsWith('</h3>') && !formattedText.endsWith('</pre>')) {
+              formattedText = formattedText + '</p>';
+            }
+            
+            // Set the formatted HTML
+            aiMessageDiv.innerHTML = formattedText;
+          } else {
+            aiMessageDiv.textContent = "Received an empty reply from AI.";
+          }
           messageDisplayArea.appendChild(aiMessageDiv);
         }
       } else {
-        const errorData = await response.json().catch(() => null); // Try to parse error, but don't fail if not JSON
+        const errorData = await response.json().catch(() => null);
         const errorMessageDiv = document.createElement('div');
         errorMessageDiv.textContent = errorData?.error || `Error: Could not get response from AI. Status: ${response.status}`;
-        errorMessageDiv.className = 'error-message';
+        errorMessageDiv.style.textAlign = 'left';
+        errorMessageDiv.style.color = 'red';
+        errorMessageDiv.style.fontStyle = 'italic';
+        errorMessageDiv.style.marginBottom = '8px';
+        errorMessageDiv.style.padding = '8px 12px';
+        errorMessageDiv.style.backgroundColor = '#ffebee';
+        errorMessageDiv.style.border = '1px solid red';
+        errorMessageDiv.style.borderRadius = '12px';
+        errorMessageDiv.style.maxWidth = '75%';
+        errorMessageDiv.style.wordWrap = 'break-word';
         messageDisplayArea.appendChild(errorMessageDiv);
       }
     } catch (error) {
-      if (botTypingDiv && botTypingDiv.parentNode) { // Ensure it exists and is in DOM
+      if (botTypingDiv && botTypingDiv.parentNode) {
         botTypingDiv.remove();
       }
       const errorMessageDiv = document.createElement('div');
       errorMessageDiv.textContent = 'Error: Could not connect to the AI service.';
-      errorMessageDiv.className = 'error-message';
-      if (messageDisplayArea) {
-        messageDisplayArea.appendChild(errorMessageDiv);
-      }
+      errorMessageDiv.style.textAlign = 'left';
+      errorMessageDiv.style.color = 'red';
+      errorMessageDiv.style.fontStyle = 'italic';
+      errorMessageDiv.style.marginBottom = '8px';
+      errorMessageDiv.style.padding = '8px 12px';
+      errorMessageDiv.style.backgroundColor = '#ffebee';
+      errorMessageDiv.style.border = '1px solid red';
+      errorMessageDiv.style.borderRadius = '12px';
+      errorMessageDiv.style.maxWidth = '75%';
+      errorMessageDiv.style.wordWrap = 'break-word';
+      messageDisplayArea.appendChild(errorMessageDiv);
       console.error('Fetch error:', error);
     } finally {
-      if (messageDisplayArea) {
-        messageDisplayArea.scrollTop = messageDisplayArea.scrollHeight;
-      }
+      messageDisplayArea.scrollTop = messageDisplayArea.scrollHeight;
     }
   }
 
@@ -99,65 +280,23 @@
 </script>
 
 <style>
-  /* Optional: Add more refined styles here */
-        .user-message {
-          text-align: right;
-          margin-bottom: 8px;
-          padding: 8px 12px;
-          background-color: #e1f5fe; /* Light blue for user */
-          border-radius: 12px;
-          margin-left: auto; /* Push to right */
-          max-width: 75%;
-          word-wrap: break-word;
-        }
-        .ai-message {
-          text-align: left;
-          margin-bottom: 8px;
-          padding: 8px 12px;
-          background-color: #f0f0f0; /* Light grey for AI */
-          border-radius: 12px;
-          margin-right: auto; /* Push to left */
-          max-width: 75%;
-          word-wrap: break-word;
-        }
-        .bot-typing-indicator {
-            text-align: left;
-            font-style: italic;
-            color: #777;
-            margin-bottom: 8px;
-            padding: 8px 12px;
-            max-width: 75%;
-        }
-        .error-message {
-            text-align: left;
-            color: red;
-            font-style: italic;
-            margin-bottom: 8px;
-            padding: 8px 12px;
-            background-color: #ffebee;
-            border: 1px solid red;
-            border-radius: 12px;
-            max-width: 75%;
-            word-wrap: break-word;
-        }
+  /* Base container styles only - minimal CSS here */
   #chat-container {
     display: flex;
     flex-direction: column;
-    height: 100%; /* Fill parent height */
+    height: 100%;
     font-family: sans-serif;
-    /* max-width: 500px; Removed to allow filling parent */
-    /* margin: 20px auto; Removed to allow filling parent */
-    border: 1px solid #ccc; /* Or remove if #chat-panel in ai.astro handles this */
     padding: 15px;
-    border-radius: 8px;
-    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-    box-sizing: border-box; /* Ensure padding and border don't expand beyond 100% height */
+    box-sizing: border-box;
   }
+  
   #message-display-area {
-    flex-grow: 1; /* Allow message area to take available space */
-    border: 1px solid #eee;
-    overflow-y: scroll;
+    display: flex;
+    flex-direction: column;
+    flex-grow: 1;
+    overflow-y: auto;
     padding: 10px;
     margin-bottom: 10px;
+    border: 1px solid #333;
   }
 </style>

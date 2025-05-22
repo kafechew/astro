@@ -25,15 +25,15 @@ export async function POST(context) {
         arguments: {
           query: "string (the search query)"
         }
+      },
+      {
+        name: "scrape_as_markdown",
+        description: "Fetches the content of a given URL as Markdown text using BrightData Crawl API. Use this if you have a specific URL and need its textual content.",
+        arguments: {
+          url: "string (the URL to scrape)"
+        }
       }
       // Add more tools later
-      // {
-      //   name: "scrape_as_markdown",
-      //   description: "Initiates a BrightData Dataset job to scrape a single webpage URL and retrieve its content. Specify 'markdown' for output format. Returns the job initiation response.",
-      //   arguments: {
-      //     url: "string (the URL to scrape)"
-      //   }
-      // }
     ];
     const toolDescriptions = availableTools.map(t => `${t.name}: ${t.description} Arguments: ${JSON.stringify(t.arguments)}`).join('\n');
 
@@ -104,6 +104,49 @@ export async function POST(context) {
               } catch (apiError) {
                 console.error("Error calling BrightData SERP API:", apiError);
                 toolOutput = `Exception during SERP API call: ${apiError.message}`;
+              }
+            }
+          } else if (toolDecision.tool_name === "scrape_as_markdown") {
+            const brightDataApiToken = process.env.BRIGHTDATA_API_TOKEN;
+            const targetUrlToScrape = toolDecision.arguments.url;
+            // Use BRIGHTDATA_WEB_UNLOCKER_ZONE from .env, fallback to 'mcp_unlocker' if not set
+            const brightDataZone = process.env.BRIGHTDATA_WEB_UNLOCKER_ZONE || 'mcp_unlocker';
+
+
+            if (!brightDataApiToken) {
+              console.error("BrightData API token not configured in environment variables.");
+              toolOutput = "Error: BrightData API credentials not configured.";
+            } else if (!targetUrlToScrape || typeof targetUrlToScrape !== 'string' || !targetUrlToScrape.startsWith('http')) {
+              console.error("Invalid or missing URL for scraping:", targetUrlToScrape);
+              toolOutput = "Error: A valid URL is required for scraping.";
+            } else {
+              try {
+                console.log(`Calling BrightData API for URL: ${targetUrlToScrape} with zone: ${brightDataZone} to get markdown.`);
+                const apiResponse = await fetch('https://api.brightdata.com/request', {
+                  method: 'POST',
+                  headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${brightDataApiToken}`
+                  },
+                  body: JSON.stringify({
+                    url: targetUrlToScrape,
+                    zone: brightDataZone,
+                    format: 'raw',
+                    data_format: 'markdown'
+                  })
+                });
+
+                if (apiResponse.ok) {
+                  toolOutput = await apiResponse.text(); // Expecting Markdown text
+                  console.log("BrightData API Output (Markdown snippet):", toolOutput.substring(0, 200) + "...");
+                } else {
+                  const errorText = await apiResponse.text();
+                  console.error("BrightData API Error:", apiResponse.status, errorText);
+                  toolOutput = `Error fetching page content via BrightData API: ${apiResponse.status} ${errorText}`;
+                }
+              } catch (apiError) {
+                console.error("Error calling BrightData API:", apiError);
+                toolOutput = `Exception during BrightData API call: ${apiError.message}`;
               }
             }
           } else {

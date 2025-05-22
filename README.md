@@ -1,5 +1,7 @@
 # Astro + Vertex AI + BrightData: Advanced AI Chatbot
 
+hermitAI is a lightweight, personal AI agent built for autonomous research, web scraping, and question-answering using Gemini 2.5, BrightData APIs, and MongoDB vector search. Designed for developers and self-hosters, it combines real-time search with private knowledge retrieval, ideal for focused, hands-off productivity.
+
 This project demonstrates an advanced AI chatbot built with [Astro](https://astro.build/), leveraging Google's Gemini model via Vertex AI and live web search capabilities through the BrightData SERP API.
 The primary feature is an AI chat page available at `/ai`, offering users an interactive way to get information, including up-to-date details fetched from the internet.
 

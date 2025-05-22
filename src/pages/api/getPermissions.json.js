@@ -1,6 +1,5 @@
 export const GET = async ({request}) =>  {
     const url = new URL(request.url);
-    const params = new URLSearchParams(url.search);
 
     // const id =  params.get("id") ; // Unused
     // const operation = params.get("operation"); // Unused

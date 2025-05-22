@@ -17,9 +17,8 @@
   
   // Function to apply styles to elements
   function applyStyles() {
-    const messageDisplayArea = document.getElementById('message-display-area');
-    const chatInput = document.getElementById('chat-input');
-    const sendButton = document.getElementById('send-button');
+    const chatInput = document.getElementById('chat-input') as HTMLInputElement | null;
+    const sendButton = document.getElementById('send-button') as HTMLButtonElement | null;
     const inputArea = document.getElementById('input-area');
     
     // Style the input area
@@ -78,9 +77,9 @@
   applyStyles();
   setTimeout(applyStyles, 100);
   
-  const messageDisplayArea = document.getElementById('message-display-area');
-  const chatInput = document.getElementById('chat-input');
-  const sendButton = document.getElementById('send-button');
+  const messageDisplayArea = document.getElementById('message-display-area') as HTMLDivElement | null;
+  const chatInput = document.getElementById('chat-input') as HTMLInputElement | null;
+  const sendButton = document.getElementById('send-button') as HTMLButtonElement | null;
 
   async function sendMessage() {
     if (!chatInput || !messageDisplayArea) {
@@ -105,7 +104,7 @@
     userMessageDiv.style.marginBottom = '10px';
     userMessageDiv.style.padding = '10px 15px';
     userMessageDiv.style.borderRadius = '15px 15px 0 15px';
-    userMessageDiv.style.wordWrap = 'break-word';
+    userMessageDiv.style.overflowWrap = 'break-word';
     messageDisplayArea.appendChild(userMessageDiv);
     chatInput.value = '';
     messageDisplayArea.scrollTop = messageDisplayArea.scrollHeight;
@@ -150,7 +149,7 @@
           errorMessageDiv.style.border = '1px solid red';
           errorMessageDiv.style.borderRadius = '12px';
           errorMessageDiv.style.maxWidth = '75%';
-          errorMessageDiv.style.wordWrap = 'break-word';
+          errorMessageDiv.style.overflowWrap = 'break-word';
           messageDisplayArea.appendChild(errorMessageDiv);
         } else {
           const aiMessageDiv = document.createElement('div');
@@ -163,7 +162,7 @@
           aiMessageDiv.style.marginBottom = '10px';
           aiMessageDiv.style.padding = '10px 15px';
           aiMessageDiv.style.borderRadius = '15px 15px 15px 0';
-          aiMessageDiv.style.wordWrap = 'break-word';
+          aiMessageDiv.style.overflowWrap = 'break-word';
           aiMessageDiv.style.lineHeight = '1.5';
 
           if (data.reply) {
@@ -173,8 +172,8 @@
             let formattedText = data.reply;
             
             // First, identify and temporarily mark code blocks to protect them
-            const codeBlocks = [];
-            formattedText = formattedText.replace(/```([\s\S]*?)```/g, function(match, code) {
+            const codeBlocks: string[] = [];
+            formattedText = formattedText.replace(/```([\s\S]*?)```/g, function(_match: string, code: string) {
               const placeholder = `__CODE_BLOCK_${codeBlocks.length}__`;
               codeBlocks.push(code);
               return placeholder;
@@ -200,7 +199,7 @@
             formattedText = formattedText.replace(/^# (.*?)$/gm, '<h1 style="font-size: 1.5em; font-weight: bold; margin: 1em 0 0.5em 0;">$1</h1>');
             
             // Now restore code blocks with proper HTML
-            codeBlocks.forEach((code, index) => {
+            codeBlocks.forEach((code: string, index: number) => {
               const placeholder = `__CODE_BLOCK_${index}__`;
               formattedText = formattedText.replace(
                 placeholder, 
@@ -241,7 +240,7 @@
         errorMessageDiv.style.border = '1px solid red';
         errorMessageDiv.style.borderRadius = '12px';
         errorMessageDiv.style.maxWidth = '75%';
-        errorMessageDiv.style.wordWrap = 'break-word';
+        errorMessageDiv.style.overflowWrap = 'break-word';
         messageDisplayArea.appendChild(errorMessageDiv);
       }
     } catch (error) {
@@ -259,7 +258,7 @@
       errorMessageDiv.style.border = '1px solid red';
       errorMessageDiv.style.borderRadius = '12px';
       errorMessageDiv.style.maxWidth = '75%';
-      errorMessageDiv.style.wordWrap = 'break-word';
+      errorMessageDiv.style.overflowWrap = 'break-word';
       messageDisplayArea.appendChild(errorMessageDiv);
       console.error('Fetch error:', error);
     } finally {

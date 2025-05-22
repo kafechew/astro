@@ -5,7 +5,6 @@ dotenv.config(); // Load .env for this API route specifically
 import { getVertexAiResponse } from '../../../services/vertexAiService.js';
 import { exec } from 'child_process';
 import util from 'util';
-const execPromise = util.promisify(exec);
 
 export async function POST(context) {
   try {

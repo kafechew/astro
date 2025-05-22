@@ -40,6 +40,13 @@ export async function POST(context) {
         arguments: {
           url: "string (the URL to scrape)"
         }
+      },
+      {
+        name: "web_data_linkedin_person_profile",
+        description: "Quickly read structured LinkedIn people profile data using a specific LinkedIn profile URL. This can be a cache lookup, so it can be more reliable than scraping directly.",
+        arguments: {
+          url: "string (the full LinkedIn profile URL)"
+        }
       }
     ];
     const toolDescriptions = availableTools.map(t => `${t.name}: ${t.description} Arguments: ${JSON.stringify(t.arguments)}`).join('\n');
@@ -197,6 +204,82 @@ export async function POST(context) {
               } catch (apiError) {
                 console.error("Error calling BrightData API for HTML scrape:", apiError);
                 toolOutput += `Exception during HTML scrape API call: ${apiError.message}`;
+              }
+            }
+          } else if (toolDecision.tool_name === "web_data_linkedin_person_profile") {
+            const brightDataApiToken = process.env.BRIGHTDATA_API_TOKEN;
+            const profileUrl = toolDecision.arguments.url;
+            const datasetId = 'gd_l1viktl72bvl7bjuj0'; // From MCP code
+
+            toolOutput = `Fetching LinkedIn profile for ${profileUrl}\n`;
+
+            if (!brightDataApiToken) {
+              console.error("BrightData API token not configured.");
+              toolOutput += "Error: BrightData API credentials not configured.";
+            } else if (!profileUrl || typeof profileUrl !== 'string' || !profileUrl.includes('linkedin.com/in/')) {
+              console.error("Invalid or missing LinkedIn profile URL:", profileUrl);
+              toolOutput += "Error: A valid LinkedIn profile URL is required.";
+            } else {
+              try {
+                console.log(`Triggering BrightData dataset for LinkedIn profile: ${profileUrl}`);
+                const triggerResponse = await fetch(`https://api.brightdata.com/datasets/v3/trigger?dataset_id=${datasetId}&include_errors=true`, {
+                  method: 'POST',
+                  headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${brightDataApiToken}`
+                  },
+                  body: JSON.stringify([{ url: profileUrl }])
+                });
+
+                if (!triggerResponse.ok) {
+                  const errorText = await triggerResponse.text();
+                  throw new Error(`Dataset trigger failed: ${triggerResponse.status} ${errorText}`);
+                }
+
+                const triggerData = await triggerResponse.json();
+                const snapshotId = triggerData?.snapshot_id;
+
+                if (!snapshotId) {
+                  throw new Error('No snapshot ID returned from dataset trigger.');
+                }
+                console.log(`Dataset triggered. Snapshot ID: ${snapshotId}`);
+                toolOutput += `Data collection started (Snapshot ID: ${snapshotId}). Polling for results...\n`;
+
+                let attempts = 0;
+                const maxAttempts = 10;
+                const pollInterval = 2500;
+
+                while (attempts < maxAttempts) {
+                  await new Promise(resolve => setTimeout(resolve, pollInterval));
+                  attempts++;
+                  console.log(`Polling snapshot ${snapshotId}, attempt ${attempts}/${maxAttempts}`);
+                  const snapshotResponse = await fetch(`https://api.brightdata.com/datasets/v3/snapshot/${snapshotId}?format=json`, {
+                    headers: { 'Authorization': `Bearer ${brightDataApiToken}` }
+                  });
+
+                  if (!snapshotResponse.ok) {
+                    console.warn(`Snapshot poll failed (attempt ${attempts}): ${snapshotResponse.status}`);
+                    if (attempts >= maxAttempts) throw new Error('Polling attempts exhausted after non-ok response.');
+                    continue;
+                  }
+                  
+                  const snapshotData = await snapshotResponse.json();
+                  if (snapshotData?.status === 'running' || snapshotData?.status === 'pending') {
+                    if (attempts >= maxAttempts) throw new Error('Polling timeout: Data collection still running.');
+                    continue;
+                  }
+                  
+                  console.log('Snapshot data received:', snapshotData);
+                  toolOutput = JSON.stringify(snapshotData, null, 2);
+                  break;
+                }
+                if (attempts >= maxAttempts && !toolOutput.includes('{')) {
+                   throw new Error('Polling timeout: Max attempts reached without completed data.');
+                }
+
+              } catch (apiError) {
+                console.error("Error with LinkedIn Profile tool:", apiError);
+                toolOutput = (toolOutput.startsWith("Fetching") ? toolOutput : "") + `Exception during LinkedIn Profile tool: ${apiError.message}`;
               }
             }
           } else {

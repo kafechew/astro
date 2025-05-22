@@ -1,33 +1,189 @@
-// src/pages/api/ai/chat.json.js
+// src/pages/api/ai/chat.js
+import dotenv from 'dotenv';
+dotenv.config(); // Load .env for this API route specifically
+
 import { getVertexAiResponse } from '../../../services/vertexAiService.js';
+import { exec } from 'child_process';
+import util from 'util';
+const execPromise = util.promisify(exec);
 
 export async function POST(context) {
   try {
-    const { message } = await context.request.json();
+    const { message: userMessage } = await context.request.json();
 
-    if (!message || typeof message !== 'string' || message.trim() === '') {
+    if (!userMessage || typeof userMessage !== 'string' || userMessage.trim() === '') {
       return new Response(JSON.stringify({ error: 'Message cannot be empty.' }), {
         status: 400,
         headers: { 'Content-Type': 'application/json' },
       });
     }
 
-    const aiResponse = await getVertexAiResponse(message);
+    const availableTools = [
+      {
+        name: "search_engine",
+        description: "Performs a web search using Google (via BrightData SERP API) to find relevant information or URLs. Returns structured search results.",
+        arguments: {
+          query: "string (the search query)"
+        }
+      }
+      // Add more tools later
+      // {
+      //   name: "scrape_as_markdown",
+      //   description: "Initiates a BrightData Dataset job to scrape a single webpage URL and retrieve its content. Specify 'markdown' for output format. Returns the job initiation response.",
+      //   arguments: {
+      //     url: "string (the URL to scrape)"
+      //   }
+      // }
+    ];
+    const toolDescriptions = availableTools.map(t => `${t.name}: ${t.description} Arguments: ${JSON.stringify(t.arguments)}`).join('\n');
 
-    if (aiResponse !== null) {
-      return new Response(JSON.stringify({ reply: aiResponse }), {
-        status: 200,
-        headers: { 'Content-Type': 'application/json' },
-      });
+    const firstPassPrompt = `You are a helpful AI assistant with access to the following tools:
+    ${toolDescriptions}
+
+    User query: "${userMessage}"
+
+    Based on the user query and the available tools, do you need to use a tool?
+    If yes, respond ONLY with a JSON object specifying the "tool_name" and an "arguments" object for that tool. Example: {"tool_name": "search_engine", "arguments": {"query": "some search query"}}
+    If no tool is needed, respond ONLY with the JSON object: {"tool_name": "none"}.`;
+
+    const geminiRawResponse = await getVertexAiResponse(firstPassPrompt);
+
+    if (geminiRawResponse !== null) {
+      try {
+        let cleanedResponse = geminiRawResponse;
+        if (cleanedResponse.startsWith("```json")) {
+          cleanedResponse = cleanedResponse.substring(7); // Remove ```json\n
+        }
+        if (cleanedResponse.endsWith("```")) {
+          cleanedResponse = cleanedResponse.substring(0, cleanedResponse.length - 3); // Remove ```
+        }
+        cleanedResponse = cleanedResponse.trim(); // Trim any leading/trailing whitespace
+
+        const toolDecision = JSON.parse(cleanedResponse);
+        console.log("Gemini tool decision (after cleaning):", toolDecision);
+
+        let toolOutput = null; // Initialize toolOutput for storing results or errors
+
+        if (toolDecision && toolDecision.tool_name && toolDecision.tool_name !== "none") {
+          const effectiveToolName = toolDecision.tool_name;
+
+          // Tool execution logic starts here
+          if (toolDecision.tool_name === "search_engine" && toolDecision.arguments && toolDecision.arguments.query) {
+            const brightDataApiToken = process.env.BRIGHTDATA_API_TOKEN;
+            const brightDataZone = process.env.BRIGHTDATA_WEB_UNLOCKER_ZONE; // Or your specific SERP API zone
+
+            if (!brightDataApiToken || !brightDataZone) {
+              console.error("BrightData API token or Zone not configured in environment variables.");
+              toolOutput = "Error: BrightData SERP API credentials not configured.";
+            } else {
+              try {
+                const targetUrl = `https://www.google.com/search?q=${encodeURIComponent(toolDecision.arguments.query)}&brd_json=1`;
+                console.log(`Calling BrightData SERP API for query: ${toolDecision.arguments.query} via URL: ${targetUrl}`);
+                const serpResponse = await fetch('https://api.brightdata.com/request', {
+                  method: 'POST',
+                  headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${brightDataApiToken}`
+                  },
+                  body: JSON.stringify({
+                    zone: brightDataZone,
+                    url: targetUrl,
+                    format: 'raw' // Or 'json' if the API directly supports it
+                  })
+                });
+
+                if (serpResponse.ok) {
+                  const serpData = await serpResponse.json();
+                  toolOutput = JSON.stringify(serpData, null, 2);
+                  console.log("BrightData SERP API Output:", toolOutput);
+                } else {
+                  const errorText = await serpResponse.text();
+                  console.error("BrightData SERP API Error:", serpResponse.status, errorText);
+                  toolOutput = `Error fetching search results: ${serpResponse.status} ${errorText}`;
+                }
+              } catch (apiError) {
+                console.error("Error calling BrightData SERP API:", apiError);
+                toolOutput = `Exception during SERP API call: ${apiError.message}`;
+              }
+            }
+          } else {
+            // Tool name recognized but arguments might be missing or incorrect
+            console.warn("Tool recognized by AI but no specific command construction logic or arguments missing:", toolDecision);
+            toolOutput = `Error: AI selected tool '${toolDecision.tool_name}' but it's not configured for execution or arguments are invalid.`;
+          }
+
+          // Second Gemini Call (Answer Synthesis)
+          let finalPrompt;
+          // Ensure userMessage is defined in this scope, it's from the top of POST function
+          if (toolOutput) { // toolOutput will exist, even if it's an error message
+            finalPrompt = `User query: "${userMessage}"
+I used the '${effectiveToolName}' tool and received the following information:
+---
+${toolOutput}
+---
+Based on this information and the original query, please provide a comprehensive answer. If the information indicates an error, state that you couldn't retrieve the specific details but try to answer generally if possible.`;
+          } else { // This case implies a tool was chosen, but toolOutput remained null (should be rare with current logic)
+            finalPrompt = `User query: "${userMessage}"
+Please answer this query directly. I attempted to use the '${effectiveToolName}' tool, but no output was generated.`;
+          }
+
+          const finalAiResponse = await getVertexAiResponse(finalPrompt);
+
+          if (finalAiResponse !== null) {
+            return new Response(JSON.stringify({ reply: finalAiResponse }), {
+              status: 200,
+              headers: { 'Content-Type': 'application/json' },
+            });
+          } else {
+            console.error("Failed to get final synthesized response from AI.");
+            return new Response(JSON.stringify({ error: 'Failed to get final synthesized response from AI.', reply: "I encountered an issue synthesizing the final answer." }), {
+              status: 500,
+              headers: { 'Content-Type': 'application/json' },
+            });
+          }
+
+        } else if (toolDecision && toolDecision.tool_name === "none") {
+          // No tool needed, get direct answer
+          const finalPrompt = `User query: "${userMessage}"
+Please answer this query directly.`;
+          const finalAiResponse = await getVertexAiResponse(finalPrompt);
+
+          if (finalAiResponse !== null) {
+            return new Response(JSON.stringify({ reply: finalAiResponse }), {
+              status: 200,
+              headers: { 'Content-Type': 'application/json' },
+            });
+          } else {
+            console.error("Failed to get response from AI for direct answer (tool_name: none).");
+            return new Response(JSON.stringify({ error: 'Failed to get response from AI for direct answer.', reply: "I encountered an issue processing your request." }), {
+              status: 500,
+              headers: { 'Content-Type': 'application/json' },
+            });
+          }
+        } else {
+          // Fallback if toolDecision is not in the expected format
+          console.error("Unexpected tool_decision format from AI:", toolDecision);
+          return new Response(JSON.stringify({ error: "Unexpected format for AI tool decision.", reply: "I received an unexpected decision format from my reasoning module." }), {
+            status: 500,
+            headers: { 'Content-Type': 'application/json' },
+          });
+        }
+      } catch (parseError) {
+        console.error("Failed to parse Gemini's tool decision:", parseError);
+        console.error("Gemini's raw response:", geminiRawResponse);
+        return new Response(JSON.stringify({ error: "Failed to parse AI's tool decision.", details: geminiRawResponse }), {
+          status: 500,
+          headers: { 'Content-Type': 'application/json' },
+        });
+      }
     } else {
-      return new Response(JSON.stringify({ error: 'Failed to get response from AI service.' }), {
+      return new Response(JSON.stringify({ error: 'Failed to get response from AI service for tool decision.' }), {
         status: 500,
         headers: { 'Content-Type': 'application/json' },
       });
     }
   } catch (error) {
-    console.error('Error in /api/ai/chat.json.js:', error);
-    // Check if it's a JSON parsing error or other client-side error
+    console.error('Error in /api/ai/chat.js:', error);
     if (error instanceof SyntaxError && error.message.includes('JSON')) {
         return new Response(JSON.stringify({ error: 'Invalid JSON in request body.' }), {
             status: 400,

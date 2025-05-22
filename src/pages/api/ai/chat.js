@@ -53,6 +53,13 @@ export async function POST(context) {
         arguments: {
           url: "string (the full Amazon product URL containing /dp/)"
         }
+      },
+      {
+        name: "web_data_amazon_product_reviews",
+        description: "Quickly read structured Amazon product review data. Requires a valid Amazon product URL with /dp/ in it. This can be a cache lookup, so it can be more reliable than scraping directly.",
+        arguments: {
+          url: "string (the full Amazon product URL containing /dp/)"
+        }
       }
     ];
     
@@ -360,6 +367,82 @@ export async function POST(context) {
               } catch (apiError) {
                 console.error("Error with Amazon Product tool:", apiError);
                 toolOutput = (toolOutput.startsWith("Fetching") ? toolOutput : "") + 'Exception during Amazon Product tool: ' + apiError.message;
+              }
+            }
+          } else if (toolDecision.tool_name === "web_data_amazon_product_reviews") {
+            const brightDataApiToken = process.env.BRIGHTDATA_API_TOKEN;
+            const productUrl = toolDecision.arguments.url;
+            const datasetId = 'gd_le8e811kzy4ggddlq'; // Specific dataset ID for Amazon product reviews
+
+            toolOutput = 'Fetching Amazon product reviews for ' + productUrl + '\\n';
+
+            if (!brightDataApiToken) {
+              console.error("BrightData API token not configured.");
+              toolOutput += "Error: BrightData API credentials not configured.";
+            } else if (!productUrl || typeof productUrl !== 'string' || !productUrl.includes('/dp/')) {
+              console.error("Invalid or missing Amazon product URL (must contain /dp/):", productUrl);
+              toolOutput += "Error: A valid Amazon product URL containing '/dp/' is required for reviews.";
+            } else {
+              try {
+                console.log('Triggering BrightData dataset for Amazon product reviews: ' + productUrl);
+                const triggerResponse = await fetch('https://api.brightdata.com/datasets/v3/trigger?dataset_id=' + datasetId + '&include_errors=true', {
+                  method: 'POST',
+                  headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': 'Bearer ' + brightDataApiToken
+                  },
+                  body: JSON.stringify([{ url: productUrl }])
+                });
+
+                if (!triggerResponse.ok) {
+                  const errorText = await triggerResponse.text();
+                  throw new Error('Dataset trigger failed: ' + triggerResponse.status + ' ' + errorText);
+                }
+
+                const triggerData = await triggerResponse.json();
+                const snapshotId = triggerData?.snapshot_id;
+
+                if (!snapshotId) {
+                  throw new Error('No snapshot ID returned from dataset trigger for reviews.');
+                }
+                console.log('Dataset triggered for reviews. Snapshot ID: ' + snapshotId);
+                toolOutput += 'Data collection for reviews started (Snapshot ID: ' + snapshotId + '). Polling for results...\\n';
+
+                let attempts = 0;
+                const maxAttempts = 10;
+                const pollInterval = 2500;
+
+                while (attempts < maxAttempts) {
+                  await new Promise(resolve => setTimeout(resolve, pollInterval));
+                  attempts++;
+                  console.log('Polling snapshot ' + snapshotId + ' for Amazon product reviews, attempt ' + attempts + '/' + maxAttempts);
+                  const snapshotResponse = await fetch('https://api.brightdata.com/datasets/v3/snapshot/' + snapshotId + '?format=json', {
+                    headers: { 'Authorization': 'Bearer ' + brightDataApiToken }
+                  });
+
+                  if (!snapshotResponse.ok) {
+                    console.warn('Snapshot poll failed (attempt ' + attempts + '): ' + snapshotResponse.status);
+                    if (attempts >= maxAttempts) throw new Error('Polling attempts exhausted for reviews after non-ok response.');
+                    continue;
+                  }
+                  
+                  const snapshotData = await snapshotResponse.json();
+                  if (snapshotData?.status === 'running' || snapshotData?.status === 'pending') {
+                    if (attempts >= maxAttempts) throw new Error('Polling timeout: Review data collection still running.');
+                    continue;
+                  }
+                  
+                  console.log('Amazon product reviews snapshot data received:', snapshotData);
+                  toolOutput = JSON.stringify(snapshotData, null, 2);
+                  break;
+                }
+                if (attempts >= maxAttempts && (typeof toolOutput !== 'string' || !toolOutput.includes('{'))) {
+                   throw new Error('Polling timeout: Max attempts reached without completed review data.');
+                }
+
+              } catch (apiError) {
+                console.error("Error with Amazon Product Reviews tool:", apiError);
+                toolOutput = (toolOutput.startsWith("Fetching") ? toolOutput : "") + 'Exception during Amazon Product Reviews tool: ' + apiError.message;
               }
             }
           } else {

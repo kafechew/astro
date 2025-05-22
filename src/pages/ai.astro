@@ -1,0 +1,38 @@
+---
+import MainLayout from '../layouts/MainLayout.astro';
+import ChatInterface from '../components/ChatInterface.astro';
+const pageTitle = "AI Chat";
+---
+
+<MainLayout title={pageTitle}>
+  <div id="ai-page-container">
+    <div id="chat-panel">
+      <ChatInterface client:load />
+    </div>
+    <div id="sidebar-panel">
+      Sidebar will go here.
+    </div>
+  </div>
+</MainLayout>
+
+<style>
+  #ai-page-container {
+    display: grid;
+    grid-template-columns: 2fr 1fr; /* Adjust ratio as needed */
+    gap: 20px; /* Adjust gap as needed */
+    padding: 20px; /* Adjust padding as needed */
+    height: calc(100vh - 120px); /* Example height, adjust based on your nav/footer */
+  }
+  #chat-panel {
+    border: 1px solid #ccc;
+    /* padding: 10px; Remove padding if ChatInterface handles its own */
+    overflow-y: hidden; /* Let ChatInterface handle its internal scroll */
+    display: flex; /* To make the child fill the height */
+    flex-direction: column; /* Stack children vertically */
+  }
+  #sidebar-panel {
+    /* Basic styling for sidebar panel */
+    border: 1px solid #ccc;
+    padding: 10px;
+  }
+</style>

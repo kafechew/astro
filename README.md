@@ -7,10 +7,89 @@ The primary feature is an AI chat page available at `/ai`, offering users an int
 ## Core Features
 
 *   **Google Vertex AI (Gemini model) Integration:** Utilizes Google's powerful Gemini model through Vertex AI for sophisticated language understanding and generation.
-*   **Live Web Search via BrightData SERP API:** Enables the chatbot to fetch real-time information from the web to answer queries, ensuring responses are current.
+*   **Live Data Access via BrightData APIs:** Enables the chatbot to fetch real-time information from the web (SERP API), scrape web content (Request API), and access structured datasets (Datasets API) to answer queries, ensuring responses are current and comprehensive.
 *   **Dynamic UI:** A new interactive chat interface at `/ai` (powered by [`src/components/ChatInterface.astro`](src/components/ChatInterface.astro:1)) provides a modern user experience.
 *   **Astro API Routes:** The new [`/api/ai/chat.js`](src/pages/api/ai/chat.js:1) route orchestrates interactions between the frontend, Vertex AI, and BrightData.
 *   **Secure API Key Management:** Uses a `.env` file for `GOOGLE_PROJECT_ID`, `GOOGLE_CLIENT_EMAIL`, `GOOGLE_PRIVATE_KEY` (for Vertex AI), `BRIGHTDATA_API_TOKEN`, `BRIGHTDATA_WEB_UNLOCKER_ZONE` (for BrightData), and `GEMINI_API_KEY` (backup).
+
+## Available Chatbot Tools
+
+The AI chatbot can leverage the following tools via BrightData's direct APIs to enhance its responses:
+
+*   **`search_engine` (BrightData SERP API)**
+    *   **Description:** Performs live web searches using Google to find relevant information or URLs.
+    *   **Example Prompt:** "What are the latest developments in renewable energy?"
+
+*   **`scrape_as_markdown` (BrightData Request API)**
+    *   **Description:** Fetches the content of a given URL and returns it as Markdown text.
+    *   **Example Prompt:** "Summarize the article at https://www.hermit.onl/blog/syllabus"
+
+*   **`scrape_as_html` (BrightData Request API)**
+    *   **Description:** Fetches the raw HTML content of a given URL.
+    *   **Example Prompt:** "Scrape the content of https://www.hermit.onl/blog/syllabus as html and tell me about it."
+
+*   **`web_data_linkedin_person_profile` (BrightData Datasets API)**
+    *   **Description:** Retrieves structured data from a specific LinkedIn profile URL.
+    *   **Example Prompt:** "Tell me about the LinkedIn profile at https://www.linkedin.com/in/kafechew/"
+
+*   **`web_data_amazon_product` (BrightData Datasets API)**
+    *   **Description:** Fetches structured data for a specific Amazon product URL.
+    *   **Example Prompt:** "What are the details for the product at https://www.amazon.com/dp/B07VGRJDFY"
+
+*   **`web_data_amazon_product_reviews` (BrightData Datasets API)**
+    *   **Description:** Retrieves structured review data for a specific Amazon product URL.
+    *   **Example Prompt:** "Show me reviews for the product at https://www.amazon.com/dp/B07VGRJDFY"
+
+## Future Tools / Roadmap (from BrightData MCP)
+
+The following additional tools are available in the BrightData MCP client and could be integrated into this chatbot in the future, pending identification of their direct API equivalents and implementation:
+
+| Feature                               | Description                                                                                                |
+| ------------------------------------- | ---------------------------------------------------------------------------------------------------------- |
+| `session_stats`                       | Tell the user about the tool usage during this session (would require custom session tracking).            |
+| `web_data_amazon_product_search`      | Quickly read structured amazon product search data.                                                        |
+| `web_data_walmart_product`            | Quickly read structured walmart product data.                                                              |
+| `web_data_walmart_seller`             | Quickly read structured walmart seller data.                                                               |
+| `web_data_ebay_product`               | Quickly read structured ebay product data.                                                                 |
+| `web_data_homedepot_products`         | Quickly read structured homedepot product data.                                                            |
+| `web_data_zara_products`              | Quickly read structured zara product data.                                                                 |
+| `web_data_etsy_products`              | Quickly read structured etsy product data.                                                                 |
+| `web_data_bestbuy_products`           | Quickly read structured bestbuy product data.                                                              |
+| `web_data_linkedin_company_profile`   | Quickly read structured linkedin company profile data.                                                     |
+| `web_data_linkedin_job_listings`      | Quickly read structured linkedin job listings data.                                                        |
+| `web_data_linkedin_posts`             | Quickly read structured linkedin posts data.                                                               |
+| `web_data_linkedin_people_search`     | Quickly read structured linkedin people search data.                                                       |
+| `web_data_crunchbase_company`         | Quickly read structured crunchbase company data.                                                           |
+| `web_data_zoominfo_company_profile`   | Quickly read structured ZoomInfo company profile data.                                                     |
+| `web_data_instagram_profiles`         | Quickly read structured Instagram profile data.                                                            |
+| `web_data_instagram_posts`            | Quickly read structured Instagram post data.                                                               |
+| `web_data_instagram_reels`            | Quickly read structured Instagram reel data.                                                               |
+| `web_data_instagram_comments`         | Quickly read structured Instagram comments data.                                                           |
+| `web_data_facebook_posts`             | Quickly read structured Facebook post data.                                                                |
+| `web_data_facebook_marketplace_listings` | Quickly read structured Facebook marketplace listing data.                                                 |
+| `web_data_facebook_company_reviews`   | Quickly read structured Facebook company reviews data.                                                     |
+| `web_data_facebook_events`            | Quickly read structured Facebook events data.                                                              |
+| `web_data_tiktok_profiles`            | Quickly read structured Tiktok profiles data.                                                              |
+| `web_data_tiktok_posts`               | Quickly read structured Tiktok post data.                                                                  |
+| `web_data_tiktok_shop`                | Quickly read structured Tiktok shop product data.                                                          |
+| `web_data_tiktok_comments`            | Quickly read structured Tiktok comments data.                                                              |
+| `web_data_google_maps_reviews`        | Quickly read structured Google maps reviews data.                                                          |
+| `web_data_google_shopping`            | Quickly read structured Google shopping data.                                                              |
+| `web_data_google_play_store`          | Quickly read structured Google play store data.                                                            |
+| `web_data_apple_app_store`            | Quickly read structured apple app store data.                                                              |
+| `web_data_reuter_news`                | Quickly read structured reuter news data.                                                                  |
+| `web_data_github_repository_file`     | Quickly read structured github repository data.                                                            |
+| `web_data_yahoo_finance_business`     | Quickly read structured yahoo finance business data.                                                       |
+| `web_data_x_posts`                    | Quickly read structured X post data.                                                                       |
+| `web_data_zillow_properties_listing`  | Quickly read structured zillow properties listing data.                                                    |
+| `web_data_booking_hotel_listings`     | Quickly read structured booking hotel listings data.                                                       |
+| `web_data_youtube_profiles`           | Quickly read structured youtube profiles data.                                                             |
+| `web_data_youtube_comments`           | Quickly read structured youtube comments data.                                                             |
+| `web_data_reddit_posts`               | Quickly read structured reddit posts data.                                                                 |
+| `web_data_youtube_videos`             | Quickly read structured YouTube videos data.                                                               |
+| `scraping_browser_*` tools            | Tools for browser automation (e.g., navigate, click, type). Integration would require a different approach. |
+
+*Note: Integration of these tools would depend on the availability and nature of their corresponding direct BrightData APIs or alternative invocation methods suitable for a serverless environment.*
 
 ## Prerequisites
 
@@ -99,8 +178,8 @@ The new AI chat functionality follows a ReAct (Reasoning and Acting) pattern:
 1.  **User Input:** The user sends a message through the [`ChatInterface.astro`](src/components/ChatInterface.astro:1) component on the `/ai` page.
 2.  **API Request:** The interface makes a `POST` request to the [`/api/ai/chat.js`](src/pages/api/ai/chat.js:1) endpoint.
 3.  **First LLM Call (Vertex AI - Gemini):** The [`chat.js`](src/pages/api/ai/chat.js:1) API route sends the user's query and conversation history to the Gemini model via [`vertexAiService.js`](src/services/vertexAiService.js:1). This initial call aims to understand the query and determine if any external tools (like web search) are needed to formulate an answer. The model might respond with a plan to use a tool.
-4.  **Tool Execution (BrightData SERP API):** If Gemini decides a web search is necessary (e.g., by indicating the `search_engine` tool), [`chat.js`](src/pages/api/ai/chat.js:1) makes a call to the BrightData SERP API using the `BRIGHTDATA_API_TOKEN` and `BRIGHTDATA_WEB_UNLOCKER_ZONE` to fetch live search results for the query.
-5.  **Second LLM Call (Vertex AI - Gemini):** The results from the BrightData API (if a tool was used) are then sent back to the Gemini model, along with the original query and context. Gemini synthesizes this information to generate a comprehensive final answer.
+4.  **Tool Execution (BrightData APIs):** If Gemini decides an external tool is necessary (e.g., by indicating `search_engine`, `scrape_as_markdown`, etc.), [`chat.js`](src/pages/api/ai/chat.js:1) makes a call to the appropriate BrightData API (SERP, Request, Datasets) using the `BRIGHTDATA_API_TOKEN` and `BRIGHTDATA_WEB_UNLOCKER_ZONE` (or other relevant credentials/configurations) to fetch the required data.
+5.  **Second LLM Call (Vertex AI - Gemini):** The results from the BrightData API call (if a tool was used) are then sent back to the Gemini model, along with the original query and context. Gemini synthesizes this information to generate a comprehensive final answer.
 6.  **Streaming Response:** The final answer from Gemini is streamed back to [`ChatInterface.astro`](src/components/ChatInterface.astro:1), where it is displayed to the user, with support for Markdown rendering.
 
 ## Deployment

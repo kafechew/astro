@@ -11,15 +11,68 @@
   const chatInput = document.getElementById('chat-input');
   const sendButton = document.getElementById('send-button');
 
-  function sendMessage() {
-    const messageText = chatInput.value.trim();
-    if (messageText !== '') {
-      const messageDiv = document.createElement('div');
-      messageDiv.textContent = messageText;
-      messageDiv.style.textAlign = 'right';
-      messageDiv.style.marginBottom = '5px';
-      messageDisplayArea.appendChild(messageDiv);
-      chatInput.value = '';
+  async function sendMessage() {
+    const userInputText = chatInput.value.trim();
+    if (userInputText === '') {
+      return;
+    }
+
+    // Display user's message
+    const userMessageDiv = document.createElement('div');
+    userMessageDiv.textContent = userInputText;
+    userMessageDiv.className = 'user-message'; // Apply user message style
+    messageDisplayArea.appendChild(userMessageDiv);
+    chatInput.value = '';
+    messageDisplayArea.scrollTop = messageDisplayArea.scrollHeight;
+
+    // Add "Bot is typing..." indicator
+    const botTypingDiv = document.createElement('div');
+    botTypingDiv.textContent = 'Bot is typing...';
+    botTypingDiv.className = 'bot-typing-indicator';
+    messageDisplayArea.appendChild(botTypingDiv);
+    messageDisplayArea.scrollTop = messageDisplayArea.scrollHeight;
+
+    try {
+      const response = await fetch('/api/ai/chat', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ message: userInputText }),
+      });
+
+      botTypingDiv.remove(); // Remove typing indicator once response starts processing
+
+      if (response.ok) {
+        const data = await response.json();
+        if (data.error) {
+          const errorMessageDiv = document.createElement('div');
+          errorMessageDiv.textContent = data.error;
+          errorMessageDiv.className = 'error-message';
+          messageDisplayArea.appendChild(errorMessageDiv);
+        } else {
+          const aiMessageDiv = document.createElement('div');
+          aiMessageDiv.textContent = data.reply;
+          aiMessageDiv.className = 'ai-message'; // Apply AI message style
+          messageDisplayArea.appendChild(aiMessageDiv);
+        }
+      } else {
+        const errorData = await response.json().catch(() => null); // Try to parse error, but don't fail if not JSON
+        const errorMessageDiv = document.createElement('div');
+        errorMessageDiv.textContent = errorData?.error || `Error: Could not get response from AI. Status: ${response.status}`;
+        errorMessageDiv.className = 'error-message';
+        messageDisplayArea.appendChild(errorMessageDiv);
+      }
+    } catch (error) {
+      if (botTypingDiv && botTypingDiv.parentNode) { // Ensure it exists and is in DOM
+        botTypingDiv.remove();
+      }
+      const errorMessageDiv = document.createElement('div');
+      errorMessageDiv.textContent = 'Error: Could not connect to the AI service.';
+      errorMessageDiv.className = 'error-message';
+      messageDisplayArea.appendChild(errorMessageDiv);
+      console.error('Fetch error:', error);
+    } finally {
       messageDisplayArea.scrollTop = messageDisplayArea.scrollHeight;
     }
   }
@@ -34,6 +87,46 @@
 
 <style>
   /* Optional: Add more refined styles here */
+        .user-message {
+          text-align: right;
+          margin-bottom: 8px;
+          padding: 8px 12px;
+          background-color: #e1f5fe; /* Light blue for user */
+          border-radius: 12px;
+          margin-left: auto; /* Push to right */
+          max-width: 75%;
+          word-wrap: break-word;
+        }
+        .ai-message {
+          text-align: left;
+          margin-bottom: 8px;
+          padding: 8px 12px;
+          background-color: #f0f0f0; /* Light grey for AI */
+          border-radius: 12px;
+          margin-right: auto; /* Push to left */
+          max-width: 75%;
+          word-wrap: break-word;
+        }
+        .bot-typing-indicator {
+            text-align: left;
+            font-style: italic;
+            color: #777;
+            margin-bottom: 8px;
+            padding: 8px 12px;
+            max-width: 75%;
+        }
+        .error-message {
+            text-align: left;
+            color: red;
+            font-style: italic;
+            margin-bottom: 8px;
+            padding: 8px 12px;
+            background-color: #ffebee;
+            border: 1px solid red;
+            border-radius: 12px;
+            max-width: 75%;
+            word-wrap: break-word;
+        }
   #chat-container {
     display: flex;
     flex-direction: column;

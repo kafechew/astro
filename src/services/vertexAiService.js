@@ -1,4 +1,7 @@
 // src/services/vertexAiService.js
+import dotenv from 'dotenv';
+dotenv.config(); // Load .env file into process.env
+
 import { VertexAI } from '@google-cloud/vertexai';
 
 let vertex_ai;

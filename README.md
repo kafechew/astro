@@ -18,7 +18,7 @@ The AI chatbot can leverage the following tools via BrightData's direct APIs to 
 
 *   **`search_engine` (BrightData SERP API)**
     *   **Description:** Performs live web searches using Google to find relevant information or URLs.
-    *   **Example Prompt:** "What are the latest developments in renewable energy?"
+    *   **Example Prompt:** "current btc price?"
 
 *   **`scrape_as_markdown` (BrightData Request API)**
     *   **Description:** Fetches the content of a given URL and returns it as Markdown text.
@@ -38,7 +38,7 @@ The AI chatbot can leverage the following tools via BrightData's direct APIs to 
 
 *   **`web_data_amazon_product_reviews` (BrightData Datasets API)**
     *   **Description:** Retrieves structured review data for a specific Amazon product URL.
-    *   **Example Prompt:** "Show me reviews for the product at https://www.amazon.com/dp/B07VGRJDFY"
+    *   **Example Prompt:** "Summarize reviews for the product at https://www.amazon.com/dp/B07VGRJDFY"
 
 ## Future Tools / Roadmap (from BrightData MCP)
 

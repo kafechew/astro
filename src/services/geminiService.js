@@ -18,7 +18,7 @@ function initializeGemini() {
   genAIInstance = new GoogleGenerativeAI(apiKey);
 
   // Get the generative model instance
-  modelInstance = genAIInstance.getGenerativeModel({ model: "gemini-2.5-pro-preview-03-25" });
+  modelInstance = genAIInstance.getGenerativeModel({ model: "gemini-2.5-flash-preview-04-17" });
 
   console.log("Gemini Service Initialized."); // Added for confirmation
 }

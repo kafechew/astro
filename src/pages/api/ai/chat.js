@@ -32,8 +32,15 @@ export async function POST(context) {
         arguments: {
           url: "string (the URL to scrape)"
         }
-      }
+      },
       // Add more tools later
+      {
+        name: "scrape_as_html",
+        description: "Scrape a single webpage URL with advanced options for content extraction and get back the results in HTML. This tool can unlock any webpage even if it uses bot detection or CAPTCHA.",
+        arguments: {
+          url: "string (the URL to scrape)"
+        }
+      }
     ];
     const toolDescriptions = availableTools.map(t => `${t.name}: ${t.description} Arguments: ${JSON.stringify(t.arguments)}`).join('\n');
 
@@ -147,6 +154,49 @@ export async function POST(context) {
               } catch (apiError) {
                 console.error("Error calling BrightData API:", apiError);
                 toolOutput = `Exception during BrightData API call: ${apiError.message}`;
+              }
+            }
+          } else if (toolDecision.tool_name === "scrape_as_html") {
+            const brightDataApiToken = process.env.BRIGHTDATA_API_TOKEN;
+            const brightDataZone = process.env.BRIGHTDATA_WEB_UNLOCKER_ZONE;
+            const targetUrlToScrape = toolDecision.arguments.url;
+
+            toolOutput = `Executing scrape_as_html for ${targetUrlToScrape}\n`; // Initial part of toolOutput
+
+            if (!brightDataApiToken || !brightDataZone) {
+              console.error("BrightData API token or Zone not configured.");
+              toolOutput += "Error: BrightData API credentials not configured.";
+            } else if (!targetUrlToScrape || typeof targetUrlToScrape !== 'string' || !targetUrlToScrape.startsWith('http')) {
+              console.error("Invalid or missing URL for scraping HTML:", targetUrlToScrape);
+              toolOutput += "Error: A valid URL is required for scraping HTML.";
+            } else {
+              try {
+                console.log(`Calling BrightData API for HTML scrape: ${targetUrlToScrape}`);
+                const scrapeHtmlResponse = await fetch('https://api.brightdata.com/request', {
+                  method: 'POST',
+                  headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${brightDataApiToken}`
+                  },
+                  body: JSON.stringify({
+                    url: targetUrlToScrape,
+                    zone: brightDataZone,
+                    format: 'raw' // Get raw HTML
+                  })
+                });
+
+                if (scrapeHtmlResponse.ok) {
+                  const htmlContent = await scrapeHtmlResponse.text();
+                  toolOutput = htmlContent; // Store the HTML content
+                  console.log("BrightData HTML Scrape Output (snippet):", htmlContent.substring(0, 200) + "...");
+                } else {
+                  const errorText = await scrapeHtmlResponse.text();
+                  console.error("BrightData HTML Scrape Error:", scrapeHtmlResponse.status, errorText);
+                  toolOutput += `Error fetching HTML: ${scrapeHtmlResponse.status} ${errorText}`;
+                }
+              } catch (apiError) {
+                console.error("Error calling BrightData API for HTML scrape:", apiError);
+                toolOutput += `Exception during HTML scrape API call: ${apiError.message}`;
               }
             }
           } else {

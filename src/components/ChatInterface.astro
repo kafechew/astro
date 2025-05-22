@@ -170,36 +170,84 @@
             
             // Process the text with proper ordering to avoid conflicts
             let formattedText = data.reply;
-            
+
             // First, identify and temporarily mark code blocks to protect them
-            const codeBlocks: string[] = [];
-            formattedText = formattedText.replace(/```([\s\S]*?)```/g, function(_match: string, code: string) {
+            const codeBlocks = [];
+            formattedText = formattedText.replace(/```([\s\S]*?)```/g, function(_match, code) {
               const placeholder = `__CODE_BLOCK_${codeBlocks.length}__`;
               codeBlocks.push(code);
               return placeholder;
             });
-            
+
+            // Improved list handling
+            // First, detect if we have a numbered list in the content
+            const hasNumberedList = /^\d+[.)] /m.test(formattedText);
+
+            // Process numbered lists - capture entire list sections
+            if (hasNumberedList) {
+              // Find sequences of lines that start with numbers
+              const numberedListRegex = /(?:^\d+[.)] .+$(?:\n|$))+/gm;
+              formattedText = formattedText.replace(numberedListRegex, function(match) {
+                // Process each list item
+                const listItems = match.split('\n').filter(line => line.trim() !== '');
+                const processedItems = listItems.map(item => {
+                  // Extract the number and text
+                  const itemMatch = item.match(/^(\d+)[.)] (.+)$/);
+                  if (itemMatch) {
+                    const [, number, text] = itemMatch;
+                    return `<li value="${number}" style="margin-bottom: 0.5em;">${text}</li>`;
+                  }
+                  return item;
+                });
+                
+                // Join the items and wrap in an ordered list
+                return `<ol style="margin: 0.75em 0; padding-left: 2em; list-style-position: outside;">${processedItems.join('')}</ol>`;
+              });
+            }
+
+            // Process unordered lists - capture entire list sections
+            formattedText = formattedText.replace(/(?:^[*-] .+$(?:\n|$))+/gm, function(match) {
+              // Process each list item
+              const listItems = match.split('\n').filter(line => line.trim() !== '');
+              const processedItems = listItems.map(item => {
+                // Extract the bullet and text
+                const itemMatch = item.match(/^[*-] (.+)$/);
+                if (itemMatch) {
+                  const [, text] = itemMatch;
+                  return `<li style="margin-bottom: 0.5em;">${text}</li>`;
+                }
+                return item;
+              });
+              
+              // Join the items and wrap in an unordered list
+              return `<ul style="margin: 0.75em 0; padding-left: 2em; list-style-type: disc; list-style-position: outside;">${processedItems.join('')}</ul>`;
+            });
+
+            // Process markdown links: [text](url)
+            formattedText = formattedText.replace(/\[([^\]]+)\]\(([^)]+)\)/g, 
+              '<a href="$2" target="_blank" rel="noopener noreferrer" style="color: #4dabf7; text-decoration: underline; word-break: break-all;">$1</a>'
+            );
+
             // Now process regular markdown elements
-            
             // Bold: **text**
             formattedText = formattedText.replace(/\*\*([^*]+)\*\*/g, '<span style="font-weight: bold;">$1</span>');
-            
+
             // Italic: *text*
             formattedText = formattedText.replace(/\*([^*]+)\*/g, '<span style="font-style: italic;">$1</span>');
-            
+
             // Inline code: `code`
             formattedText = formattedText.replace(/`([^`]+)`/g, '<code style="font-family: monospace; background-color: #333740; color: #d0d0d0; padding: 0.2em 0.4em; border-radius: 3px; font-size: 0.9em;">$1</code>');
-            
+
             // Horizontal rule: ---
             formattedText = formattedText.replace(/^---$/gm, '<hr style="border: 0; border-top: 1px solid #555; margin: 1em 0;">');
-            
+
             // Headers: # Header
             formattedText = formattedText.replace(/^### (.*?)$/gm, '<h3 style="font-size: 1.1em; font-weight: bold; margin: 1em 0 0.5em 0;">$1</h3>');
             formattedText = formattedText.replace(/^## (.*?)$/gm, '<h2 style="font-size: 1.3em; font-weight: bold; margin: 1em 0 0.5em 0;">$1</h2>');
             formattedText = formattedText.replace(/^# (.*?)$/gm, '<h1 style="font-size: 1.5em; font-weight: bold; margin: 1em 0 0.5em 0;">$1</h1>');
-            
+
             // Now restore code blocks with proper HTML
-            codeBlocks.forEach((code: string, index: number) => {
+            codeBlocks.forEach((code, index) => {
               const placeholder = `__CODE_BLOCK_${index}__`;
               formattedText = formattedText.replace(
                 placeholder, 
@@ -207,16 +255,27 @@
               );
             });
             
-            // Paragraphs: Split by double newlines and wrap in <p> tags
-            formattedText = formattedText.replace(/\n\n/g, '</p><p style="margin: 0.75em 0;">');
+            // Handle paragraphs - but be careful not to break lists
+            // First, identify paragraphs (text blocks separated by double newlines)
+            formattedText = formattedText.replace(/\n\n(?!<[uo]l|<h|<pre|<hr)/g, '</p><p style="margin: 0.75em 0;">');
             
             // Wrap the entire text in a paragraph if it doesn't start with a formatted element
-            if (!formattedText.startsWith('<h') && !formattedText.startsWith('<pre') && !formattedText.startsWith('<hr')) {
+            if (!formattedText.startsWith('<h') && 
+                !formattedText.startsWith('<pre') && 
+                !formattedText.startsWith('<hr') && 
+                !formattedText.startsWith('<ol') && 
+                !formattedText.startsWith('<ul')) {
               formattedText = '<p style="margin: 0.75em 0;">' + formattedText;
             }
             
             // Close the last paragraph if needed
-            if (!formattedText.endsWith('</p>') && !formattedText.endsWith('</h1>') && !formattedText.endsWith('</h2>') && !formattedText.endsWith('</h3>') && !formattedText.endsWith('</pre>')) {
+            if (!formattedText.endsWith('</p>') && 
+                !formattedText.endsWith('</h1>') && 
+                !formattedText.endsWith('</h2>') && 
+                !formattedText.endsWith('</h3>') && 
+                !formattedText.endsWith('</pre>') && 
+                !formattedText.endsWith('</ol>') && 
+                !formattedText.endsWith('</ul>')) {
               formattedText = formattedText + '</p>';
             }
             
@@ -255,6 +314,7 @@
       errorMessageDiv.style.marginBottom = '8px';
       errorMessageDiv.style.padding = '8px 12px';
       errorMessageDiv.style.backgroundColor = '#ffebee';
+      errorMessageDiv.style.errorMessageDiv.style.backgroundColor = '#ffebee';
       errorMessageDiv.style.border = '1px solid red';
       errorMessageDiv.style.borderRadius = '12px';
       errorMessageDiv.style.maxWidth = '75%';

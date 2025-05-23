@@ -21,6 +21,7 @@ import { executeGetInstagramComments } from '../../../lib/ai-tools/instagramComm
 import { executeGetFacebookPosts } from '../../../lib/ai-tools/facebookPostsTool.js';
 import { executeGetFacebookMarketplaceListings } from '../../../lib/ai-tools/facebookMarketplaceListingsTool.js';
 import { executeGetFacebookCompanyReviews } from '../../../lib/ai-tools/facebookCompanyReviewsTool.js';
+import { executeGetXPosts } from '../../../lib/ai-tools/xPostsTool.js';
 
 export async function POST(context) {
   try {
@@ -143,6 +144,13 @@ export async function POST(context) {
         arguments: {
           url: "string (the Facebook company URL)",
           num_of_reviews: "string (the number of reviews to fetch, e.g., '10')"
+        }
+      },
+      {
+        name: "web_data_x_posts",
+        description: "Quickly read structured X (formerly Twitter) post data. Requires a valid X post URL.",
+        arguments: {
+          url: "string (the X post URL)"
         }
       }
     ];
@@ -304,6 +312,14 @@ export async function POST(context) {
             }
           } else if (toolDecision.tool_name === "session_stats") {
             toolOutput = executeSessionStats(availableTools);
+          } else if (toolDecision.tool_name === "web_data_x_posts") {
+            if (toolDecision.arguments && toolDecision.arguments.url) {
+              const brightDataApiToken = process.env.BRIGHTDATA_API_TOKEN;
+              toolOutput = await executeGetXPosts(toolDecision.arguments.url, brightDataApiToken);
+            } else {
+              console.error("Missing URL argument for web_data_x_posts tool.");
+              toolOutput = "Error: URL argument missing for web_data_x_posts tool.";
+            }
           } else {
             console.warn("Tool recognized by AI but no specific command construction logic or arguments missing:", toolDecision);
             toolOutput = "Error: AI selected tool '" + toolDecision.tool_name + "' but it's not configured for execution or arguments are invalid.";

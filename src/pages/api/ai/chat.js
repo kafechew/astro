@@ -2,6 +2,8 @@
 import dotenv from 'dotenv';
 dotenv.config(); // Load .env for this API route specifically
 
+const BROWSER_AUTOMATION_SERVICE_URL = process.env.BROWSER_AUTOMATION_SERVICE_URL;
+
 import { getVertexAiResponse } from '../../../services/vertexAiService.js';
 import { executeSearchEngine } from '../../../lib/ai-tools/searchEngineTool.js';
 import { executeScrapeMarkdown } from '../../../lib/ai-tools/scrapeMarkdownTool.js';
@@ -174,6 +176,18 @@ export async function POST(context) {
         arguments: {
           url: "string (the YouTube video URL)"
         }
+      },
+      {
+        name: "scraping_browser_navigate",
+        description: "Navigates a remote browser to a new URL. Use this as the first step for interactive browser tasks.",
+        arguments: {
+          url: "string (The URL to navigate to)"
+        }
+      },
+      {
+        name: "scraping_browser_get_text",
+        description: "Gets the visible text content of the current page in a remote browser session. Should be used after navigating to a page.",
+        arguments: {} // No arguments needed for get_text itself, assumes prior navigation
       }
     ];
     
@@ -365,6 +379,71 @@ export async function POST(context) {
             } else {
               console.error("Missing URL argument for web_data_youtube_videos tool.");
               toolOutput = "Error: URL argument missing for web_data_youtube_videos tool.";
+            }
+          } else if (toolDecision.tool_name === "scraping_browser_navigate") {
+            const targetUrl = toolDecision.arguments?.url;
+            toolOutput = "Attempting to navigate browser to: " + (targetUrl || "No URL provided") + "\\n";
+
+            if (!BROWSER_AUTOMATION_SERVICE_URL) {
+              console.error("BROWSER_AUTOMATION_SERVICE_URL is not configured in environment variables.");
+              toolOutput += "Error: Browser automation service is not configured.";
+            } else if (!targetUrl || typeof targetUrl !== 'string' || !targetUrl.startsWith('http')) {
+              console.error("Invalid or missing URL for browser navigation:", targetUrl);
+              toolOutput += "Error: A valid URL is required for browser navigation.";
+            } else {
+              try {
+                console.log('Calling browser automation service to navigate to: ' + targetUrl);
+                const serviceEndpoint = BROWSER_AUTOMATION_SERVICE_URL.replace(/\/$/, "") + '/navigate'; // Assuming /navigate endpoint
+                
+                const browserResponse = await fetch(serviceEndpoint, {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' /* Add any auth headers if your service needs them */ },
+                  body: JSON.stringify({ url: targetUrl })
+                });
+
+                if (browserResponse.ok) {
+                  const responseData = await browserResponse.json();
+                  toolOutput = "Browser navigation initiated. Service response: " + JSON.stringify(responseData);
+                  console.log("Browser automation service (navigate) response:", responseData);
+                } else {
+                  const errorText = await browserResponse.text();
+                  console.error("Browser automation service (navigate) error:", browserResponse.status, errorText);
+                  toolOutput += "Error from browser navigation service: " + browserResponse.status + " " + errorText;
+                }
+              } catch (serviceError) {
+                console.error("Error calling browser navigation service:", serviceError);
+                toolOutput += "Exception during browser navigation service call: " + serviceError.message;
+              }
+            }
+          } else if (toolDecision.tool_name === "scraping_browser_get_text") {
+            toolOutput = "Attempting to get text from current browser page.\\n";
+
+            if (!BROWSER_AUTOMATION_SERVICE_URL) {
+              console.error("BROWSER_AUTOMATION_SERVICE_URL is not configured in environment variables.");
+              toolOutput += "Error: Browser automation service is not configured.";
+            } else {
+              try {
+                console.log('Calling browser automation service to get text.');
+                const serviceEndpoint = BROWSER_AUTOMATION_SERVICE_URL.replace(/\/$/, "") + '/get_text'; // Assuming /get_text endpoint
+                
+                const browserResponse = await fetch(serviceEndpoint, {
+                  method: 'GET', // Or POST if it needs a session ID or other context in body
+                  headers: { /* Add any auth headers if your service needs them */ }
+                });
+
+                if (browserResponse.ok) {
+                  const responseData = await browserResponse.json(); // Assuming service returns { text: "..." }
+                  toolOutput = "Browser page text content: " + JSON.stringify(responseData); // Or just responseData.text
+                  console.log("Browser automation service (get_text) response:", responseData);
+                } else {
+                  const errorText = await browserResponse.text();
+                  console.error("Browser automation service (get_text) error:", browserResponse.status, errorText);
+                  toolOutput += "Error from browser get_text service: " + browserResponse.status + " " + errorText;
+                }
+              } catch (serviceError) {
+                console.error("Error calling browser get_text service:", serviceError);
+                toolOutput += "Exception during browser get_text service call: " + serviceError.message;
+              }
             }
           } else {
             console.warn("Tool recognized by AI but no specific command construction logic or arguments missing:", toolDecision);

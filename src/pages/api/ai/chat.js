@@ -14,6 +14,7 @@ import { executeGetAmazonProductReviews } from '../../../lib/ai-tools/amazonProd
 import { executeSessionStats } from '../../../lib/ai-tools/sessionStatsTool.js';
 import { executeGetLinkedInCompanyProfile } from '../../../lib/ai-tools/linkedinCompanyProfileTool.js';
 import { executeGetZoominfoCompanyProfile } from '../../../lib/ai-tools/zoominfoCompanyProfileTool.js';
+import { executeGetInstagramProfile } from '../../../lib/ai-tools/instagramProfileTool.js';
 
 export async function POST(context) {
   try {
@@ -81,6 +82,13 @@ export async function POST(context) {
         description: "Quickly read structured ZoomInfo company profile data. Requires a valid ZoomInfo company URL.",
         arguments: {
           url: "string (the full ZoomInfo company profile URL)"
+        }
+      },
+      {
+        name: "web_data_instagram_profiles",
+        description: "Quickly read structured Instagram profile data. Requires a valid Instagram URL.",
+        arguments: {
+          url: "string (the full Instagram profile URL)"
         }
       },
       {
@@ -188,6 +196,14 @@ export async function POST(context) {
             } else {
               console.error("Missing URL argument for web_data_zoominfo_company_profile tool.");
               toolOutput = "Error: URL argument missing for web_data_zoominfo_company_profile tool.";
+            }
+          } else if (toolDecision.tool_name === "web_data_instagram_profiles") {
+            if (toolDecision.arguments && toolDecision.arguments.url) {
+              const brightDataApiToken = process.env.BRIGHTDATA_API_TOKEN;
+              toolOutput = await executeGetInstagramProfile(toolDecision.arguments.url, brightDataApiToken);
+            } else {
+              console.error("Missing URL argument for web_data_instagram_profiles tool.");
+              toolOutput = "Error: URL argument missing for web_data_instagram_profiles tool.";
             }
           } else if (toolDecision.tool_name === "session_stats") {
             toolOutput = executeSessionStats(availableTools);

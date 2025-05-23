@@ -12,6 +12,7 @@ import { executeGetLinkedInProfile } from '../../../lib/ai-tools/linkedinProfile
 import { executeGetAmazonProduct } from '../../../lib/ai-tools/amazonProductTool.js';
 import { executeGetAmazonProductReviews } from '../../../lib/ai-tools/amazonProductReviewsTool.js';
 import { executeSessionStats } from '../../../lib/ai-tools/sessionStatsTool.js';
+import { executeGetLinkedInCompanyProfile } from '../../../lib/ai-tools/linkedinCompanyProfileTool.js';
 
 export async function POST(context) {
   try {
@@ -65,6 +66,13 @@ export async function POST(context) {
         description: "Quickly read structured Amazon product review data. Requires a valid Amazon product URL with /dp/ in it. This can be a cache lookup, so it can be more reliable than scraping directly.",
         arguments: {
           url: "string (the full Amazon product URL containing /dp/)"
+        }
+      },
+      {
+        name: "web_data_linkedin_company_profile",
+        description: "Quickly read structured LinkedIn company profile data using a specific LinkedIn company URL.",
+        arguments: {
+          url: "string (the full LinkedIn company profile URL)"
         }
       },
       {
@@ -156,6 +164,14 @@ export async function POST(context) {
             } else {
               console.error("Missing URL argument for web_data_amazon_product_reviews tool.");
               toolOutput = "Error: URL argument missing for web_data_amazon_product_reviews tool.";
+            }
+          } else if (toolDecision.tool_name === "web_data_linkedin_company_profile") {
+            if (toolDecision.arguments && toolDecision.arguments.url) {
+              const brightDataApiToken = process.env.BRIGHTDATA_API_TOKEN;
+              toolOutput = await executeGetLinkedInCompanyProfile(toolDecision.arguments.url, brightDataApiToken);
+            } else {
+              console.error("Missing URL argument for web_data_linkedin_company_profile tool.");
+              toolOutput = "Error: URL argument missing for web_data_linkedin_company_profile tool.";
             }
           } else if (toolDecision.tool_name === "session_stats") {
             toolOutput = executeSessionStats(availableTools);

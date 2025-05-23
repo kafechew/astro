@@ -172,8 +172,8 @@
             let formattedText = data.reply;
 
             // First, identify and temporarily mark code blocks to protect them
-            const codeBlocks = [];
-            formattedText = formattedText.replace(/```([\s\S]*?)```/g, function(_match, code) {
+            const codeBlocks: string[] = [];
+            formattedText = formattedText.replace(/```([\s\S]*?)```/g, function(_match: string, code: string) {
               const placeholder = `__CODE_BLOCK_${codeBlocks.length}__`;
               codeBlocks.push(code);
               return placeholder;
@@ -187,10 +187,10 @@
             if (hasNumberedList) {
               // Find sequences of lines that start with numbers
               const numberedListRegex = /(?:^\d+[.)] .+$(?:\n|$))+/gm;
-              formattedText = formattedText.replace(numberedListRegex, function(match) {
+              formattedText = formattedText.replace(numberedListRegex, function(match: string) {
                 // Process each list item
-                const listItems = match.split('\n').filter(line => line.trim() !== '');
-                const processedItems = listItems.map(item => {
+                const listItems = match.split('\n').filter((line: string) => line.trim() !== '');
+                const processedItems = listItems.map((item: string) => {
                   // Extract the number and text
                   const itemMatch = item.match(/^(\d+)[.)] (.+)$/);
                   if (itemMatch) {
@@ -206,10 +206,10 @@
             }
 
             // Process unordered lists - capture entire list sections
-            formattedText = formattedText.replace(/(?:^[*-] .+$(?:\n|$))+/gm, function(match) {
+            formattedText = formattedText.replace(/(?:^[*-] .+$(?:\n|$))+/gm, function(match: string) {
               // Process each list item
-              const listItems = match.split('\n').filter(line => line.trim() !== '');
-              const processedItems = listItems.map(item => {
+              const listItems = match.split('\n').filter((line: string) => line.trim() !== '');
+              const processedItems = listItems.map((item: string) => {
                 // Extract the bullet and text
                 const itemMatch = item.match(/^[*-] (.+)$/);
                 if (itemMatch) {
@@ -247,7 +247,7 @@
             formattedText = formattedText.replace(/^# (.*?)$/gm, '<h1 style="font-size: 1.5em; font-weight: bold; margin: 1em 0 0.5em 0;">$1</h1>');
 
             // Now restore code blocks with proper HTML
-            codeBlocks.forEach((code, index) => {
+            codeBlocks.forEach((code: string, index: number) => {
               const placeholder = `__CODE_BLOCK_${index}__`;
               formattedText = formattedText.replace(
                 placeholder, 
@@ -314,7 +314,6 @@
       errorMessageDiv.style.marginBottom = '8px';
       errorMessageDiv.style.padding = '8px 12px';
       errorMessageDiv.style.backgroundColor = '#ffebee';
-      errorMessageDiv.style.errorMessageDiv.style.backgroundColor = '#ffebee';
       errorMessageDiv.style.border = '1px solid red';
       errorMessageDiv.style.borderRadius = '12px';
       errorMessageDiv.style.maxWidth = '75%';

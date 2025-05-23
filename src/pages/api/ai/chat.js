@@ -3,8 +3,6 @@ import dotenv from 'dotenv';
 dotenv.config(); // Load .env for this API route specifically
 
 import { getVertexAiResponse } from '../../../services/vertexAiService.js';
-import { exec } from 'child_process';
-import util from 'util';
 import { executeSearchEngine } from '../../../lib/ai-tools/searchEngineTool.js';
 import { executeScrapeMarkdown } from '../../../lib/ai-tools/scrapeMarkdownTool.js';
 import { executeScrapeHtml } from '../../../lib/ai-tools/scrapeHtmlTool.js';

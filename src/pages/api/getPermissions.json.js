@@ -1,6 +1,5 @@
 // Can be deleted?
 export const GET = async ({request}) =>  {
-    const url = new URL(request.url);
 
     // const id =  params.get("id") ; // Unused
     // const operation = params.get("operation"); // Unused

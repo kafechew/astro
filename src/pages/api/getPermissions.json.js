@@ -1,3 +1,4 @@
+// Can be deleted?
 export const GET = async ({request}) =>  {
     const url = new URL(request.url);
 

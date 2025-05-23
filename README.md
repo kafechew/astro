@@ -1,9 +1,23 @@
-# Astro + Vertex AI + BrightData: Advanced AI Chatbot
+# hermitAI
 
-This project demonstrates an advanced AI chatbot built with [Astro](https://astro.build/), leveraging Google's Gemini model via Vertex AI and live web search capabilities through the BrightData SERP API.
-The primary feature is an AI chat page available at `/ai`, offering users an interactive way to get information, including up-to-date details fetched from the internet.
+**hermitAI** is like ChatGPT on steroids — your personal AI twin for autonomous research, real-time web scraping, intelligent Q&A and soon email, social, bill management & more. It’s designed to help hermits (and high-performers) live a focused, hands-off digital life. Built with Google’s Gemini 2.5 via Vertex AI, BrightData APIs, and Astro, hermitAI is your privacy-conscious AI agent — lightweight, powerful, and ready to grow.
 
-<!-- TODO: Add screenshot of the application UI here -->
+## What Is It?
+
+hermitAI is a developer-friendly, self-hostable AI agent that combines:
+
+- **LLM intelligence** (Gemini 2.5 via Vertex AI),
+- **Real-time web scraping** (via BrightData),
+- **Private knowledge retrieval** (MongoDB vector db),
+- **Modern UI** (Astro, JSX),
+- and soon: **Email, social, bill management & more.**
+
+It’s built for hackers, researchers, solopreneurs, and digital hermits seeking a streamlined, AI-augmented life.
+
+## Philosophy
+
+**hermitAI** is for people who want to offload tedious digital tasks while maintaining sovereignty over their data and tools. It’s not just an AI assistant — it’s an infrastructure for your quiet, high-functioning, tech-augmented life.
+
 ## Core Features
 
 *   **Google Vertex AI (Gemini model) Integration:** Utilizes Google's powerful Gemini model through Vertex AI for sophisticated language understanding and generation.
@@ -12,33 +26,37 @@ The primary feature is an AI chat page available at `/ai`, offering users an int
 *   **Astro API Routes:** The new [`/api/ai/chat.js`](src/pages/api/ai/chat.js:1) route orchestrates interactions between the frontend, Vertex AI, and BrightData.
 *   **Secure API Key Management:** Uses a `.env` file for `GOOGLE_PROJECT_ID`, `GOOGLE_CLIENT_EMAIL`, `GOOGLE_PRIVATE_KEY` (for Vertex AI), `BRIGHTDATA_API_TOKEN`, `BRIGHTDATA_WEB_UNLOCKER_ZONE` (for BrightData), and `GEMINI_API_KEY` (backup).
 
+## AI Chat Interface
+
+The main interface lives at `/ai`, built using Astro’s component model. The backend orchestration happens through:
+
+- [`/api/ai/chat.js`](src/pages/api/ai/chat.js:1) — Core logic for routing prompts to Gemini and invoking tools.
+- [`ChatInterface.astro`](src/components/ChatInterface.astro:1) — Clean, interactive UI for chatting.
+
 ## Available Chatbot Tools
 
 The AI chatbot can leverage the following tools via BrightData's direct APIs to enhance its responses:
 
-*   **`search_engine` (BrightData SERP API)**
-    *   **Description:** Performs live web searches using Google to find relevant information or URLs.
-    *   **Example Prompt:** "What are the latest developments in renewable energy?"
-
-*   **`scrape_as_markdown` (BrightData Request API)**
-    *   **Description:** Fetches the content of a given URL and returns it as Markdown text.
-    *   **Example Prompt:** "Summarize the article at https://www.hermit.onl/blog/syllabus"
-
-*   **`scrape_as_html` (BrightData Request API)**
-    *   **Description:** Fetches the raw HTML content of a given URL.
-    *   **Example Prompt:** "Scrape the content of https://www.hermit.onl/blog/syllabus as html and tell me about it."
-
-*   **`web_data_linkedin_person_profile` (BrightData Datasets API)**
-    *   **Description:** Retrieves structured data from a specific LinkedIn profile URL.
-    *   **Example Prompt:** "Tell me about the LinkedIn profile at https://www.linkedin.com/in/kafechew/"
-
-*   **`web_data_amazon_product` (BrightData Datasets API)**
-    *   **Description:** Fetches structured data for a specific Amazon product URL.
-    *   **Example Prompt:** "What are the details for the product at https://www.amazon.com/dp/B07VGRJDFY"
-
-*   **`web_data_amazon_product_reviews` (BrightData Datasets API)**
-    *   **Description:** Retrieves structured review data for a specific Amazon product URL.
-    *   **Example Prompt:** "Show me reviews for the product at https://www.amazon.com/dp/B07VGRJDFY"
+| Tool                                     | Description                                                                 | Prompt Example                                                              |
+| ---------------------------------------- | --------------------------------------------------------------------------- | --------------------------------------------------------------------------- |
+| `search_engine`                          | Live Google search (SERP API).                                              | "What's the weather in Tokyo?"                                              |
+| `scrape_as_markdown`                     | Scrapes a URL and returns Markdown.                                         | "Summarize the article at https://example.com/article"                      |
+| `scrape_as_html`                         | Scrapes raw HTML of a URL.                                                  | "Get the HTML for example.com"                                              |
+| `web_data_linkedin_person_profile`       | Structured LinkedIn person profile data.                                    | "Info on LinkedIn profile https://www.linkedin.com/in/johndoe"              |
+| `web_data_amazon_product`                | Structured Amazon product data (requires URL with /dp/).                    | "Details for Amazon product https://www.amazon.com/dp/ASIN123"              |
+| `web_data_amazon_product_reviews`        | Structured Amazon product reviews (requires URL with /dp/).                 | "Reviews for Amazon product https://www.amazon.com/dp/ASIN123"              |
+| `web_data_linkedin_company_profile`    | Structured LinkedIn company profile data.                                   | "Data for LinkedIn company https://www.linkedin.com/company/example"        |
+| `web_data_zoominfo_company_profile`    | Structured ZoomInfo company profile data.                                   | "ZoomInfo details for https://www.zoominfo.com/c/example/123"             |
+| `web_data_instagram_profiles`            | Structured Instagram profile data.                                          | "Get Instagram profile data for instagram.com/exampleuser"                  |
+| `web_data_instagram_posts`               | Structured Instagram post data from a profile or post URL.                  | "Latest posts from instagram.com/exampleuser"                               |
+| `web_data_instagram_reels`               | Structured Instagram reel data from a profile or reel URL.                  | "Fetch reels from instagram.com/exampleuser"                                |
+| `web_data_instagram_comments`            | Structured Instagram comments for a specific post/reel URL.                 | "Comments for Instagram post https://www.instagram.com/p/POSTID"            |
+| `web_data_facebook_posts`                | Structured Facebook post data.                                              | "Data for Facebook post https://www.facebook.com/user/posts/POSTID"       |
+| `web_data_facebook_marketplace_listings` | Structured Facebook Marketplace listing data.                               | "Details for FB Marketplace item https://www.facebook.com/marketplace/item/ITEMID" |
+| `web_data_zillow_properties_listing`     | Structured Zillow property listing data (requires URL with /homedetails/). | "Zillow listing info for https://www.zillow.com/homedetails/ADDRESS/ID"   |
+| `web_data_booking_hotel_listings`        | Structured Booking.com hotel listing data (requires URL with /hotel/).      | "Booking.com hotel details for https://www.booking.com/hotel/country/name.html" |
+| `web_data_youtube_videos`                | Structured YouTube video data. (Uses placeholder BrightData `dataset_id` - needs verification) | "Info on YouTube video https://www.youtube.com/watch?v=VIDEOID"         |
+| `session_stats`                          | Lists available tools (simplified version).                                 | "What are my session stats?"                                                |
 
 ## Future Tools / Roadmap (from BrightData MCP)
 
@@ -46,7 +64,6 @@ The following additional tools are available in the BrightData MCP client and co
 
 | Feature                               | Description                                                                                                |
 | ------------------------------------- | ---------------------------------------------------------------------------------------------------------- |
-| `session_stats`                       | Tell the user about the tool usage during this session (would require custom session tracking).            |
 | `web_data_amazon_product_search`      | Quickly read structured amazon product search data.                                                        |
 | `web_data_walmart_product`            | Quickly read structured walmart product data.                                                              |
 | `web_data_walmart_seller`             | Quickly read structured walmart seller data.                                                               |
@@ -55,18 +72,10 @@ The following additional tools are available in the BrightData MCP client and co
 | `web_data_zara_products`              | Quickly read structured zara product data.                                                                 |
 | `web_data_etsy_products`              | Quickly read structured etsy product data.                                                                 |
 | `web_data_bestbuy_products`           | Quickly read structured bestbuy product data.                                                              |
-| `web_data_linkedin_company_profile`   | Quickly read structured linkedin company profile data.                                                     |
 | `web_data_linkedin_job_listings`      | Quickly read structured linkedin job listings data.                                                        |
 | `web_data_linkedin_posts`             | Quickly read structured linkedin posts data.                                                               |
 | `web_data_linkedin_people_search`     | Quickly read structured linkedin people search data.                                                       |
 | `web_data_crunchbase_company`         | Quickly read structured crunchbase company data.                                                           |
-| `web_data_zoominfo_company_profile`   | Quickly read structured ZoomInfo company profile data.                                                     |
-| `web_data_instagram_profiles`         | Quickly read structured Instagram profile data.                                                            |
-| `web_data_instagram_posts`            | Quickly read structured Instagram post data.                                                               |
-| `web_data_instagram_reels`            | Quickly read structured Instagram reel data.                                                               |
-| `web_data_instagram_comments`         | Quickly read structured Instagram comments data.                                                           |
-| `web_data_facebook_posts`             | Quickly read structured Facebook post data.                                                                |
-| `web_data_facebook_marketplace_listings` | Quickly read structured Facebook marketplace listing data.                                                 |
 | `web_data_facebook_company_reviews`   | Quickly read structured Facebook company reviews data.                                                     |
 | `web_data_facebook_events`            | Quickly read structured Facebook events data.                                                              |
 | `web_data_tiktok_profiles`            | Quickly read structured Tiktok profiles data.                                                              |
@@ -81,24 +90,23 @@ The following additional tools are available in the BrightData MCP client and co
 | `web_data_github_repository_file`     | Quickly read structured github repository data.                                                            |
 | `web_data_yahoo_finance_business`     | Quickly read structured yahoo finance business data.                                                       |
 | `web_data_x_posts`                    | Quickly read structured X post data.                                                                       |
-| `web_data_zillow_properties_listing`  | Quickly read structured zillow properties listing data.                                                    |
-| `web_data_booking_hotel_listings`     | Quickly read structured booking hotel listings data.                                                       |
 | `web_data_youtube_profiles`           | Quickly read structured youtube profiles data.                                                             |
 | `web_data_youtube_comments`           | Quickly read structured youtube comments data.                                                             |
 | `web_data_reddit_posts`               | Quickly read structured reddit posts data.                                                                 |
-| `web_data_youtube_videos`             | Quickly read structured YouTube videos data.                                                               |
 | `scraping_browser_*` tools            | Tools for browser automation (e.g., navigate, click, type). Integration would require a different approach. |
 
 *Note: Integration of these tools would depend on the availability and nature of their corresponding direct BrightData APIs or alternative invocation methods suitable for a serverless environment.*
 
-## Prerequisites
+## How It Works: AI Chat Flow (`/ai` page)
 
-*   Node.js v18.x or later
-*   Basic understanding of Astro
-*   Google Cloud Project with Vertex AI enabled.
-*   Service account credentials (JSON key file or individual environment variables) for Vertex AI.
-*   BrightData account and SERP API credentials (API Token, Zone).
-*   A [Google AI / Gemini API Key](https://aistudio.google.com/app/apikey) (if `geminiService.js` is retained for other purposes or as a fallback).
+The new AI chat functionality follows a ReAct (Reasoning and Acting) pattern:
+
+1.  **User Input:** The user sends a message through the [`ChatInterface.astro`](src/components/ChatInterface.astro:1) component on the `/ai` page.
+2.  **API Request:** The interface makes a `POST` request to the [`/api/ai/chat.js`](src/pages/api/ai/chat.js:1) endpoint.
+3.  **First LLM Call (Vertex AI - Gemini):** The [`chat.js`](src/pages/api/ai/chat.js:1) API route sends the user's query and conversation history to the Gemini model via [`vertexAiService.js`](src/services/vertexAiService.js:1). This initial call aims to understand the query and determine if any external tools (like web search) are needed to formulate an answer. The model might respond with a plan to use a tool.
+4.  **Tool Execution (BrightData APIs):** If Gemini decides an external tool is necessary (e.g., by indicating `search_engine`, `scrape_as_markdown`, etc.), [`chat.js`](src/pages/api/ai/chat.js:1) makes a call to the appropriate BrightData API (SERP, Request, Datasets) using the `BRIGHTDATA_API_TOKEN` and `BRIGHTDATA_WEB_UNLOCKER_ZONE` (or other relevant credentials/configurations) to fetch the required data.
+5.  **Second LLM Call (Vertex AI - Gemini):** The results from the BrightData API call (if a tool was used) are then sent back to the Gemini model, along with the original query and context. Gemini synthesizes this information to generate a comprehensive final answer.
+6.  **Streaming Response:** The final answer from Gemini is streamed back to [`ChatInterface.astro`](src/components/ChatInterface.astro:1), where it is displayed to the user, with support for Markdown rendering.
 
 ## Project Structure Highlights
 
@@ -132,6 +140,15 @@ The following additional tools are available in the BrightData MCP client and co
 ├── package.json
 └── README.md
 ```
+
+## Prerequisites
+
+*   Node.js v18.x or later
+*   Basic understanding of Astro
+*   Google Cloud Project with Vertex AI enabled.
+*   Service account credentials (JSON key file or individual environment variables) for Vertex AI.
+*   BrightData account and SERP API credentials (API Token, Zone).
+*   A [Google AI / Gemini API Key](https://aistudio.google.com/app/apikey) (if `geminiService.js` is retained for other purposes or as a fallback).
 
 ## Setup Instructions
 
@@ -171,17 +188,6 @@ The following additional tools are available in the BrightData MCP client and co
     ```
 2.  **Access:** Open `http://localhost:4321` in your browser.
 
-## How It Works: AI Chat Flow (`/ai` page)
-
-The new AI chat functionality follows a ReAct (Reasoning and Acting) pattern:
-
-1.  **User Input:** The user sends a message through the [`ChatInterface.astro`](src/components/ChatInterface.astro:1) component on the `/ai` page.
-2.  **API Request:** The interface makes a `POST` request to the [`/api/ai/chat.js`](src/pages/api/ai/chat.js:1) endpoint.
-3.  **First LLM Call (Vertex AI - Gemini):** The [`chat.js`](src/pages/api/ai/chat.js:1) API route sends the user's query and conversation history to the Gemini model via [`vertexAiService.js`](src/services/vertexAiService.js:1). This initial call aims to understand the query and determine if any external tools (like web search) are needed to formulate an answer. The model might respond with a plan to use a tool.
-4.  **Tool Execution (BrightData APIs):** If Gemini decides an external tool is necessary (e.g., by indicating `search_engine`, `scrape_as_markdown`, etc.), [`chat.js`](src/pages/api/ai/chat.js:1) makes a call to the appropriate BrightData API (SERP, Request, Datasets) using the `BRIGHTDATA_API_TOKEN` and `BRIGHTDATA_WEB_UNLOCKER_ZONE` (or other relevant credentials/configurations) to fetch the required data.
-5.  **Second LLM Call (Vertex AI - Gemini):** The results from the BrightData API call (if a tool was used) are then sent back to the Gemini model, along with the original query and context. Gemini synthesizes this information to generate a comprehensive final answer.
-6.  **Streaming Response:** The final answer from Gemini is streamed back to [`ChatInterface.astro`](src/components/ChatInterface.astro:1), where it is displayed to the user, with support for Markdown rendering.
-
 ## Deployment
 
 This project is configured for Vercel serverless deployment (`@astrojs/vercel/serverless`). Adapt `astro.config.mjs` for other platforms (e.g., Netlify).
@@ -199,15 +205,6 @@ This project is configured for Vercel serverless deployment (`@astrojs/vercel/se
     *   `GEMINI_API_KEY` (if still applicable)
 *   **Build Settings:** Ensure Build Command is `npm run build` and the Output Directory is `.vercel/output` (as configured in `astro.config.mjs`).
 *   Ensure the deployment environment uses Node.js v18+.
-
-## Available Commands
-
-| Command           | Action                                       |
-| :---------------- | :------------------------------------------- |
-| `npm install`     | Installs dependencies                        |
-| `npm run dev`     | Starts local dev server at `localhost:4321`  |
-| `npm run build`   | Builds the production site                   |
-| `npm run preview` | Previews the production build locally        |
 
 ## Learn More
 

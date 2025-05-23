@@ -11,6 +11,7 @@ import { executeScrapeHtml } from '../../../lib/ai-tools/scrapeHtmlTool.js';
 import { executeGetLinkedInProfile } from '../../../lib/ai-tools/linkedinProfileTool.js';
 import { executeGetAmazonProduct } from '../../../lib/ai-tools/amazonProductTool.js';
 import { executeGetAmazonProductReviews } from '../../../lib/ai-tools/amazonProductReviewsTool.js';
+import { executeSessionStats } from '../../../lib/ai-tools/sessionStatsTool.js';
 
 export async function POST(context) {
   try {
@@ -65,6 +66,11 @@ export async function POST(context) {
         arguments: {
           url: "string (the full Amazon product URL containing /dp/)"
         }
+      },
+      {
+        name: "session_stats",
+        description: "Provides information about tool usage in the current interaction.",
+        arguments: {} // No arguments needed
       }
     ];
     
@@ -151,6 +157,8 @@ export async function POST(context) {
               console.error("Missing URL argument for web_data_amazon_product_reviews tool.");
               toolOutput = "Error: URL argument missing for web_data_amazon_product_reviews tool.";
             }
+          } else if (toolDecision.tool_name === "session_stats") {
+            toolOutput = executeSessionStats(availableTools);
           } else {
             console.warn("Tool recognized by AI but no specific command construction logic or arguments missing:", toolDecision);
             toolOutput = "Error: AI selected tool '" + toolDecision.tool_name + "' but it's not configured for execution or arguments are invalid.";

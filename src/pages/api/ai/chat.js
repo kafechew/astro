@@ -24,6 +24,7 @@ import { executeGetFacebookCompanyReviews } from '../../../lib/ai-tools/facebook
 import { executeGetXPosts } from '../../../lib/ai-tools/xPostsTool.js';
 import { executeGetZillowPropertiesListing } from '../../../lib/ai-tools/zillowPropertiesListingTool.js';
 import { executeGetBookingHotelListings } from '../../../lib/ai-tools/bookingHotelListingsTool.js';
+import { executeGetYoutubeVideos } from '../../../lib/ai-tools/youtubeVideosTool.js';
 
 export async function POST(context) {
   try {
@@ -167,6 +168,13 @@ export async function POST(context) {
         description: "Quickly read structured Booking.com hotel listings data. Requires a valid Booking.com hotel listing URL.",
         arguments: {
           url: "string (the Booking.com hotel listing URL)"
+        }
+      },
+      {
+        name: "web_data_youtube_videos",
+        description: "Quickly read structured YouTube videos data. Requires a valid YouTube video URL.",
+        arguments: {
+          url: "string (the YouTube video URL)"
         }
       }
     ];
@@ -351,6 +359,14 @@ export async function POST(context) {
             } else {
               console.error("Missing URL argument for web_data_booking_hotel_listings tool.");
               toolOutput = "Error: URL argument missing for web_data_booking_hotel_listings tool.";
+            }
+          } else if (toolDecision.tool_name === "web_data_youtube_videos") {
+            if (toolDecision.arguments && toolDecision.arguments.url) {
+              const brightDataApiToken = process.env.BRIGHTDATA_API_TOKEN;
+              toolOutput = await executeGetYoutubeVideos(toolDecision.arguments.url, brightDataApiToken);
+            } else {
+              console.error("Missing URL argument for web_data_youtube_videos tool.");
+              toolOutput = "Error: URL argument missing for web_data_youtube_videos tool.";
             }
           } else {
             console.warn("Tool recognized by AI but no specific command construction logic or arguments missing:", toolDecision);

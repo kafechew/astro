@@ -25,6 +25,7 @@ It’s built for hackers, researchers, solopreneurs, and digital hermits seeking
 *   **Dynamic UI:** A new interactive chat interface at `/ai` (powered by [`src/components/ChatInterface.astro`](src/components/ChatInterface.astro:1)) provides a modern user experience.
 *   **Astro API Routes:** The new [`/api/ai/chat.js`](src/pages/api/ai/chat.js:1) route orchestrates interactions between the frontend, Vertex AI, and BrightData.
 *   **Secure API Key Management:** Uses a `.env` file for `GOOGLE_PROJECT_ID`, `GOOGLE_CLIENT_EMAIL`, `GOOGLE_PRIVATE_KEY` (for Vertex AI), `BRIGHTDATA_API_TOKEN`, `BRIGHTDATA_WEB_UNLOCKER_ZONE` (for BrightData), and `GEMINI_API_KEY` (backup).
+*   **Planned Browser Automation:** Upcoming capability for advanced browser automation to handle interactive web tasks.
 
 ## AI Chat Interface
 
@@ -93,20 +94,29 @@ The following additional tools are available in the BrightData MCP client and co
 | `web_data_youtube_profiles`           | Quickly read structured youtube profiles data.                                                             |
 | `web_data_youtube_comments`           | Quickly read structured youtube comments data.                                                             |
 | `web_data_reddit_posts`               | Quickly read structured reddit posts data.                                                                 |
-| `scraping_browser_*` tools            | Tools for browser automation (e.g., navigate, click, type). Integration would require a different approach. |
+| `scraping_browser_*` tools            | Tools for browser automation (e.g., navigate, click, type). Full implementation and usage of these tools rely on the external Node.js Agent Service being set up and configured via the `NODE_AGENT_SERVICE_URL` environment variable. This service would host the BrightData MCP client capable of running these browser interactions. *(See [`plan-browser-tools.md`](plan-browser-tools.md:1) for an example architecture of such an external service)* |
 
-*Note: Integration of these tools would depend on the availability and nature of their corresponding direct BrightData APIs or alternative invocation methods suitable for a serverless environment.*
+*Note: Integration of most other tools would depend on the availability and nature of their corresponding direct BrightData APIs or alternative invocation methods suitable for a serverless environment.*
 
 ## How It Works: AI Chat Flow (`/ai` page)
 
-The new AI chat functionality follows a ReAct (Reasoning and Acting) pattern:
+The AI chat functionality, orchestrated by [`/api/ai/chat.js`](src/pages/api/ai/chat.js:1), operates in one of two modes depending on the `NODE_AGENT_SERVICE_URL` environment variable:
 
-1.  **User Input:** The user sends a message through the [`ChatInterface.astro`](src/components/ChatInterface.astro:1) component on the `/ai` page.
-2.  **API Request:** The interface makes a `POST` request to the [`/api/ai/chat.js`](src/pages/api/ai/chat.js:1) endpoint.
-3.  **First LLM Call (Vertex AI - Gemini):** The [`chat.js`](src/pages/api/ai/chat.js:1) API route sends the user's query and conversation history to the Gemini model via [`vertexAiService.js`](src/services/vertexAiService.js:1). This initial call aims to understand the query and determine if any external tools (like web search) are needed to formulate an answer. The model might respond with a plan to use a tool.
-4.  **Tool Execution (BrightData APIs):** If Gemini decides an external tool is necessary (e.g., by indicating `search_engine`, `scrape_as_markdown`, etc.), [`chat.js`](src/pages/api/ai/chat.js:1) makes a call to the appropriate BrightData API (SERP, Request, Datasets) using the `BRIGHTDATA_API_TOKEN` and `BRIGHTDATA_WEB_UNLOCKER_ZONE` (or other relevant credentials/configurations) to fetch the required data.
-5.  **Second LLM Call (Vertex AI - Gemini):** The results from the BrightData API call (if a tool was used) are then sent back to the Gemini model, along with the original query and context. Gemini synthesizes this information to generate a comprehensive final answer.
-6.  **Streaming Response:** The final answer from Gemini is streamed back to [`ChatInterface.astro`](src/components/ChatInterface.astro:1), where it is displayed to the user, with support for Markdown rendering.
+1.  **Mode 1: External Agent Service (If `NODE_AGENT_SERVICE_URL` is set)**
+    *   **User Input:** The user sends a message via [`ChatInterface.astro`](src/components/ChatInterface.astro:1).
+    *   **Proxy to External Service:** [`chat.js`](src/pages/api/ai/chat.js:1) acts as a proxy, forwarding the request to the external Node.js Agent & Tool Service specified by `NODE_AGENT_SERVICE_URL`.
+    *   **Advanced Agentic Logic:** This external service handles more complex agentic logic, including a ReAct loop, and has full integration with the BrightData MCP (Model Context Protocol) client. This enables the use of a wider range of tools, including advanced browser automation tools (`scraping_browser_*`).
+    *   **Response:** The external service processes the request, potentially using various tools, and streams the response back through [`chat.js`](src/pages/api/ai/chat.js:1) to the user. This mode is designed for future advanced capabilities and comprehensive tool usage.
+
+2.  **Mode 2: In-Process ReAct Loop (If `NODE_AGENT_SERVICE_URL` is NOT set - Current Default)**
+    *   **User Input:** The user sends a message via [`ChatInterface.astro`](src/components/ChatInterface.astro:1).
+    *   **API Request:** The interface makes a `POST` request to [`/api/ai/chat.js`](src/pages/api/ai/chat.js:1).
+    *   **First LLM Call (Vertex AI - Gemini):** [`chat.js`](src/pages/api/ai/chat.js:1) sends the query and history to Gemini ([`vertexAiService.js`](src/services/vertexAiService.js:1)) to determine if tools are needed.
+    *   **Tool Execution (Direct BrightData APIs):** If a tool is identified (e.g., `search_engine`, `scrape_as_markdown`, `web_data_amazon_product`), [`chat.js`](src/pages/api/ai/chat.js:1) directly calls the relevant BrightData API (SERP, Request, Datasets) using `BRIGHTDATA_API_TOKEN` and `BRIGHTDATA_WEB_UNLOCKER_ZONE`.
+    *   **Second LLM Call (Vertex AI - Gemini):** Tool results are sent back to Gemini for synthesis.
+    *   **Streaming Response:** The final answer is streamed to [`ChatInterface.astro`](src/components/ChatInterface.astro:1). This mode provides core functionality using a subset of BrightData tools available via direct API calls.
+
+This dual-mode architecture allows for basic, self-contained operation while providing a path for enhanced capabilities through an optional external service.
 
 ## Project Structure Highlights
 
@@ -127,7 +137,7 @@ The new AI chat functionality follows a ReAct (Reasoning and Acting) pattern:
 │   │   ├── blog/                # Blog post markdown files
 │   │   └── api/
 │   │       ├── ai/
-│   │       │   └── chat.js      # API: Orchestrates AI responses, including tool decisions and BrightData SERP API calls.
+│   │       │   └── chat.js      # API: Orchestrates AI responses, including tool decisions, BrightData direct APIs, and the planned Browser Automation Service.
 │   │       ├── askQna.json.js   # API: Original Q&A endpoint (superseded by /api/ai/chat.js for new functionality)
 │   │       └── getPermissions.json.js # API: Handles blog permissions (review for removal if unused by new chat)
 │   ├── services/
@@ -135,6 +145,7 @@ The new AI chat functionality follows a ReAct (Reasoning and Acting) pattern:
 │   │   └── geminiService.js     # Module for original Gemini API interaction (review for relevance)
 │   └── utils/
 │       └── blogs.js             # Sample blog data
+├── BrowserAutomationService/    # (Separate Project - Planned for Render.com)
 ├── .env                       # (Create this) Stores API keys for Vertex AI, BrightData, and potentially Gemini
 ├── astro.config.mjs           # Astro configuration
 ├── package.json
@@ -167,18 +178,36 @@ The new AI chat functionality follows a ReAct (Reasoning and Acting) pattern:
     *   Create a `.env` file in the project root.
     *   Add your API keys and configuration. Handle multi-line private keys carefully (e.g., by wrapping in quotes or using `\\n` for newlines if your environment loader supports it).
         ```env
-        # Google Vertex AI Credentials
+        # Google Vertex AI Credentials (Required for both modes, or by the external service)
         GOOGLE_PROJECT_ID="<YOUR_GCP_PROJECT_ID>"
         GOOGLE_CLIENT_EMAIL="<YOUR_GCP_SERVICE_ACCOUNT_EMAIL>"
         GOOGLE_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\\nYOUR_KEY_PART_1\\nYOUR_KEY_PART_2\\n-----END PRIVATE KEY-----\\n" # Ensure newlines are correctly formatted
 
-        # BrightData Credentials
+        # BrightData Credentials (Required for both modes, or by the external service)
         BRIGHTDATA_API_TOKEN="<YOUR_BRIGHTDATA_API_TOKEN>"
         BRIGHTDATA_WEB_UNLOCKER_ZONE="<YOUR_BRIGHTDATA_ZONE>" # Or relevant SERP zone
 
-        # Optional: Original Gemini API Key (if still used)
+        # Node.js Agent & Tool Service URL (Optional)
+        NODE_AGENT_SERVICE_URL="<URL_OF_THE_EXTERNAL_NODE_JS_AGENT_SERVICE>" # e.g., https://your-agent-service.onrender.com. If set, chat.js proxies requests here for advanced agentic behavior and full BrightData MCP tool usage (including browser tools). If not set, chat.js uses its internal ReAct loop with direct BrightData API tools.
+
+        # Optional: Original Gemini API Key (if still used for other purposes)
         # GEMINI_API_KEY="<YOUR_GEMINI_API_KEY>"
         ```
+
+    *   **External Node.js Agent & Tool Service (e.g., on Render.com) - Key Environment Variables (If you deploy it):**
+        If you set up the external service, it will typically require its own set of environment variables, including:
+        ```env
+        # For the external service itself:
+        GOOGLE_PROJECT_ID="<YOUR_GCP_PROJECT_ID>"
+        GOOGLE_CLIENT_EMAIL="<YOUR_GCP_SERVICE_ACCOUNT_EMAIL>"
+        GOOGLE_PRIVATE_KEY="<YOUR_GCP_PRIVATE_KEY_FORMATTED>"
+        BRIGHTDATA_API_TOKEN="<YOUR_BRIGHTDATA_API_TOKEN>"
+        BRIGHTDATA_WEB_UNLOCKER_ZONE="<YOUR_BRIGHTDATA_ZONE>"
+        # Potentially other BrightData credentials for MCP browser tools if used by the service:
+        # BRIGHTDATA_BROWSER_AUTH="<YOUR_BRIGHTDATA_BROWSER_AUTH_CREDENTIALS>" # e.g., brd-customer-ACCOUNT-zone-ZONE
+        PORT="3000" # Or any port the service platform assigns
+        ```
+        *The Astro application (hermitAI) only needs `NODE_AGENT_SERVICE_URL` to communicate with this external service. The other Google and BrightData keys listed for the Astro app are used for its fallback in-process ReAct loop.*
 
 ## Running the Application
 
@@ -188,23 +217,47 @@ The new AI chat functionality follows a ReAct (Reasoning and Acting) pattern:
     ```
 2.  **Access:** Open `http://localhost:4321` in your browser.
 
-## Deployment
+## Deployment Architecture
 
-This project is configured for Vercel serverless deployment (`@astrojs/vercel/serverless`). Adapt `astro.config.mjs` for other platforms (e.g., Netlify).
+The project supports a flexible deployment model:
 
-**Key Deployment Steps:**
+1.  **Astro Application (Vercel - Core):**
+    *   **Hosts:** The frontend UI ([`src/pages/ai.astro`](src/pages/ai.astro:1), [`src/components/ChatInterface.astro`](src/components/ChatInterface.astro:1)), the main AI chat API ([`/api/ai/chat.js`](src/pages/api/ai/chat.js:1)).
+    *   **Functionality:**
+        *   If `NODE_AGENT_SERVICE_URL` is **not** set, it directly orchestrates calls to Gemini (Vertex AI) and uses a subset of BrightData tools via their direct APIs (in-process ReAct loop).
+        *   If `NODE_AGENT_SERVICE_URL` **is** set, it proxies requests to the external Node.js Agent & Tool Service.
+    *   **Platform:** Typically deployed on Vercel (configured via [`astro.config.mjs`](astro.config.mjs:1)).
+    *   **Key Environment Variables (for Vercel deployment):**
+        *   `GOOGLE_PROJECT_ID`
+        *   `GOOGLE_CLIENT_EMAIL`
+        *   `GOOGLE_PRIVATE_KEY`
+        *   `BRIGHTDATA_API_TOKEN`
+        *   `BRIGHTDATA_WEB_UNLOCKER_ZONE`
+        *   `NODE_AGENT_SERVICE_URL` (Optional: URL of the external Node.js Agent & Tool Service)
+        *   `GEMINI_API_KEY` (if still applicable for other uses)
+
+2.  **Node.js Agent & Tool Service (Render.com - Optional, Advanced):**
+    *   **Hosts:** A separate Node.js service that implements advanced agentic logic, full BrightData MCP integration (including browser tools like `scraping_browser_*`), and potentially other backend tasks.
+    *   **Functionality:** Receives requests proxied from the Astro application (when `NODE_AGENT_SERVICE_URL` is set).
+    *   **Platform:** Can be deployed on platforms like Render.com, Heroku, or any environment that can run a persistent Node.js server.
+    *   **Key Environment Variables (for this separate service):**
+        *   Its own `GOOGLE_PROJECT_ID`, `GOOGLE_CLIENT_EMAIL`, `GOOGLE_PRIVATE_KEY`.
+        *   Its own `BRIGHTDATA_API_TOKEN`, `BRIGHTDATA_WEB_UNLOCKER_ZONE`.
+        *   Potentially `BRIGHTDATA_BROWSER_AUTH` if using BrightData's browser automation features.
+        *   `PORT` (e.g., `3000`, or as assigned by the platform).
+    *   **Details:** The setup of this service is independent of the core Astro application. The Astro app only needs the `NODE_AGENT_SERVICE_URL` to connect to it. Refer to [`plan-browser-tools.md`](plan-browser-tools.md:1) for an example architecture of such a service focused on browser tools.
+
+The Vercel Astro app can function independently using its in-process ReAct loop for a core set of tools if `NODE_AGENT_SERVICE_URL` is not provided. The external service enhances its capabilities.
+
+### Vercel Deployment Steps (Astro Application):
 
 *   Push code to a Git provider (GitHub, GitLab, etc.).
-*   Import the project into your hosting platform (e.g., Vercel).
-*   **Configure Environment Variables:** Set the following in your platform's settings:
-    *   `GOOGLE_PROJECT_ID`
-    *   `GOOGLE_CLIENT_EMAIL`
-    *   `GOOGLE_PRIVATE_KEY` (ensure multi-line values are handled correctly by your platform)
-    *   `BRIGHTDATA_API_TOKEN`
-    *   `BRIGHTDATA_WEB_UNLOCKER_ZONE`
-    *   `GEMINI_API_KEY` (if still applicable)
-*   **Build Settings:** Ensure Build Command is `npm run build` and the Output Directory is `.vercel/output` (as configured in `astro.config.mjs`).
-*   Ensure the deployment environment uses Node.js v18+.
+*   Import the project into Vercel.
+*   **Configure Environment Variables on Vercel:** Set the variables listed above for the Astro Application. Ensure multi-line values like `GOOGLE_PRIVATE_KEY` are handled correctly.
+*   **Build Settings:**
+    *   Build Command: `npm run build`
+    *   Output Directory: `.vercel/output` (as per `astro.config.mjs`)
+*   Ensure the Vercel deployment environment uses Node.js v18+.
 
 ## Learn More
 

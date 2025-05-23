@@ -2,16 +2,23 @@
 import dotenv from 'dotenv';
 dotenv.config(); // Load .env for this API route specifically
 
-const BROWSER_AUTOMATION_SERVICE_URL = process.env.BROWSER_AUTOMATION_SERVICE_URL;
+const NODE_AGENT_SERVICE_URL = process.env.NODE_AGENT_SERVICE_URL;
+// BROWSER_AUTOMATION_SERVICE_URL is not used if NODE_AGENT_SERVICE_URL handles all agent logic
+// const BROWSER_AUTOMATION_SERVICE_URL = process.env.BROWSER_AUTOMATION_SERVICE_URL; 
 
+// Imports needed for the fallback ReAct logic
 import { getVertexAiResponse } from '../../../services/vertexAiService.js';
+// Assuming all other necessary execute... function imports for ReAct tools are present here
+// For example (based on original file structure indications):
+import { executeGetYoutubeVideos } from '../../../lib/ai-tools/youtubeVideosTool.js';
+import { executeSessionStats } from '../../../lib/ai-tools/sessionStatsTool.js';
+// And others like:
 import { executeSearchEngine } from '../../../lib/ai-tools/searchEngineTool.js';
 import { executeScrapeMarkdown } from '../../../lib/ai-tools/scrapeMarkdownTool.js';
 import { executeScrapeHtml } from '../../../lib/ai-tools/scrapeHtmlTool.js';
 import { executeGetLinkedInProfile } from '../../../lib/ai-tools/linkedinProfileTool.js';
 import { executeGetAmazonProduct } from '../../../lib/ai-tools/amazonProductTool.js';
 import { executeGetAmazonProductReviews } from '../../../lib/ai-tools/amazonProductReviewsTool.js';
-import { executeSessionStats } from '../../../lib/ai-tools/sessionStatsTool.js';
 import { executeGetLinkedInCompanyProfile } from '../../../lib/ai-tools/linkedinCompanyProfileTool.js';
 import { executeGetZoominfoCompanyProfile } from '../../../lib/ai-tools/zoominfoCompanyProfileTool.js';
 import { executeGetInstagramProfile } from '../../../lib/ai-tools/instagramProfileTool.js';
@@ -24,7 +31,7 @@ import { executeGetFacebookCompanyReviews } from '../../../lib/ai-tools/facebook
 import { executeGetXPosts } from '../../../lib/ai-tools/xPostsTool.js';
 import { executeGetZillowPropertiesListing } from '../../../lib/ai-tools/zillowPropertiesListingTool.js';
 import { executeGetBookingHotelListings } from '../../../lib/ai-tools/bookingHotelListingsTool.js';
-import { executeGetYoutubeVideos } from '../../../lib/ai-tools/youtubeVideosTool.js';
+
 
 export async function POST(context) {
   try {
@@ -37,7 +44,54 @@ export async function POST(context) {
       });
     }
 
-    const availableTools = [
+    let agentServiceSucceeded = false;
+    let agentReply = null;
+
+    if (NODE_AGENT_SERVICE_URL) {
+      console.log("Attempting to use Node.js Agent Service via URL:", NODE_AGENT_SERVICE_URL);
+      try {
+        const agentServiceResponse = await fetch(NODE_AGENT_SERVICE_URL, {
+          method: 'POST',
+          headers: { 
+            'Content-Type': 'application/json',
+            // Add any other headers your agent service might expect, e.g., API keys
+          },
+          body: JSON.stringify({ message: userMessage /*, other_params_if_needed */ }),
+          // Consider adding a timeout for this fetch call
+          // signal: AbortSignal.timeout(10000) // Example: 10 second timeout (requires Node 16+ for AbortSignal.timeout)
+        });
+
+        if (agentServiceResponse.ok) {
+          const responseData = await agentServiceResponse.json();
+          // Adjust based on the actual structure of your agent service's response
+          agentReply = responseData.reply || responseData.final_document || responseData.answer || "No specific reply field found from agent.";
+          agentServiceSucceeded = true;
+          console.log("Received response from Node.js Agent Service.");
+          return new Response(JSON.stringify({ reply: agentReply }), {
+            status: 200,
+            headers: { 'Content-Type': 'application/json' },
+          });
+        } else {
+          const errorText = await agentServiceResponse.text();
+          console.warn("Error from Node.js Agent Service (status " + agentServiceResponse.status + "):", errorText, "Falling back to in-process ReAct logic.");
+          // Do not return yet, let it fall through to ReAct logic
+        }
+      } catch (serviceError) {
+         console.warn('Failed to connect to Node.js Agent service:', serviceError.message, "Falling back to in-process ReAct logic.");
+         // Do not return yet, let it fall through to ReAct logic
+      }
+    }
+
+    // If NODE_AGENT_SERVICE_URL was not set, or if the call to it failed and agentServiceSucceeded is false
+    if (!agentServiceSucceeded) {
+      if (NODE_AGENT_SERVICE_URL) { // Log only if we attempted and failed
+        console.log("Fallback: Node.js Agent Service call failed or service URL not set. Using in-process ReAct logic.");
+      } else {
+        console.log("NODE_AGENT_SERVICE_URL not set. Using in-process ReAct logic.");
+      }
+      
+      // IN-PROCESS RE-ACT LOGIC (copied from original file's else block)
+      const availableTools = [
       {
         name: "search_engine",
         description: "Performs a web search using Google (via BrightData SERP API) to find relevant information or URLs. Returns structured search results.",
@@ -235,7 +289,7 @@ export async function POST(context) {
           } else if (toolDecision.tool_name === "scrape_as_markdown") {
             if (toolDecision.arguments && toolDecision.arguments.url) {
               const brightDataApiToken = process.env.BRIGHTDATA_API_TOKEN;
-              const brightDataZone = process.env.BRIGHTDATA_WEB_UNLOCKER_ZONE || 'mcp_unlocker'; // Default zone if needed
+              const brightDataZone = process.env.BRIGHTDATA_WEB_UNLOCKER_ZONE || 'mcp_unlocker'; 
               toolOutput = await executeScrapeMarkdown(toolDecision.arguments.url, brightDataApiToken, brightDataZone);
             } else {
               console.error("Missing URL argument for scrape_as_markdown tool.");
@@ -383,6 +437,7 @@ export async function POST(context) {
           } else if (toolDecision.tool_name === "scraping_browser_navigate") {
             const targetUrl = toolDecision.arguments?.url;
             toolOutput = "Attempting to navigate browser to: " + (targetUrl || "No URL provided") + "\\n";
+            const BROWSER_AUTOMATION_SERVICE_URL = process.env.BROWSER_AUTOMATION_SERVICE_URL;
 
             if (!BROWSER_AUTOMATION_SERVICE_URL) {
               console.error("BROWSER_AUTOMATION_SERVICE_URL is not configured in environment variables.");
@@ -393,7 +448,7 @@ export async function POST(context) {
             } else {
               try {
                 console.log('Calling browser automation service to navigate to: ' + targetUrl);
-                const serviceEndpoint = BROWSER_AUTOMATION_SERVICE_URL.replace(/\/$/, "") + '/navigate'; // Assuming /navigate endpoint
+                const serviceEndpoint = BROWSER_AUTOMATION_SERVICE_URL.replace(/\/$/, "") + '/navigate'; 
                 
                 const browserResponse = await fetch(serviceEndpoint, {
                   method: 'POST',
@@ -417,6 +472,7 @@ export async function POST(context) {
             }
           } else if (toolDecision.tool_name === "scraping_browser_get_text") {
             toolOutput = "Attempting to get text from current browser page.\\n";
+            const BROWSER_AUTOMATION_SERVICE_URL = process.env.BROWSER_AUTOMATION_SERVICE_URL;
 
             if (!BROWSER_AUTOMATION_SERVICE_URL) {
               console.error("BROWSER_AUTOMATION_SERVICE_URL is not configured in environment variables.");
@@ -424,7 +480,7 @@ export async function POST(context) {
             } else {
               try {
                 console.log('Calling browser automation service to get text.');
-                const serviceEndpoint = BROWSER_AUTOMATION_SERVICE_URL.replace(/\/$/, "") + '/get_text'; // Assuming /get_text endpoint
+                const serviceEndpoint = BROWSER_AUTOMATION_SERVICE_URL.replace(/\/$/, "") + '/get_text'; 
                 
                 const browserResponse = await fetch(serviceEndpoint, {
                   method: 'GET', // Or POST if it needs a session ID or other context in body
@@ -454,77 +510,63 @@ export async function POST(context) {
           if (toolOutput) { 
             finalPrompt = "User query: \"" + userMessage + "\"" +
                           "\\nI used the '" + effectiveToolName + "' tool and received the following information:" +
-                          "\\n---" +
-                          "\\n" + toolOutput +
-                          "\\n---" +
-                          "\\nBased on this information and the original query, please provide a comprehensive answer. If the information indicates an error, state that you couldn't retrieve the specific details but try to answer generally if possible.";
-          } else { 
-            finalPrompt = "User query: \"" + userMessage + "\"" +
-                          "\\nPlease answer this query directly. I attempted to use the '" + effectiveToolName + "' tool, but no output was generated.";
-          }
-
-          const finalAiResponse = await getVertexAiResponse(finalPrompt);
-
-          if (finalAiResponse !== null) {
-            return new Response(JSON.stringify({ reply: finalAiResponse }), {
+                          "\\n" + JSON.stringify(toolOutput) +
+                          "\\nBased on this information, please provide a concise answer to the user's query. If the information is an error message, explain the error. If the information is complex, summarize it. Respond directly to the user.";
+            
+            const finalAiResponse = await getVertexAiResponse(finalPrompt);
+            return new Response(JSON.stringify({ reply: finalAiResponse || "Tool executed, but no final response generated." }), {
               status: 200,
               headers: { 'Content-Type': 'application/json' },
             });
           } else {
-            console.error("Failed to get final synthesized response from AI.");
-            return new Response(JSON.stringify({ error: 'Failed to get final synthesized response from AI.', reply: "I encountered an issue synthesizing the final answer." }), {
-              status: 500,
-              headers: { 'Content-Type': 'application/json' },
+            return new Response(JSON.stringify({ error: 'Failed to get tool output or an issue occurred before final AI synthesis.', reply: "I encountered an issue after selecting a tool but before generating the final answer." }), {
+                status: 500,
+                headers: { 'Content-Type': 'application/json' },
             });
           }
-
         } else if (toolDecision && toolDecision.tool_name === "none") {
+          // No tool needed, directly answer
           const finalPrompt = "User query: \"" + userMessage + "\"" +
-                              "\\nPlease answer this query directly.";
+                              "\\nNo tool was needed. Please provide a direct answer to the user's query.";
           const finalAiResponse = await getVertexAiResponse(finalPrompt);
-
-          if (finalAiResponse !== null) {
-            return new Response(JSON.stringify({ reply: finalAiResponse }), {
-              status: 200,
-              headers: { 'Content-Type': 'application/json' },
-            });
-          } else {
-            console.error("Failed to get response from AI for direct answer (tool_name: none).");
-            return new Response(JSON.stringify({ error: 'Failed to get response from AI for direct answer.', reply: "I encountered an issue processing your request." }), {
-              status: 500,
-              headers: { 'Content-Type': 'application/json' },
-            });
-          }
-        } else {
-          console.error("Unexpected tool_decision format from AI:", toolDecision);
+          return new Response(JSON.stringify({ reply: finalAiResponse || "I received your message but have no specific answer." }), {
+            status: 200,
+            headers: { 'Content-Type': 'application/json' },
+          });
+        } else { // Error in toolDecision structure
+          console.error("Unexpected format for AI tool decision:", toolDecision, "Raw:", geminiRawResponse);
           return new Response(JSON.stringify({ error: "Unexpected format for AI tool decision.", reply: "I received an unexpected decision format from my reasoning module." }), {
             status: 500,
             headers: { 'Content-Type': 'application/json' },
           });
         }
-      } catch (parseError) {
-        console.error("Failed to parse Gemini's tool decision:", parseError);
-        console.error("Gemini's raw response:", geminiRawResponse);
-        return new Response(JSON.stringify({ error: "Failed to parse AI's tool decision.", details: geminiRawResponse }), {
+      } catch (parseError) { // Catch for JSON.parse(cleanedResponse) and subsequent logic
+        console.error("Error processing AI tool decision:", parseError, "Raw response:", geminiRawResponse);
+        return new Response(JSON.stringify({ error: "Failed to parse AI's tool decision.", details: geminiRawResponse, reply: "I had trouble understanding the decision from my reasoning module." }), {
           status: 500,
           headers: { 'Content-Type': 'application/json' },
         });
       }
-    } else {
-      return new Response(JSON.stringify({ error: 'Failed to get response from AI service for tool decision.' }), {
+    } else { // geminiRawResponse is null
+      console.error("Failed to get response from AI service for tool decision (geminiRawResponse is null).");
+      return new Response(JSON.stringify({ error: 'Failed to get response from AI service for tool decision.', reply: "I couldn't get a response from my reasoning module to decide on a tool." }), {
         status: 500,
         headers: { 'Content-Type': 'application/json' },
       });
     }
-  } catch (error) {
-    console.error('Error in /api/ai/chat.js:', error);
-    if (error instanceof SyntaxError && error.message.includes('JSON')) {
-        return new Response(JSON.stringify({ error: 'Invalid JSON in request body.' }), {
+    // END OF IN-PROCESS RE-ACT LOGIC
+    }
+    
+  } catch (error) { // Outer error handling for request parsing etc.
+    if (error instanceof SyntaxError && error.message.includes("JSON")) {
+        console.error('JSON parsing error in request body:', error);
+        return new Response(JSON.stringify({ error: 'Invalid JSON in request body.', reply: "Sorry, the request format was invalid." }), {
             status: 400,
             headers: { 'Content-Type': 'application/json' },
         });
     }
-    return new Response(JSON.stringify({ error: 'An unexpected error occurred.' }), {
+    console.error('Outer error in /api/ai/chat.js:', error);
+    return new Response(JSON.stringify({ error: 'An unexpected server error occurred.', reply: "Sorry, an unexpected server error occurred." }), {
       status: 500,
       headers: { 'Content-Type': 'application/json' },
     });

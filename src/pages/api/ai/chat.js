@@ -20,6 +20,7 @@ import { executeGetInstagramReels } from '../../../lib/ai-tools/instagramReelsTo
 import { executeGetInstagramComments } from '../../../lib/ai-tools/instagramCommentsTool.js';
 import { executeGetFacebookPosts } from '../../../lib/ai-tools/facebookPostsTool.js';
 import { executeGetFacebookMarketplaceListings } from '../../../lib/ai-tools/facebookMarketplaceListingsTool.js';
+import { executeGetFacebookCompanyReviews } from '../../../lib/ai-tools/facebookCompanyReviewsTool.js';
 
 export async function POST(context) {
   try {
@@ -134,6 +135,14 @@ export async function POST(context) {
         description: "Quickly read structured Facebook marketplace listing data. Requires a valid Facebook marketplace listing URL.",
         arguments: {
           url: "string (the Facebook marketplace listing URL)"
+        }
+      },
+      {
+        name: "web_data_facebook_company_reviews",
+        description: "Quickly read structured Facebook company reviews data. Requires a valid Facebook company URL and the number of reviews to fetch.",
+        arguments: {
+          url: "string (the Facebook company URL)",
+          num_of_reviews: "string (the number of reviews to fetch, e.g., '10')"
         }
       }
     ];
@@ -284,6 +293,14 @@ export async function POST(context) {
             } else {
               console.error("Missing URL argument for web_data_facebook_marketplace_listings tool.");
               toolOutput = "Error: URL argument missing for web_data_facebook_marketplace_listings tool.";
+            }
+          } else if (toolDecision.tool_name === "web_data_facebook_company_reviews") {
+            if (toolDecision.arguments && toolDecision.arguments.url && toolDecision.arguments.num_of_reviews) {
+              const brightDataApiToken = process.env.BRIGHTDATA_API_TOKEN;
+              toolOutput = await executeGetFacebookCompanyReviews(toolDecision.arguments.url, toolDecision.arguments.num_of_reviews, brightDataApiToken);
+            } else {
+              console.error("Missing URL or num_of_reviews argument for web_data_facebook_company_reviews tool.");
+              toolOutput = "Error: URL or num_of_reviews argument missing for web_data_facebook_company_reviews tool.";
             }
           } else if (toolDecision.tool_name === "session_stats") {
             toolOutput = executeSessionStats(availableTools);

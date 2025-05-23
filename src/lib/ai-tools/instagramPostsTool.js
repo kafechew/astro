@@ -41,8 +41,8 @@ export async function executeGetInstagramPosts(instagramUrl, apiToken) {
     toolOutput += 'Data collection started (Snapshot ID: ' + snapshotId + '). Polling for results...\\n';
 
     let attempts = 0;
-    const maxAttempts = 20;
-    const pollInterval = 5000;
+    const maxAttempts = 10;
+    const pollInterval = 2500;
 
     while (attempts < maxAttempts) {
       await new Promise(resolve => setTimeout(resolve, pollInterval));

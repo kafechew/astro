@@ -22,6 +22,8 @@ import { executeGetFacebookPosts } from '../../../lib/ai-tools/facebookPostsTool
 import { executeGetFacebookMarketplaceListings } from '../../../lib/ai-tools/facebookMarketplaceListingsTool.js';
 import { executeGetFacebookCompanyReviews } from '../../../lib/ai-tools/facebookCompanyReviewsTool.js';
 import { executeGetXPosts } from '../../../lib/ai-tools/xPostsTool.js';
+import { executeGetZillowPropertiesListing } from '../../../lib/ai-tools/zillowPropertiesListingTool.js';
+import { executeGetBookingHotelListings } from '../../../lib/ai-tools/bookingHotelListingsTool.js';
 
 export async function POST(context) {
   try {
@@ -151,6 +153,20 @@ export async function POST(context) {
         description: "Quickly read structured X (formerly Twitter) post data. Requires a valid X post URL.",
         arguments: {
           url: "string (the X post URL)"
+        }
+      },
+      {
+        name: "web_data_zillow_properties_listing",
+        description: "Quickly read structured Zillow properties listing data. Requires a valid Zillow properties listing URL.",
+        arguments: {
+          url: "string (the Zillow properties listing URL)"
+        }
+      },
+      {
+        name: "web_data_booking_hotel_listings",
+        description: "Quickly read structured Booking.com hotel listings data. Requires a valid Booking.com hotel listing URL.",
+        arguments: {
+          url: "string (the Booking.com hotel listing URL)"
         }
       }
     ];
@@ -319,6 +335,22 @@ export async function POST(context) {
             } else {
               console.error("Missing URL argument for web_data_x_posts tool.");
               toolOutput = "Error: URL argument missing for web_data_x_posts tool.";
+            }
+          } else if (toolDecision.tool_name === "web_data_zillow_properties_listing") {
+            if (toolDecision.arguments && toolDecision.arguments.url) {
+              const brightDataApiToken = process.env.BRIGHTDATA_API_TOKEN;
+              toolOutput = await executeGetZillowPropertiesListing(toolDecision.arguments.url, brightDataApiToken);
+            } else {
+              console.error("Missing URL argument for web_data_zillow_properties_listing tool.");
+              toolOutput = "Error: URL argument missing for web_data_zillow_properties_listing tool.";
+            }
+          } else if (toolDecision.tool_name === "web_data_booking_hotel_listings") {
+            if (toolDecision.arguments && toolDecision.arguments.url) {
+              const brightDataApiToken = process.env.BRIGHTDATA_API_TOKEN;
+              toolOutput = await executeGetBookingHotelListings(toolDecision.arguments.url, brightDataApiToken);
+            } else {
+              console.error("Missing URL argument for web_data_booking_hotel_listings tool.");
+              toolOutput = "Error: URL argument missing for web_data_booking_hotel_listings tool.";
             }
           } else {
             console.warn("Tool recognized by AI but no specific command construction logic or arguments missing:", toolDecision);

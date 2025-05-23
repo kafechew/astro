@@ -17,6 +17,7 @@ import { executeGetZoominfoCompanyProfile } from '../../../lib/ai-tools/zoominfo
 import { executeGetInstagramProfile } from '../../../lib/ai-tools/instagramProfileTool.js';
 import { executeGetInstagramPosts } from '../../../lib/ai-tools/instagramPostsTool.js';
 import { executeGetInstagramReels } from '../../../lib/ai-tools/instagramReelsTool.js';
+import { executeGetInstagramComments } from '../../../lib/ai-tools/instagramCommentsTool.js';
 
 export async function POST(context) {
   try {
@@ -111,6 +112,13 @@ export async function POST(context) {
         name: "session_stats",
         description: "Provides information about tool usage in the current interaction.",
         arguments: {} // No arguments needed
+      },
+      {
+        name: "web_data_instagram_comments",
+        description: "Quickly read structured Instagram comments data for a specific Instagram post or reel. Requires a valid Instagram post/reel URL.",
+        arguments: {
+          url: "string (the Instagram post or reel URL)"
+        }
       }
     ];
     
@@ -236,6 +244,14 @@ export async function POST(context) {
             } else {
               console.error("Missing URL argument for web_data_instagram_reels tool.");
               toolOutput = "Error: URL argument missing for web_data_instagram_reels tool.";
+            }
+          } else if (toolDecision.tool_name === "web_data_instagram_comments") {
+            if (toolDecision.arguments && toolDecision.arguments.url) {
+              const brightDataApiToken = process.env.BRIGHTDATA_API_TOKEN;
+              toolOutput = await executeGetInstagramComments(toolDecision.arguments.url, brightDataApiToken);
+            } else {
+              console.error("Missing URL argument for web_data_instagram_comments tool.");
+              toolOutput = "Error: URL argument missing for web_data_instagram_comments tool.";
             }
           } else if (toolDecision.tool_name === "session_stats") {
             toolOutput = executeSessionStats(availableTools);

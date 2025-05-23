@@ -25,6 +25,7 @@ It’s built for hackers, researchers, solopreneurs, and digital hermits seeking
 *   **Dynamic UI:** A new interactive chat interface at `/ai` (powered by [`src/components/ChatInterface.astro`](src/components/ChatInterface.astro:1)) provides a modern user experience.
 *   **Astro API Routes:** The new [`/api/ai/chat.js`](src/pages/api/ai/chat.js:1) route orchestrates interactions between the frontend, Vertex AI, and BrightData.
 *   **Secure API Key Management:** Uses a `.env` file for `GOOGLE_PROJECT_ID`, `GOOGLE_CLIENT_EMAIL`, `GOOGLE_PRIVATE_KEY` (for Vertex AI), `BRIGHTDATA_API_TOKEN`, `BRIGHTDATA_WEB_UNLOCKER_ZONE` (for BrightData), and `GEMINI_API_KEY` (backup).
+*   **Planned Browser Automation:** Upcoming capability for advanced browser automation to handle interactive web tasks.
 
 ## AI Chat Interface
 
@@ -93,9 +94,9 @@ The following additional tools are available in the BrightData MCP client and co
 | `web_data_youtube_profiles`           | Quickly read structured youtube profiles data.                                                             |
 | `web_data_youtube_comments`           | Quickly read structured youtube comments data.                                                             |
 | `web_data_reddit_posts`               | Quickly read structured reddit posts data.                                                                 |
-| `scraping_browser_*` tools            | Tools for browser automation (e.g., navigate, click, type). Integration would require a different approach. |
+| `scraping_browser_*` tools            | Tools for browser automation (e.g., navigate, click, type). Integration will involve a separate, persistent Browser Automation Service deployed on a platform like Render.com, which will communicate with the main Astro application. *(See [`plan-browser-tools.md`](plan-browser-tools.md:1) for detailed architecture)* |
 
-*Note: Integration of these tools would depend on the availability and nature of their corresponding direct BrightData APIs or alternative invocation methods suitable for a serverless environment.*
+*Note: Integration of most other tools would depend on the availability and nature of their corresponding direct BrightData APIs or alternative invocation methods suitable for a serverless environment.*
 
 ## How It Works: AI Chat Flow (`/ai` page)
 
@@ -127,7 +128,7 @@ The new AI chat functionality follows a ReAct (Reasoning and Acting) pattern:
 │   │   ├── blog/                # Blog post markdown files
 │   │   └── api/
 │   │       ├── ai/
-│   │       │   └── chat.js      # API: Orchestrates AI responses, including tool decisions and BrightData SERP API calls.
+│   │       │   └── chat.js      # API: Orchestrates AI responses, including tool decisions, BrightData direct APIs, and the planned Browser Automation Service.
 │   │       ├── askQna.json.js   # API: Original Q&A endpoint (superseded by /api/ai/chat.js for new functionality)
 │   │       └── getPermissions.json.js # API: Handles blog permissions (review for removal if unused by new chat)
 │   ├── services/
@@ -135,6 +136,7 @@ The new AI chat functionality follows a ReAct (Reasoning and Acting) pattern:
 │   │   └── geminiService.js     # Module for original Gemini API interaction (review for relevance)
 │   └── utils/
 │       └── blogs.js             # Sample blog data
+├── BrowserAutomationService/    # (Separate Project - Planned for Render.com)
 ├── .env                       # (Create this) Stores API keys for Vertex AI, BrightData, and potentially Gemini
 ├── astro.config.mjs           # Astro configuration
 ├── package.json
@@ -178,6 +180,14 @@ The new AI chat functionality follows a ReAct (Reasoning and Acting) pattern:
 
         # Optional: Original Gemini API Key (if still used)
         # GEMINI_API_KEY="<YOUR_GEMINI_API_KEY>"
+        BROWSER_AUTOMATION_SERVICE_URL="<URL_OF_YOUR_DEPLOYED_BROWSER_SERVICE_ON_RENDER>" # For Astro app
+        ```
+
+    *   **Browser Automation Service (Render.com) - Key Environment Variables (Planned):**
+        These will be needed for the separate Browser Automation Service:
+        ```env
+        BROWSER_AUTH="<YOUR_BRIGHTDATA_BROWSER_AUTH_CREDENTIALS>" # e.g., brd-customer-ACCOUNT-zone-ZONE
+        PORT="3000" # Or any port Render.com assigns
         ```
 
 ## Running the Application
@@ -188,23 +198,39 @@ The new AI chat functionality follows a ReAct (Reasoning and Acting) pattern:
     ```
 2.  **Access:** Open `http://localhost:4321` in your browser.
 
-## Deployment
+## Deployment Architecture
 
-This project is configured for Vercel serverless deployment (`@astrojs/vercel/serverless`). Adapt `astro.config.mjs` for other platforms (e.g., Netlify).
+The project utilizes a two-service deployment model:
 
-**Key Deployment Steps:**
+1.  **Astro Application (Vercel):**
+    *   **Hosts:** The frontend UI, the main AI chat API ([`/api/ai/chat.js`](src/pages/api/ai/chat.js:1)), and orchestrates calls to Gemini (Vertex AI) and BrightData direct APIs.
+    *   **Platform:** Deployed on Vercel (configured via [`astro.config.mjs`](astro.config.mjs:1)).
+    *   **Key Environment Variables:**
+        *   `GOOGLE_PROJECT_ID`
+        *   `GOOGLE_CLIENT_EMAIL`
+        *   `GOOGLE_PRIVATE_KEY`
+        *   `BRIGHTDATA_API_TOKEN`
+        *   `BRIGHTDATA_WEB_UNLOCKER_ZONE`
+        *   `BROWSER_AUTOMATION_SERVICE_URL` (URL of the deployed Browser Automation Service)
+        *   `GEMINI_API_KEY` (if still applicable as a fallback)
+
+2.  **Browser Automation Service (Render.com - Planned):**
+    *   **Hosts:** A separate Node.js service running Playwright, exposing an API for browser actions (e.g., navigate, click, type). This service handles the `scraping_browser_*` tools.
+    *   **Platform:** Planned for deployment on Render.com (or a similar platform supporting persistent Node.js services).
+    *   **Key Environment Variables:**
+        *   `BROWSER_AUTH` (e.g., BrightData browser authenticator credentials like `brd-customer-ACCOUNT-zone-ZONE`)
+        *   `PORT` (e.g., `3000`, or as assigned by Render.com)
+    *   **Details:** Refer to [`plan-browser-tools.md`](plan-browser-tools.md:1) for more details on setting up this service.
+
+### Vercel Deployment Steps (Astro Application):
 
 *   Push code to a Git provider (GitHub, GitLab, etc.).
-*   Import the project into your hosting platform (e.g., Vercel).
-*   **Configure Environment Variables:** Set the following in your platform's settings:
-    *   `GOOGLE_PROJECT_ID`
-    *   `GOOGLE_CLIENT_EMAIL`
-    *   `GOOGLE_PRIVATE_KEY` (ensure multi-line values are handled correctly by your platform)
-    *   `BRIGHTDATA_API_TOKEN`
-    *   `BRIGHTDATA_WEB_UNLOCKER_ZONE`
-    *   `GEMINI_API_KEY` (if still applicable)
-*   **Build Settings:** Ensure Build Command is `npm run build` and the Output Directory is `.vercel/output` (as configured in `astro.config.mjs`).
-*   Ensure the deployment environment uses Node.js v18+.
+*   Import the project into Vercel.
+*   **Configure Environment Variables on Vercel:** Set the variables listed above for the Astro Application. Ensure multi-line values like `GOOGLE_PRIVATE_KEY` are handled correctly.
+*   **Build Settings:**
+    *   Build Command: `npm run build`
+    *   Output Directory: `.vercel/output` (as per `astro.config.mjs`)
+*   Ensure the Vercel deployment environment uses Node.js v18+.
 
 ## Learn More
 

@@ -5,6 +5,12 @@ dotenv.config(); // Load .env for this API route specifically
 import { getVertexAiResponse } from '../../../services/vertexAiService.js';
 import { exec } from 'child_process';
 import util from 'util';
+import { executeSearchEngine } from '../../../lib/ai-tools/searchEngineTool.js';
+import { executeScrapeMarkdown } from '../../../lib/ai-tools/scrapeMarkdownTool.js';
+import { executeScrapeHtml } from '../../../lib/ai-tools/scrapeHtmlTool.js';
+import { executeGetLinkedInProfile } from '../../../lib/ai-tools/linkedinProfileTool.js';
+import { executeGetAmazonProduct } from '../../../lib/ai-tools/amazonProductTool.js';
+import { executeGetAmazonProductReviews } from '../../../lib/ai-tools/amazonProductReviewsTool.js';
 
 export async function POST(context) {
   try {
@@ -94,355 +100,56 @@ export async function POST(context) {
         if (toolDecision && toolDecision.tool_name && toolDecision.tool_name !== "none") {
           const effectiveToolName = toolDecision.tool_name;
 
-          if (toolDecision.tool_name === "search_engine" && toolDecision.arguments && toolDecision.arguments.query) {
-            const brightDataApiToken = process.env.BRIGHTDATA_API_TOKEN;
-            const brightDataZone = process.env.BRIGHTDATA_WEB_UNLOCKER_ZONE;
-
-            if (!brightDataApiToken || !brightDataZone) {
-              console.error("BrightData API token or Zone not configured in environment variables.");
-              toolOutput = "Error: BrightData SERP API credentials not configured.";
+          if (toolDecision.tool_name === "search_engine") {
+            if (toolDecision.arguments && toolDecision.arguments.query) {
+              const brightDataApiToken = process.env.BRIGHTDATA_API_TOKEN;
+              const brightDataZone = process.env.BRIGHTDATA_WEB_UNLOCKER_ZONE;
+              toolOutput = await executeSearchEngine(toolDecision.arguments.query, brightDataApiToken, brightDataZone);
             } else {
-              try {
-                const targetUrl = 'https://www.google.com/search?q=' + encodeURIComponent(toolDecision.arguments.query) + '&brd_json=1';
-                console.log('Calling BrightData SERP API for query: ' + toolDecision.arguments.query + ' via URL: ' + targetUrl);
-                const serpResponse = await fetch('https://api.brightdata.com/request', {
-                  method: 'POST',
-                  headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': 'Bearer ' + brightDataApiToken
-                  },
-                  body: JSON.stringify({
-                    zone: brightDataZone,
-                    url: targetUrl,
-                    format: 'raw' 
-                  })
-                });
-
-                if (serpResponse.ok) {
-                  const serpData = await serpResponse.json();
-                  toolOutput = JSON.stringify(serpData, null, 2);
-                  console.log("BrightData SERP API Output:", toolOutput);
-                } else {
-                  const errorText = await serpResponse.text();
-                  console.error("BrightData SERP API Error:", serpResponse.status, errorText);
-                  toolOutput = 'Error fetching search results: ' + serpResponse.status + ' ' + errorText;
-                }
-              } catch (apiError) {
-                console.error("Error calling BrightData SERP API:", apiError);
-                toolOutput = 'Exception during SERP API call: ' + apiError.message;
-              }
+              console.error("Missing query argument for search_engine tool.");
+              toolOutput = "Error: Query argument missing for search_engine tool.";
             }
           } else if (toolDecision.tool_name === "scrape_as_markdown") {
-            const brightDataApiToken = process.env.BRIGHTDATA_API_TOKEN;
-            const targetUrlToScrape = toolDecision.arguments.url;
-            const brightDataZone = process.env.BRIGHTDATA_WEB_UNLOCKER_ZONE || 'mcp_unlocker';
-
-            if (!brightDataApiToken) {
-              console.error("BrightData API token not configured in environment variables.");
-              toolOutput = "Error: BrightData API credentials not configured.";
-            } else if (!targetUrlToScrape || typeof targetUrlToScrape !== 'string' || !targetUrlToScrape.startsWith('http')) {
-              console.error("Invalid or missing URL for scraping:", targetUrlToScrape);
-              toolOutput = "Error: A valid URL is required for scraping.";
+            if (toolDecision.arguments && toolDecision.arguments.url) {
+              const brightDataApiToken = process.env.BRIGHTDATA_API_TOKEN;
+              const brightDataZone = process.env.BRIGHTDATA_WEB_UNLOCKER_ZONE || 'mcp_unlocker'; // Default zone if needed
+              toolOutput = await executeScrapeMarkdown(toolDecision.arguments.url, brightDataApiToken, brightDataZone);
             } else {
-              try {
-                console.log('Calling BrightData API for URL: ' + targetUrlToScrape + ' with zone: ' + brightDataZone + ' to get markdown.');
-                const apiResponse = await fetch('https://api.brightdata.com/request', {
-                  method: 'POST',
-                  headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': 'Bearer ' + brightDataApiToken
-                  },
-                  body: JSON.stringify({
-                    url: targetUrlToScrape,
-                    zone: brightDataZone,
-                    format: 'raw',
-                    data_format: 'markdown'
-                  })
-                });
-
-                if (apiResponse.ok) {
-                  toolOutput = await apiResponse.text(); 
-                  console.log("BrightData API Output (Markdown snippet):", toolOutput.substring(0, 200) + "...");
-                } else {
-                  const errorText = await apiResponse.text();
-                  console.error("BrightData API Error:", apiResponse.status, errorText);
-                  toolOutput = 'Error fetching page content via BrightData API: ' + apiResponse.status + ' ' + errorText;
-                }
-              } catch (apiError) {
-                console.error("Error calling BrightData API:", apiError);
-                toolOutput = 'Exception during BrightData API call: ' + apiError.message;
-              }
+              console.error("Missing URL argument for scrape_as_markdown tool.");
+              toolOutput = "Error: URL argument missing for scrape_as_markdown tool.";
             }
           } else if (toolDecision.tool_name === "scrape_as_html") {
-            const brightDataApiToken = process.env.BRIGHTDATA_API_TOKEN;
-            const brightDataZone = process.env.BRIGHTDATA_WEB_UNLOCKER_ZONE;
-            const targetUrlToScrape = toolDecision.arguments.url;
-
-            toolOutput = 'Executing scrape_as_html for ' + targetUrlToScrape + '\\n'; 
-
-            if (!brightDataApiToken || !brightDataZone) {
-              console.error("BrightData API token or Zone not configured.");
-              toolOutput += "Error: BrightData API credentials not configured.";
-            } else if (!targetUrlToScrape || typeof targetUrlToScrape !== 'string' || !targetUrlToScrape.startsWith('http')) {
-              console.error("Invalid or missing URL for scraping HTML:", targetUrlToScrape);
-              toolOutput += "Error: A valid URL is required for scraping HTML.";
+            if (toolDecision.arguments && toolDecision.arguments.url) {
+              const brightDataApiToken = process.env.BRIGHTDATA_API_TOKEN;
+              const brightDataZone = process.env.BRIGHTDATA_WEB_UNLOCKER_ZONE;
+              toolOutput = await executeScrapeHtml(toolDecision.arguments.url, brightDataApiToken, brightDataZone);
             } else {
-              try {
-                console.log('Calling BrightData API for HTML scrape: ' + targetUrlToScrape);
-                const scrapeHtmlResponse = await fetch('https://api.brightdata.com/request', {
-                  method: 'POST',
-                  headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': 'Bearer ' + brightDataApiToken
-                  },
-                  body: JSON.stringify({
-                    url: targetUrlToScrape,
-                    zone: brightDataZone,
-                    format: 'raw' 
-                  })
-                });
-
-                if (scrapeHtmlResponse.ok) {
-                  const htmlContent = await scrapeHtmlResponse.text();
-                  toolOutput = htmlContent; 
-                  console.log("BrightData HTML Scrape Output (snippet):", htmlContent.substring(0, 200) + "...");
-                } else {
-                  const errorText = await scrapeHtmlResponse.text();
-                  console.error("BrightData HTML Scrape Error:", scrapeHtmlResponse.status, errorText);
-                  toolOutput += 'Error fetching HTML: ' + scrapeHtmlResponse.status + ' ' + errorText;
-                }
-              } catch (apiError) {
-                console.error("Error calling BrightData API for HTML scrape:", apiError);
-                toolOutput += 'Exception during HTML scrape API call: ' + apiError.message;
-              }
+              console.error("Missing URL argument for scrape_as_html tool.");
+              toolOutput = "Error: URL argument missing for scrape_as_html tool.";
             }
           } else if (toolDecision.tool_name === "web_data_linkedin_person_profile") {
-            const brightDataApiToken = process.env.BRIGHTDATA_API_TOKEN;
-            const profileUrl = toolDecision.arguments.url;
-            const datasetId = 'gd_l1viktl72bvl7bjuj0'; 
-
-            toolOutput = 'Fetching LinkedIn profile for ' + profileUrl + '\\n';
-
-            if (!brightDataApiToken) {
-              console.error("BrightData API token not configured.");
-              toolOutput += "Error: BrightData API credentials not configured.";
-            } else if (!profileUrl || typeof profileUrl !== 'string' || !profileUrl.includes('linkedin.com/in/')) {
-              console.error("Invalid or missing LinkedIn profile URL:", profileUrl);
-              toolOutput += "Error: A valid LinkedIn profile URL is required.";
+            if (toolDecision.arguments && toolDecision.arguments.url) {
+              const brightDataApiToken = process.env.BRIGHTDATA_API_TOKEN;
+              toolOutput = await executeGetLinkedInProfile(toolDecision.arguments.url, brightDataApiToken);
             } else {
-              try {
-                console.log('Triggering BrightData dataset for LinkedIn profile: ' + profileUrl);
-                const triggerResponse = await fetch('https://api.brightdata.com/datasets/v3/trigger?dataset_id=' + datasetId + '&include_errors=true', {
-                  method: 'POST',
-                  headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': 'Bearer ' + brightDataApiToken
-                  },
-                  body: JSON.stringify([{ url: profileUrl }])
-                });
-
-                if (!triggerResponse.ok) {
-                  const errorText = await triggerResponse.text();
-                  throw new Error('Dataset trigger failed: ' + triggerResponse.status + ' ' + errorText);
-                }
-
-                const triggerData = await triggerResponse.json();
-                const snapshotId = triggerData?.snapshot_id;
-
-                if (!snapshotId) {
-                  throw new Error('No snapshot ID returned from dataset trigger.');
-                }
-                console.log('Dataset triggered. Snapshot ID: ' + snapshotId);
-                toolOutput += 'Data collection started (Snapshot ID: ' + snapshotId + '). Polling for results...\\n';
-
-                let attempts = 0;
-                const maxAttempts = 10;
-                const pollInterval = 2500;
-
-                while (attempts < maxAttempts) {
-                  await new Promise(resolve => setTimeout(resolve, pollInterval));
-                  attempts++;
-                  console.log('Polling snapshot ' + snapshotId + ', attempt ' + attempts + '/' + maxAttempts);
-                  const snapshotResponse = await fetch('https://api.brightdata.com/datasets/v3/snapshot/' + snapshotId + '?format=json', {
-                    headers: { 'Authorization': 'Bearer ' + brightDataApiToken }
-                  });
-
-                  if (!snapshotResponse.ok) {
-                    console.warn('Snapshot poll failed (attempt ' + attempts + '): ' + snapshotResponse.status);
-                    if (attempts >= maxAttempts) throw new Error('Polling attempts exhausted after non-ok response.');
-                    continue;
-                  }
-                  
-                  const snapshotData = await snapshotResponse.json();
-                  if (snapshotData?.status === 'running' || snapshotData?.status === 'pending') {
-                    if (attempts >= maxAttempts) throw new Error('Polling timeout: Data collection still running.');
-                    continue;
-                  }
-                  
-                  console.log('Snapshot data received:', snapshotData);
-                  toolOutput = JSON.stringify(snapshotData, null, 2);
-                  break;
-                }
-                if (attempts >= maxAttempts && !toolOutput.includes('{')) {
-                   throw new Error('Polling timeout: Max attempts reached without completed data.');
-                }
-
-              } catch (apiError) {
-                console.error("Error with LinkedIn Profile tool:", apiError);
-                toolOutput = (toolOutput.startsWith("Fetching") ? toolOutput : "") + 'Exception during LinkedIn Profile tool: ' + apiError.message;
-              }
+              console.error("Missing URL argument for web_data_linkedin_person_profile tool.");
+              toolOutput = "Error: URL argument missing for web_data_linkedin_person_profile tool.";
             }
-          } else if (toolDecision.tool_name === "web_data_amazon_product") {
+        } else if (toolDecision.tool_name === "web_data_amazon_product") {
+          if (toolDecision.arguments && toolDecision.arguments.url) {
             const brightDataApiToken = process.env.BRIGHTDATA_API_TOKEN;
-            const productUrl = toolDecision.arguments.url;
-            const datasetId = 'gd_l7q7dkf244hwjntr0'; 
-
-            toolOutput = 'Fetching Amazon product data for ' + productUrl + '\\n';
-
-            if (!brightDataApiToken) {
-              console.error("BrightData API token not configured.");
-              toolOutput += "Error: BrightData API credentials not configured.";
-            } else if (!productUrl || typeof productUrl !== 'string' || !productUrl.includes('/dp/')) {
-              console.error("Invalid or missing Amazon product URL (must contain /dp/):", productUrl);
-              toolOutput += "Error: A valid Amazon product URL containing '/dp/' is required.";
-            } else {
-              try {
-                console.log('Triggering BrightData dataset for Amazon product: ' + productUrl);
-                const triggerResponse = await fetch('https://api.brightdata.com/datasets/v3/trigger?dataset_id=' + datasetId + '&include_errors=true', {
-                  method: 'POST',
-                  headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': 'Bearer ' + brightDataApiToken
-                  },
-                  body: JSON.stringify([{ url: productUrl }]) 
-                });
-
-                if (!triggerResponse.ok) {
-                  const errorText = await triggerResponse.text();
-                  throw new Error('Dataset trigger failed: ' + triggerResponse.status + ' ' + errorText);
-                }
-
-                const triggerData = await triggerResponse.json();
-                const snapshotId = triggerData?.snapshot_id;
-
-                if (!snapshotId) {
-                  throw new Error('No snapshot ID returned from dataset trigger.');
-                }
-                console.log('Dataset triggered. Snapshot ID: ' + snapshotId);
-                toolOutput += 'Data collection started (Snapshot ID: ' + snapshotId + '). Polling for results...\\n';
-
-                let attempts = 0;
-                const maxAttempts = 10; 
-                const pollInterval = 2500; 
-
-                while (attempts < maxAttempts) {
-                  await new Promise(resolve => setTimeout(resolve, pollInterval));
-                  attempts++;
-                  console.log('Polling snapshot ' + snapshotId + ' for Amazon product, attempt ' + attempts + '/' + maxAttempts);
-                  const snapshotResponse = await fetch('https://api.brightdata.com/datasets/v3/snapshot/' + snapshotId + '?format=json', {
-                    headers: { 'Authorization': 'Bearer ' + brightDataApiToken }
-                  });
-
-                  if (!snapshotResponse.ok) {
-                    console.warn('Snapshot poll failed (attempt ' + attempts + '): ' + snapshotResponse.status);
-                    if (attempts >= maxAttempts) throw new Error('Polling attempts exhausted after non-ok response.');
-                    continue;
-                  }
-                  
-                  const snapshotData = await snapshotResponse.json();
-                  if (snapshotData?.status === 'running' || snapshotData?.status === 'pending') { 
-                    if (attempts >= maxAttempts) throw new Error('Polling timeout: Data collection still running.');
-                    continue; 
-                  }
-                  
-                  console.log('Amazon product snapshot data received:', snapshotData);
-                  toolOutput = JSON.stringify(snapshotData, null, 2); 
-                  break; 
-                }
-                if (attempts >= maxAttempts && (typeof toolOutput !== 'string' || !toolOutput.includes('{'))) {
-                   throw new Error('Polling timeout: Max attempts reached without completed data.');
-                }
-
-              } catch (apiError) {
-                console.error("Error with Amazon Product tool:", apiError);
-                toolOutput = (toolOutput.startsWith("Fetching") ? toolOutput : "") + 'Exception during Amazon Product tool: ' + apiError.message;
-              }
-            }
+            toolOutput = await executeGetAmazonProduct(toolDecision.arguments.url, brightDataApiToken);
+          } else {
+            console.error("Missing URL argument for web_data_amazon_product tool.");
+            toolOutput = "Error: URL argument missing for web_data_amazon_product tool.";
+          }
           } else if (toolDecision.tool_name === "web_data_amazon_product_reviews") {
-            const brightDataApiToken = process.env.BRIGHTDATA_API_TOKEN;
-            const productUrl = toolDecision.arguments.url;
-            const datasetId = 'gd_le8e811kzy4ggddlq'; // Specific dataset ID for Amazon product reviews
-
-            toolOutput = 'Fetching Amazon product reviews for ' + productUrl + '\\n';
-
-            if (!brightDataApiToken) {
-              console.error("BrightData API token not configured.");
-              toolOutput += "Error: BrightData API credentials not configured.";
-            } else if (!productUrl || typeof productUrl !== 'string' || !productUrl.includes('/dp/')) {
-              console.error("Invalid or missing Amazon product URL (must contain /dp/):", productUrl);
-              toolOutput += "Error: A valid Amazon product URL containing '/dp/' is required for reviews.";
+            if (toolDecision.arguments && toolDecision.arguments.url) {
+              const brightDataApiToken = process.env.BRIGHTDATA_API_TOKEN;
+              toolOutput = await executeGetAmazonProductReviews(toolDecision.arguments.url, brightDataApiToken);
             } else {
-              try {
-                console.log('Triggering BrightData dataset for Amazon product reviews: ' + productUrl);
-                const triggerResponse = await fetch('https://api.brightdata.com/datasets/v3/trigger?dataset_id=' + datasetId + '&include_errors=true', {
-                  method: 'POST',
-                  headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': 'Bearer ' + brightDataApiToken
-                  },
-                  body: JSON.stringify([{ url: productUrl }])
-                });
-
-                if (!triggerResponse.ok) {
-                  const errorText = await triggerResponse.text();
-                  throw new Error('Dataset trigger failed: ' + triggerResponse.status + ' ' + errorText);
-                }
-
-                const triggerData = await triggerResponse.json();
-                const snapshotId = triggerData?.snapshot_id;
-
-                if (!snapshotId) {
-                  throw new Error('No snapshot ID returned from dataset trigger for reviews.');
-                }
-                console.log('Dataset triggered for reviews. Snapshot ID: ' + snapshotId);
-                toolOutput += 'Data collection for reviews started (Snapshot ID: ' + snapshotId + '). Polling for results...\\n';
-
-                let attempts = 0;
-                const maxAttempts = 10;
-                const pollInterval = 2500;
-
-                while (attempts < maxAttempts) {
-                  await new Promise(resolve => setTimeout(resolve, pollInterval));
-                  attempts++;
-                  console.log('Polling snapshot ' + snapshotId + ' for Amazon product reviews, attempt ' + attempts + '/' + maxAttempts);
-                  const snapshotResponse = await fetch('https://api.brightdata.com/datasets/v3/snapshot/' + snapshotId + '?format=json', {
-                    headers: { 'Authorization': 'Bearer ' + brightDataApiToken }
-                  });
-
-                  if (!snapshotResponse.ok) {
-                    console.warn('Snapshot poll failed (attempt ' + attempts + '): ' + snapshotResponse.status);
-                    if (attempts >= maxAttempts) throw new Error('Polling attempts exhausted for reviews after non-ok response.');
-                    continue;
-                  }
-                  
-                  const snapshotData = await snapshotResponse.json();
-                  if (snapshotData?.status === 'running' || snapshotData?.status === 'pending') {
-                    if (attempts >= maxAttempts) throw new Error('Polling timeout: Review data collection still running.');
-                    continue;
-                  }
-                  
-                  console.log('Amazon product reviews snapshot data received:', snapshotData);
-                  toolOutput = JSON.stringify(snapshotData, null, 2);
-                  break;
-                }
-                if (attempts >= maxAttempts && (typeof toolOutput !== 'string' || !toolOutput.includes('{'))) {
-                   throw new Error('Polling timeout: Max attempts reached without completed review data.');
-                }
-
-              } catch (apiError) {
-                console.error("Error with Amazon Product Reviews tool:", apiError);
-                toolOutput = (toolOutput.startsWith("Fetching") ? toolOutput : "") + 'Exception during Amazon Product Reviews tool: ' + apiError.message;
-              }
+              console.error("Missing URL argument for web_data_amazon_product_reviews tool.");
+              toolOutput = "Error: URL argument missing for web_data_amazon_product_reviews tool.";
             }
           } else {
             console.warn("Tool recognized by AI but no specific command construction logic or arguments missing:", toolDecision);

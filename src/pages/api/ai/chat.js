@@ -16,6 +16,7 @@ import { executeGetLinkedInCompanyProfile } from '../../../lib/ai-tools/linkedin
 import { executeGetZoominfoCompanyProfile } from '../../../lib/ai-tools/zoominfoCompanyProfileTool.js';
 import { executeGetInstagramProfile } from '../../../lib/ai-tools/instagramProfileTool.js';
 import { executeGetInstagramPosts } from '../../../lib/ai-tools/instagramPostsTool.js';
+import { executeGetInstagramReels } from '../../../lib/ai-tools/instagramReelsTool.js';
 
 export async function POST(context) {
   try {
@@ -97,6 +98,13 @@ export async function POST(context) {
         description: "Quickly read structured Instagram post data. Requires a valid Instagram URL (can be a profile URL to get posts from, or a specific post URL).",
         arguments: {
           url: "string (the Instagram profile or post URL)"
+        }
+      },
+      {
+        name: "web_data_instagram_reels",
+        description: "Quickly read structured Instagram reel data. Requires a valid Instagram URL (can be a profile URL to get reels from, or a specific reel URL).",
+        arguments: {
+          url: "string (the Instagram profile or reel URL)"
         }
       },
       {
@@ -220,6 +228,14 @@ export async function POST(context) {
             } else {
               console.error("Missing URL argument for web_data_instagram_posts tool.");
               toolOutput = "Error: URL argument missing for web_data_instagram_posts tool.";
+            }
+          } else if (toolDecision.tool_name === "web_data_instagram_reels") {
+            if (toolDecision.arguments && toolDecision.arguments.url) {
+              const brightDataApiToken = process.env.BRIGHTDATA_API_TOKEN;
+              toolOutput = await executeGetInstagramReels(toolDecision.arguments.url, brightDataApiToken);
+            } else {
+              console.error("Missing URL argument for web_data_instagram_reels tool.");
+              toolOutput = "Error: URL argument missing for web_data_instagram_reels tool.";
             }
           } else if (toolDecision.tool_name === "session_stats") {
             toolOutput = executeSessionStats(availableTools);

@@ -18,6 +18,8 @@ import { executeGetInstagramProfile } from '../../../lib/ai-tools/instagramProfi
 import { executeGetInstagramPosts } from '../../../lib/ai-tools/instagramPostsTool.js';
 import { executeGetInstagramReels } from '../../../lib/ai-tools/instagramReelsTool.js';
 import { executeGetInstagramComments } from '../../../lib/ai-tools/instagramCommentsTool.js';
+import { executeGetFacebookPosts } from '../../../lib/ai-tools/facebookPostsTool.js';
+import { executeGetFacebookMarketplaceListings } from '../../../lib/ai-tools/facebookMarketplaceListingsTool.js';
 
 export async function POST(context) {
   try {
@@ -118,6 +120,20 @@ export async function POST(context) {
         description: "Quickly read structured Instagram comments data for a specific Instagram post or reel. Requires a valid Instagram post/reel URL.",
         arguments: {
           url: "string (the Instagram post or reel URL)"
+        }
+      },
+      {
+        name: "web_data_facebook_posts",
+        description: "Quickly read structured Facebook post data. Requires a valid Facebook post URL.",
+        arguments: {
+          url: "string (the Facebook post URL)"
+        }
+      },
+      {
+        name: "web_data_facebook_marketplace_listings",
+        description: "Quickly read structured Facebook marketplace listing data. Requires a valid Facebook marketplace listing URL.",
+        arguments: {
+          url: "string (the Facebook marketplace listing URL)"
         }
       }
     ];
@@ -252,6 +268,22 @@ export async function POST(context) {
             } else {
               console.error("Missing URL argument for web_data_instagram_comments tool.");
               toolOutput = "Error: URL argument missing for web_data_instagram_comments tool.";
+            }
+          } else if (toolDecision.tool_name === "web_data_facebook_posts") {
+            if (toolDecision.arguments && toolDecision.arguments.url) {
+              const brightDataApiToken = process.env.BRIGHTDATA_API_TOKEN;
+              toolOutput = await executeGetFacebookPosts(toolDecision.arguments.url, brightDataApiToken);
+            } else {
+              console.error("Missing URL argument for web_data_facebook_posts tool.");
+              toolOutput = "Error: URL argument missing for web_data_facebook_posts tool.";
+            }
+          } else if (toolDecision.tool_name === "web_data_facebook_marketplace_listings") {
+            if (toolDecision.arguments && toolDecision.arguments.url) {
+              const brightDataApiToken = process.env.BRIGHTDATA_API_TOKEN;
+              toolOutput = await executeGetFacebookMarketplaceListings(toolDecision.arguments.url, brightDataApiToken);
+            } else {
+              console.error("Missing URL argument for web_data_facebook_marketplace_listings tool.");
+              toolOutput = "Error: URL argument missing for web_data_facebook_marketplace_listings tool.";
             }
           } else if (toolDecision.tool_name === "session_stats") {
             toolOutput = executeSessionStats(availableTools);

@@ -1,0 +1,79 @@
+---
+// src/components/Auth/RegisterForm.astro
+---
+<form id="registerForm">
+  <div>
+    <label for="username">Username:</label>
+    <input type="text" id="username" name="username" required />
+  </div>
+  <div>
+    <label for="email">Email:</label>
+    <input type="email" id="email" name="email" required />
+  </div>
+  <div>
+    <label for="password">Password:</label>
+    <input type="password" id="password" name="password" required />
+  </div>
+  <div>
+    <label for="confirmPassword">Confirm Password:</label>
+    <input type="password" id="confirmPassword" name="confirmPassword" required />
+  </div>
+  <button type="submit">Register</button>
+  <div id="message"></div>
+</form>
+
+<script>
+  const form = document.getElementById('registerForm');
+  const messageDiv = document.getElementById('message');
+
+  form.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    messageDiv.textContent = '';
+
+    const username = (document.getElementById('username') as HTMLInputElement).value;
+    const email = (document.getElementById('email') as HTMLInputElement).value;
+    const password = (document.getElementById('password') as HTMLInputElement).value;
+    const confirmPassword = (document.getElementById('confirmPassword') as HTMLInputElement).value;
+
+    if (password !== confirmPassword) {
+      messageDiv.textContent = 'Passwords do not match.';
+      messageDiv.style.color = 'red';
+      return;
+    }
+
+    // Basic email validation
+    const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailPattern.test(email)) {
+      messageDiv.textContent = 'Please enter a valid email address.';
+      messageDiv.style.color = 'red';
+      return;
+    }
+
+    try {
+      const response = await fetch('/api/auth/register', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ username, email, password }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        messageDiv.textContent = data.message || 'Registration successful and logged in!';
+        messageDiv.style.color = 'green';
+        // Redirect to profile page or homepage after successful registration and auto-login
+        window.location.href = '/profile'; // Or perhaps '/ai' or '/'
+        // form.reset(); // No need to reset if redirecting
+      } else {
+        messageDiv.textContent = data.message || 'Registration failed.';
+        messageDiv.style.color = 'red';
+      }
+    } catch (error) {
+      console.error('Registration error:', error);
+      messageDiv.textContent = 'An error occurred during registration.';
+      messageDiv.style.color = 'red';
+    }
+  });
+</script>

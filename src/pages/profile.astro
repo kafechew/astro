@@ -1,0 +1,101 @@
+---
+import MainLayout from '../layouts/MainLayout.astro';
+
+// 1. Check if user is logged in
+if (!Astro.locals.user) {
+  return Astro.redirect('/login');
+}
+
+// 2. Fetch User Data (Astro.locals.user should have it)
+const user = Astro.locals.user;
+const profile = user.profile || {}; // Ensure profile object exists
+
+let initialDisplayName = profile.displayName || user.username; // Fallback to username if displayName is not set
+let initialBio = profile.bio || '';
+---
+
+<MainLayout title="User Profile">
+  <div class="container mx-auto px-4 py-8">
+    <h1 class="text-3xl font-bold mb-6 text-center">Your Profile</h1>
+
+    <div class="max-w-md mx-auto bg-white shadow-md rounded-lg p-6">
+      <div class="mb-4">
+        <p><strong>Username:</strong> {user.username}</p>
+        <p><strong>Email:</strong> {user.email}</p>
+        <p><strong>Display Name:</strong> <span id="currentDisplayName">{initialDisplayName}</span></p>
+        <p><strong>Bio:</strong> <span id="currentBio">{initialBio || 'No bio set.'}</span></p>
+        {user.createdAt && <p><strong>Joined:</strong> {new Date(user.createdAt).toLocaleDateString()}</p>}
+        {user.updatedAt && <p><strong>Last Updated:</strong> {new Date(user.updatedAt).toLocaleString()}</p>}
+      </div>
+
+      <h2 class="text-2xl font-semibold mb-4">Update Profile</h2>
+      <form id="profileUpdateForm" class="space-y-4">
+        <div>
+          <label for="displayName" class="block text-sm font-medium text-gray-700">Display Name:</label>
+          <input type="text" id="displayName" name="displayName" value={initialDisplayName} class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
+        </div>
+        <div>
+          <label for="bio" class="block text-sm font-medium text-gray-700">Bio:</label>
+          <textarea id="bio" name="bio" rows="3" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">{initialBio}</textarea>
+        </div>
+        <div>
+          <button type="submit" class="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+            Update Profile
+          </button>
+        </div>
+      </form>
+      <div id="messageArea" class="mt-4 text-sm"></div>
+    </div>
+  </div>
+</MainLayout>
+
+<script>
+  const form = document.getElementById('profileUpdateForm');
+  const messageArea = document.getElementById('messageArea');
+  const currentDisplayNameElement = document.getElementById('currentDisplayName');
+  const currentBioElement = document.getElementById('currentBio');
+
+  form.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    messageArea.textContent = '';
+    messageArea.className = 'mt-4 text-sm'; // Reset classes
+
+    const formData = new FormData(form);
+    const displayName = formData.get('displayName');
+    const bio = formData.get('bio');
+
+    try {
+      const response = await fetch('/api/auth/profile', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ displayName, bio }),
+      });
+
+      const result = await response.json();
+
+      if (response.ok) {
+        messageArea.textContent = result.message || 'Profile updated successfully!';
+        messageArea.classList.add('text-green-600');
+        // Update displayed values
+        if (result.user && result.user.profile) {
+          currentDisplayNameElement.textContent = result.user.profile.displayName || result.user.username;
+          currentBioElement.textContent = result.user.profile.bio || 'No bio set.';
+          // Optionally update form input values if needed, though a page refresh might be simpler for full sync
+          document.getElementById('displayName').value = result.user.profile.displayName || result.user.username;
+          document.getElementById('bio').value = result.user.profile.bio || '';
+        } else if (result.user) {
+            currentDisplayNameElement.textContent = result.user.username; // Fallback if profile object is missing after update
+        }
+      } else {
+        messageArea.textContent = `Error: ${result.message || 'Failed to update profile.'}`;
+        messageArea.classList.add('text-red-600');
+      }
+    } catch (error) {
+      console.error('Update profile error:', error);
+      messageArea.textContent = 'An unexpected error occurred. Please try again.';
+      messageArea.classList.add('text-red-600');
+    }
+  });
+</script>

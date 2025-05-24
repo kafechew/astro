@@ -1,0 +1,54 @@
+---
+// src/components/Auth/LoginForm.astro
+---
+<form id="loginForm">
+  <div>
+    <label for="email">Email (or Username):</label>
+    <input type="text" id="email" name="email" required />
+  </div>
+  <div>
+    <label for="password">Password:</label>
+    <input type="password" id="password" name="password" required />
+  </div>
+  <button type="submit">Login</button>
+  <div id="message"></div>
+</form>
+
+<script>
+  const form = document.getElementById('loginForm');
+  const messageDiv = document.getElementById('message');
+
+  form.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    messageDiv.textContent = '';
+
+    const identifier = (document.getElementById('email') as HTMLInputElement).value; // Keep using 'email' ID for the input field
+    const password = (document.getElementById('password') as HTMLInputElement).value;
+
+    try {
+      const response = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ identifier, password }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        messageDiv.textContent = data.message || 'Login successful!';
+        messageDiv.style.color = 'green';
+        // Redirect to AI chat page or homepage
+        window.location.href = '/ai'; // Or '/'
+      } else {
+        messageDiv.textContent = data.message || 'Login failed.';
+        messageDiv.style.color = 'red';
+      }
+    } catch (error) {
+      console.error('Login error:', error);
+      messageDiv.textContent = 'An error occurred during login.';
+      messageDiv.style.color = 'red';
+    }
+  });
+</script>

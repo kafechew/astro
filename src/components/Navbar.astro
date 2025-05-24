@@ -1,11 +1,25 @@
 ---
+const user = Astro.locals.user;
 ---
 
 <nav>
   <div class="nav-content">
     <h1 class="site-title"><a href="/" style="color: inherit; text-decoration: none;">HermitONL</a></h1>
     <div class="user-selector-wrapper">
-      
+      <ul class="nav-links">
+        {user ? (
+          <>
+            <li>Logged in as: {user.username}</li>
+            <li><a href="/profile">Profile</a></li>
+            <li><a href="/api/auth/logout">Logout</a></li>
+          </>
+        ) : (
+          <>
+            <li><a href="/login">Login</a></li>
+            <li><a href="/register">Register</a></li>
+          </>
+        )}
+      </ul>
     </div>
   </div>
 </nav>

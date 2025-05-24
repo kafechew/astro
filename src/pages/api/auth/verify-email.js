@@ -30,15 +30,23 @@ export async function GET({ request, redirect }) {
     }
 
     // Token is valid, update the user
+    const updateData = {
+      isEmailVerified: true,
+      emailVerificationToken: null, // Clear the token
+      emailVerificationTokenExpires: null, // Clear the expiry
+      updatedAt: new Date(),
+    };
+
+    // Grant initial credits if not already granted
+    const INITIAL_CREDITS = 5;
+    if (user.credits === undefined || user.credits === null || user.credits < INITIAL_CREDITS) {
+      updateData.credits = INITIAL_CREDITS;
+    }
+
     const result = await usersCollection.updateOne(
       { _id: new ObjectId(user._id) },
       {
-        $set: {
-          isEmailVerified: true,
-          emailVerificationToken: null, // Clear the token
-          emailVerificationTokenExpires: null, // Clear the expiry
-          updatedAt: new Date(),
-        },
+        $set: updateData,
       }
     );
 

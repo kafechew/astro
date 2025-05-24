@@ -82,6 +82,7 @@ if (message) {
         <p><strong>Bio:</strong> <span id="currentBio">{initialBio || 'No bio set.'}</span></p>
         {user.createdAt && <p><strong>Joined:</strong> {new Date(user.createdAt).toLocaleDateString()}</p>}
         {user.updatedAt && <p><strong>Last Updated:</strong> {new Date(user.updatedAt).toLocaleString()}</p>}
+        <p><strong>Credits:</strong> {Astro.locals.user?.credits ?? 0}</p>
       </div>
 
       <h2 class="text-2xl font-semibold mb-4">Update Profile</h2>

@@ -11,7 +11,15 @@ export async function onRequest({ locals, request, cookies, redirect }, next) {
   if (token) {
     try {
       const decoded = jwt.verify(token, import.meta.env.JWT_SECRET);
-      locals.user = decoded; // Attach decoded payload (e.g., { userId, username, roles })
+      // Ensure all expected fields are present, especially new ones
+      locals.user = {
+        userId: decoded.userId,
+        username: decoded.username,
+        email: decoded.email,
+        roles: decoded.roles,
+        isEmailVerified: decoded.isEmailVerified,
+        credits: decoded.credits,
+      };
     } catch (err) {
       // Token verification failed (expired, invalid, etc.)
       // Clear the invalid cookie to prevent login loops or issues

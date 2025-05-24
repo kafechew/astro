@@ -1,8 +1,19 @@
 // src/pages/api/ai/chat.js
 import dotenv from 'dotenv';
+import jwt from 'jsonwebtoken'; // Added for JWT regeneration
+import { serialize } from 'cookie'; // Added for setting cookie
+import { connectToDatabase } from '../../../lib/mongodb.js';
+import { ObjectId } from 'mongodb';
+
 dotenv.config(); // Load .env for this API route specifically
 
+const JWT_SECRET = import.meta.env.JWT_SECRET; // Added for JWT signing
+if (!JWT_SECRET) {
+  console.error("FATAL ERROR: JWT_SECRET is not defined in .env file for AI chat route. JWT refresh will fail.");
+}
+
 const NODE_AGENT_SERVICE_URL = process.env.NODE_AGENT_SERVICE_URL;
+const COST_PER_QUERY = 1; // Define the cost per query
 // BROWSER_AUTOMATION_SERVICE_URL is not used if NODE_AGENT_SERVICE_URL handles all agent logic
 // const BROWSER_AUTOMATION_SERVICE_URL = process.env.BROWSER_AUTOMATION_SERVICE_URL; 
 
@@ -35,6 +46,64 @@ import { executeGetBookingHotelListings } from '../../../lib/ai-tools/bookingHot
 
 export async function POST(context) {
   try {
+    const user = context.locals.user;
+    console.log('AI_CHAT_DEBUG: Initial user credits from JWT:', user?.credits);
+    console.log('AI_CHAT_DEBUG: Cost per query:', COST_PER_QUERY);
+
+    if (!user) {
+      return new Response(JSON.stringify({ error: "unauthorized", message: "Authentication required." }), {
+        status: 401,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
+
+    if (!user.isEmailVerified) {
+      return new Response(JSON.stringify({ error: "email_not_verified", message: "Please verify your email to use the AI chat." }), {
+        status: 403,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
+
+    if (user.credits < COST_PER_QUERY) {
+      return new Response(JSON.stringify({ error: "insufficient_credits", message: "You do not have enough credits to perform this action." }), {
+        status: 402,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
+
+    // Attempt to decrement credits
+    const { db: dbInstance } = await connectToDatabase(); // Destructure to get the actual db instance
+    const usersCollection = dbInstance.collection('users');
+    
+    let userIdToUpdate;
+    try {
+      userIdToUpdate = new ObjectId(user.userId);
+    } catch (e) {
+      console.error("Invalid userId format for ObjectId:", user.userId);
+      return new Response(JSON.stringify({ error: "internal_server_error", message: "Invalid user identifier." }), {
+        status: 500,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
+
+    const updateResult = await usersCollection.updateOne(
+      { _id: userIdToUpdate, credits: { $gte: COST_PER_QUERY } },
+      { $inc: { credits: -COST_PER_QUERY } }
+    );
+
+    if (updateResult.modifiedCount === 0) {
+      // This could happen if credits dropped below COST_PER_QUERY between the check and update (race condition)
+      // or if the user document wasn't found with sufficient credits (less likely if initial check passed).
+      console.warn(`Failed to update credits for user ${user.userId}. Initial credits: ${user.credits}, Cost: ${COST_PER_QUERY}. Modified count: ${updateResult.modifiedCount}`);
+      return new Response(JSON.stringify({ error: "credit_deduction_failed", message: "Failed to update credits. Please try again or check your balance." }), {
+        status: 409, // Conflict or 402 Payment Required
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
+    
+    // Credits successfully deducted, update in-memory user for this request if necessary (optional)
+    // Astro.locals.user.credits -= COST_PER_QUERY; // Not strictly needed as JWT is source of truth between requests
+
     const { message: userMessage } = await context.request.json();
 
     if (!userMessage || typeof userMessage !== 'string' || userMessage.trim() === '') {
@@ -67,9 +136,48 @@ export async function POST(context) {
           agentReply = responseData.reply || responseData.final_document || responseData.answer || "No specific reply field found from agent.";
           agentServiceSucceeded = true;
           console.log("Received response from Node.js Agent Service.");
+          const updatedUser = await usersCollection.findOne({ _id: userIdToUpdate });
+          const newCreditBalance = updatedUser ? updatedUser.credits : user.credits - COST_PER_QUERY; // Fallback if findOne fails
+          console.log('AI_CHAT_DEBUG: User credits in DB after update (Node Agent Path):', updatedUser?.credits);
+          console.log('AI_CHAT_DEBUG: New credit balance for response (Node Agent Path):', newCreditBalance);
+          console.log('AI_CHAT_DEBUG: X-User-Credits header value (Node Agent Path):', newCreditBalance.toString());
+
+          const userForToken = await usersCollection.findOne({ _id: userIdToUpdate });
+          let newCookie = null;
+
+          if (userForToken && JWT_SECRET) {
+            const tokenPayload = {
+              userId: userForToken._id.toString(),
+              username: userForToken.username,
+              email: userForToken.email,
+              roles: userForToken.roles,
+              isEmailVerified: userForToken.isEmailVerified,
+              credits: userForToken.credits, // This will be the new balance
+            };
+            const newToken = jwt.sign(tokenPayload, JWT_SECRET, { expiresIn: '1h' });
+            const cookieOptions = {
+              httpOnly: true,
+              secure: import.meta.env.MODE !== 'development',
+              maxAge: 60 * 60, // 1 hour
+              path: '/',
+              sameSite: 'lax',
+            };
+            newCookie = serialize('authToken', newToken, cookieOptions);
+          } else {
+            console.error('AI_CHAT_DEBUG: Failed to fetch user for token regeneration or JWT_SECRET missing (Node Agent Path).');
+          }
+
+          const responseHeaders = {
+            'Content-Type': 'application/json',
+            'X-User-Credits': newCreditBalance.toString()
+          };
+          if (newCookie) {
+            responseHeaders['Set-Cookie'] = newCookie;
+          }
+
           return new Response(JSON.stringify({ reply: agentReply }), {
             status: 200,
-            headers: { 'Content-Type': 'application/json' },
+            headers: responseHeaders,
           });
         } else {
           const errorText = await agentServiceResponse.text();
@@ -514,9 +622,49 @@ export async function POST(context) {
                           "\\nBased on this information, please provide a concise answer to the user's query. If the information is an error message, explain the error. If the information is complex, summarize it. Respond directly to the user.";
             
             const finalAiResponse = await getVertexAiResponse(finalPrompt);
+            const updatedUser = await usersCollection.findOne({ _id: userIdToUpdate });
+            const newCreditBalance = updatedUser ? updatedUser.credits : user.credits - COST_PER_QUERY; // Fallback
+
+console.log('AI_CHAT_DEBUG: User credits in DB after update (ReAct Path - Tool Used):', updatedUser?.credits);
+            console.log('AI_CHAT_DEBUG: New credit balance calculated (ReAct Path - Tool Used):', newCreditBalance);
+            console.log('AI_CHAT_DEBUG: X-User-Credits header value (ReAct Path - Tool Used):', newCreditBalance.toString());
+
+            const userForToken_ReActTool = await usersCollection.findOne({ _id: userIdToUpdate });
+            let newCookie_ReActTool = null;
+
+            if (userForToken_ReActTool && JWT_SECRET) {
+              const tokenPayload_ReActTool = {
+                userId: userForToken_ReActTool._id.toString(),
+                username: userForToken_ReActTool.username,
+                email: userForToken_ReActTool.email,
+                roles: userForToken_ReActTool.roles,
+                isEmailVerified: userForToken_ReActTool.isEmailVerified,
+                credits: userForToken_ReActTool.credits, // This will be the new balance
+              };
+              const newToken_ReActTool = jwt.sign(tokenPayload_ReActTool, JWT_SECRET, { expiresIn: '1h' });
+              const cookieOptions = {
+                httpOnly: true,
+                secure: import.meta.env.MODE !== 'development',
+                maxAge: 60 * 60, // 1 hour
+                path: '/',
+                sameSite: 'lax',
+              };
+              newCookie_ReActTool = serialize('authToken', newToken_ReActTool, cookieOptions);
+            } else {
+              console.error('AI_CHAT_DEBUG: Failed to fetch user for token regeneration or JWT_SECRET missing (ReAct Path - Tool Used).');
+            }
+
+            const responseHeaders_ReActTool = {
+              'Content-Type': 'application/json',
+              'X-User-Credits': newCreditBalance.toString()
+            };
+            if (newCookie_ReActTool) {
+              responseHeaders_ReActTool['Set-Cookie'] = newCookie_ReActTool;
+            }
+
             return new Response(JSON.stringify({ reply: finalAiResponse || "Tool executed, but no final response generated." }), {
               status: 200,
-              headers: { 'Content-Type': 'application/json' },
+              headers: responseHeaders_ReActTool,
             });
           } else {
             return new Response(JSON.stringify({ error: 'Failed to get tool output or an issue occurred before final AI synthesis.', reply: "I encountered an issue after selecting a tool but before generating the final answer." }), {
@@ -529,9 +677,48 @@ export async function POST(context) {
           const finalPrompt = "User query: \"" + userMessage + "\"" +
                               "\\nNo tool was needed. Please provide a direct answer to the user's query.";
           const finalAiResponse = await getVertexAiResponse(finalPrompt);
+          const updatedUser = await usersCollection.findOne({ _id: userIdToUpdate });
+          const newCreditBalance = updatedUser ? updatedUser.credits : user.credits - COST_PER_QUERY; // Fallback
+
+console.log('AI_CHAT_DEBUG: User credits in DB after update (ReAct Path - No Tool):', updatedUser?.credits);
+            console.log('AI_CHAT_DEBUG: New credit balance calculated (ReAct Path - No Tool):', newCreditBalance);
+            console.log('AI_CHAT_DEBUG: X-User-Credits header value (ReAct Path - No Tool):', newCreditBalance.toString());
+          const userForToken_ReActNoTool = await usersCollection.findOne({ _id: userIdToUpdate });
+          let newCookie_ReActNoTool = null;
+
+          if (userForToken_ReActNoTool && JWT_SECRET) {
+            const tokenPayload_ReActNoTool = {
+              userId: userForToken_ReActNoTool._id.toString(),
+              username: userForToken_ReActNoTool.username,
+              email: userForToken_ReActNoTool.email,
+              roles: userForToken_ReActNoTool.roles,
+              isEmailVerified: userForToken_ReActNoTool.isEmailVerified,
+              credits: userForToken_ReActNoTool.credits, // This will be the new balance
+            };
+            const newToken_ReActNoTool = jwt.sign(tokenPayload_ReActNoTool, JWT_SECRET, { expiresIn: '1h' });
+            const cookieOptions = {
+              httpOnly: true,
+              secure: import.meta.env.MODE !== 'development',
+              maxAge: 60 * 60, // 1 hour
+              path: '/',
+              sameSite: 'lax',
+            };
+            newCookie_ReActNoTool = serialize('authToken', newToken_ReActNoTool, cookieOptions);
+          } else {
+            console.error('AI_CHAT_DEBUG: Failed to fetch user for token regeneration or JWT_SECRET missing (ReAct Path - No Tool).');
+          }
+
+          const responseHeaders_ReActNoTool = {
+            'Content-Type': 'application/json',
+            'X-User-Credits': newCreditBalance.toString()
+          };
+          if (newCookie_ReActNoTool) {
+            responseHeaders_ReActNoTool['Set-Cookie'] = newCookie_ReActNoTool;
+          }
+
           return new Response(JSON.stringify({ reply: finalAiResponse || "I received your message but have no specific answer." }), {
             status: 200,
-            headers: { 'Content-Type': 'application/json' },
+            headers: responseHeaders_ReActNoTool,
           });
         } else { // Error in toolDecision structure
           console.error("Unexpected format for AI tool decision:", toolDecision, "Raw:", geminiRawResponse);

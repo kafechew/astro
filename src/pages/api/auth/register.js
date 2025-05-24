@@ -69,6 +69,7 @@ export async function POST({ request }) {
       isEmailVerified: false,
       emailVerificationToken: null,
       emailVerificationTokenExpires: null,
+      credits: 0, // Initialize credits
     };
 
     const result = await usersCollection.insertOne(newUser);
@@ -122,7 +123,8 @@ export async function POST({ request }) {
       username: newUser.username,
       email: newUser.email,
       roles: newUser.roles,
-      isEmailVerified: newUser.isEmailVerified, // Add this line
+      isEmailVerified: newUser.isEmailVerified,
+      credits: newUser.credits, // Add credits to token
     };
 
     const token = jwt.sign(userForToken, JWT_SECRET, {

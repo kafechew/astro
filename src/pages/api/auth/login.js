@@ -60,7 +60,8 @@ export async function POST({ request }) {
       username: user.username,
       email: user.email, // Optional: include email if needed on client-side
       roles: user.roles,
-      isEmailVerified: user.isEmailVerified, // Add this line
+      isEmailVerified: user.isEmailVerified,
+      credits: user.credits, // Add credits to token
     };
 
     const token = jwt.sign(tokenPayload, JWT_SECRET, {
@@ -79,11 +80,23 @@ export async function POST({ request }) {
     const cookie = serialize('authToken', token, cookieOptions);
 
     // Prepare user data to return (excluding sensitive info)
-    const { passwordHash, ...userWithoutPassword } = user;
+    const { passwordHash, emailVerificationToken, emailVerificationTokenExpires, ...userForResponse } = user;
+    // Ensure _id is a string
+    userForResponse._id = user._id.toString();
+
 
     return new Response(JSON.stringify({
       message: 'Login successful.',
-      user: userWithoutPassword,
+      user: {
+        userId: userForResponse._id,
+        username: userForResponse.username,
+        email: userForResponse.email,
+        roles: userForResponse.roles,
+        isEmailVerified: userForResponse.isEmailVerified,
+        credits: userForResponse.credits,
+        createdAt: userForResponse.createdAt,
+        updatedAt: userForResponse.updatedAt,
+      },
     }), {
       status: 200,
       headers: {

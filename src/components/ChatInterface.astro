@@ -136,10 +136,27 @@
       }
 
       if (response.ok) {
+        const newCreditsHeader = response.headers.get('X-User-Credits');
+        if (newCreditsHeader) {
+          const creditDisplayElement = document.getElementById('navbar-credit-display');
+          if (creditDisplayElement) {
+            const newCredits = parseInt(newCreditsHeader, 10);
+            if (!isNaN(newCredits)) {
+              creditDisplayElement.textContent = newCredits.toString();
+            }
+          }
+        }
         const data = await response.json();
+        // It's possible for a 200 OK to still contain an error object from business logic
         if (data.error) {
+          let displayMessage = data.error; // Default to the error message from API
+          if (data.error === "email_not_verified") {
+            displayMessage = "Please verify your email to use the AI chat. You can resend the verification email from your profile page.";
+          } else if (data.error === "insufficient_credits") {
+            displayMessage = "You do not have enough credits to send this message.";
+          }
           const errorMessageDiv = document.createElement('div');
-          errorMessageDiv.textContent = data.error;
+          errorMessageDiv.textContent = displayMessage;
           errorMessageDiv.style.textAlign = 'left';
           errorMessageDiv.style.color = 'red';
           errorMessageDiv.style.fontStyle = 'italic';
@@ -287,9 +304,17 @@
           messageDisplayArea.appendChild(aiMessageDiv);
         }
       } else {
-        const errorData = await response.json().catch(() => null);
+        const errorData = await response.json().catch(() => ({ error: `Error: Could not get response from AI. Status: ${response.status}` }));
+        let displayMessage = errorData?.error || `Error: Could not get response from AI. Status: ${response.status}`;
+
+        if (response.status === 403 && errorData?.error === "email_not_verified") {
+          displayMessage = "Please verify your email to use the AI chat. You can resend the verification email from your profile page.";
+        } else if (response.status === 402 && errorData?.error === "insufficient_credits") {
+          displayMessage = "You do not have enough credits to send this message.";
+        }
+        
         const errorMessageDiv = document.createElement('div');
-        errorMessageDiv.textContent = errorData?.error || `Error: Could not get response from AI. Status: ${response.status}`;
+        errorMessageDiv.textContent = displayMessage;
         errorMessageDiv.style.textAlign = 'left';
         errorMessageDiv.style.color = 'red';
         errorMessageDiv.style.fontStyle = 'italic';

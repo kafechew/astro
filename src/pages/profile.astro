@@ -70,8 +70,12 @@ if (message) {
           {user.isEmailVerified ? (
             <span class="text-green-600 font-semibold">Verified</span>
           ) : (
-            <span class="text-red-600 font-semibold">Not Verified</span>
-            // We can add a "Resend verification email" button here later
+            <>
+              <span class="text-red-600 font-semibold">Not Verified</span>
+              <button id="resendVerificationBtn" class="ml-2 text-sm text-blue-600 hover:underline focus:outline-none">
+                Resend verification email
+              </button>
+            </>
           )}
         </p>
         <p><strong>Display Name:</strong> <span id="currentDisplayName">{initialDisplayName}</span></p>
@@ -106,6 +110,62 @@ if (message) {
   const messageArea = document.getElementById('messageArea');
   const currentDisplayNameElement = document.getElementById('currentDisplayName');
   const currentBioElement = document.getElementById('currentBio');
+  const resendBtn = document.getElementById('resendVerificationBtn');
+
+  // Function to display messages in the main status area at the top
+  function showStatusMessage(text, type = 'info') {
+    const statusDiv = document.querySelector('div[role="alert"]'); // Find existing or create new
+    let newStatusDiv = statusDiv;
+    if (!newStatusDiv) {
+        newStatusDiv = document.createElement('div');
+        newStatusDiv.setAttribute('role', 'alert');
+        const mainContentDiv = document.querySelector('.container > .max-w-md.mx-auto.bg-white'); // insert before this
+        if (mainContentDiv) {
+            mainContentDiv.parentNode.insertBefore(newStatusDiv, mainContentDiv);
+        } else {
+            // fallback if structure changes
+            document.querySelector('.container').prepend(newStatusDiv);
+        }
+    }
+    newStatusDiv.textContent = text;
+    newStatusDiv.className = "max-w-md mx-auto p-4 mb-4 text-sm rounded-lg"; // Reset classes
+    if (type === 'success') {
+      newStatusDiv.classList.add('bg-green-100', 'text-green-700');
+    } else if (type === 'error') {
+      newStatusDiv.classList.add('bg-red-100', 'text-red-700');
+    } else { // info or default
+      newStatusDiv.classList.add('bg-blue-100', 'text-blue-700');
+    }
+  }
+
+
+  if (resendBtn) {
+    resendBtn.addEventListener('click', async () => {
+      resendBtn.disabled = true;
+      resendBtn.textContent = 'Sending...';
+      messageArea.textContent = ''; // Clear profile update messages
+      messageArea.className = 'mt-4 text-sm';
+
+      try {
+        const response = await fetch('/api/auth/resend-verification-email', {
+          method: 'POST',
+        });
+        const result = await response.json();
+
+        if (response.ok) {
+          showStatusMessage(result.message || 'Verification email sent!', 'success');
+        } else {
+          showStatusMessage(`Error: ${result.message || 'Failed to resend email.'}`, 'error');
+        }
+      } catch (err) {
+        console.error('Resend verification error:', err);
+        showStatusMessage('An unexpected error occurred. Please try again.', 'error');
+      } finally {
+        resendBtn.disabled = false;
+        resendBtn.textContent = 'Resend verification email';
+      }
+    });
+  }
 
   form.addEventListener('submit', async (event) => {
     event.preventDefault();

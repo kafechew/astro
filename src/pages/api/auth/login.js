@@ -60,6 +60,7 @@ export async function POST({ request }) {
       username: user.username,
       email: user.email, // Optional: include email if needed on client-side
       roles: user.roles,
+      isEmailVerified: user.isEmailVerified, // Add this line
     };
 
     const token = jwt.sign(tokenPayload, JWT_SECRET, {

@@ -31,7 +31,8 @@
     "typescript": "^5.4.5",
     "mongodb": "^6.7.0",
     "bcryptjs": "^2.4.3",
-    "jsonwebtoken": "^9.0.2"
+    "jsonwebtoken": "^9.0.2",
+    "nodemailer": "^6.9.13"
   },
   "engines": {
     "node": "18.x"

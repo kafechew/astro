@@ -2,6 +2,8 @@ import { connectToDatabase } from '../../../lib/mongodb';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { serialize } from 'cookie';
+import crypto from 'crypto';
+import { sendVerificationEmail } from '../../../lib/emailService';
 
 export async function POST({ request }) {
   try {
@@ -64,6 +66,9 @@ export async function POST({ request }) {
       roles: ['user'],
       createdAt: new Date(),
       updatedAt: new Date(),
+      isEmailVerified: false,
+      emailVerificationToken: null,
+      emailVerificationTokenExpires: null,
     };
 
     const result = await usersCollection.insertOne(newUser);
@@ -73,6 +78,32 @@ export async function POST({ request }) {
             status: 500,
             headers: { 'Content-Type': 'application/json' },
         });
+    }
+
+    // Generate email verification token
+    const emailVerificationToken = crypto.randomBytes(32).toString('hex');
+    const emailVerificationTokenExpires = new Date(Date.now() + 3600000); // 1 hour from now
+
+    // Update user with verification token
+    await usersCollection.updateOne(
+      { _id: result.insertedId },
+      {
+        $set: {
+          emailVerificationToken,
+          emailVerificationTokenExpires,
+        },
+      }
+    );
+
+    // Send verification email
+    try {
+      const origin = new URL(request.url).origin;
+      await sendVerificationEmail(newUser.email, newUser.username, emailVerificationToken, origin);
+    } catch (emailError) {
+      console.error('Failed to send verification email:', emailError);
+      // Optionally, you could decide if this failure should prevent user creation
+      // or just log the error and proceed. For now, we'll proceed but log it.
+      // You might also want to return a specific message to the user if email sending fails.
     }
 
     // Auto-login: Generate JWT and set cookie
@@ -91,6 +122,7 @@ export async function POST({ request }) {
       username: newUser.username,
       email: newUser.email,
       roles: newUser.roles,
+      isEmailVerified: newUser.isEmailVerified, // Add this line
     };
 
     const token = jwt.sign(userForToken, JWT_SECRET, {
@@ -115,7 +147,7 @@ export async function POST({ request }) {
 
 
     return new Response(JSON.stringify({
-      message: 'User registered successfully and logged in.',
+      message: 'User registered successfully. Please check your email to verify your account. You have been logged in, but full access requires email verification.',
       user: userForResponse,
     }), {
       status: 201, // Created

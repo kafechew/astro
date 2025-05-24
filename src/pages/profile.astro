@@ -12,16 +12,68 @@ const profile = user.profile || {}; // Ensure profile object exists
 
 let initialDisplayName = profile.displayName || user.username; // Fallback to username if displayName is not set
 let initialBio = profile.bio || '';
+
+// Get messages from URL query parameters
+const urlParams = new URLSearchParams(Astro.url.search);
+const message = urlParams.get('message');
+const error = urlParams.get('error');
+
+let statusMessage = '';
+let statusMessageType = ''; // 'success' or 'error'
+
+if (message) {
+  statusMessageType = 'success';
+  if (message === 'email_verified_successfully') {
+    statusMessage = 'Your email has been successfully verified!';
+    // Potentially update user object if it's not reflecting the change yet,
+    // though a page reload or re-fetch from /api/auth/me would be more robust
+    if (user && !user.isEmailVerified) user.isEmailVerified = true;
+  } else if (message === 'profile_updated') {
+    statusMessage = 'Profile updated successfully!';
+  } else {
+    statusMessage = decodeURIComponent(message);
+  }
+} else if (error) {
+  statusMessageType = 'error';
+  if (error === 'verification_failed_or_expired') {
+    statusMessage = 'Email verification failed. The link may be invalid or expired.';
+  } else if (error === 'verification_update_failed') {
+    statusMessage = 'There was an issue updating your email verification status. Please try again or contact support.';
+  } else if (error === 'verification_error') {
+    statusMessage = 'An unexpected error occurred during email verification. Please try again.';
+  } else {
+    statusMessage = decodeURIComponent(error);
+  }
+}
 ---
 
 <MainLayout title="User Profile">
   <div class="container mx-auto px-4 py-8">
     <h1 class="text-3xl font-bold mb-6 text-center">Your Profile</h1>
 
+    {statusMessage && (
+      <div class:list={[
+        "max-w-md mx-auto p-4 mb-4 text-sm rounded-lg",
+        statusMessageType === 'success' ? "bg-green-100 text-green-700" : "",
+        statusMessageType === 'error' ? "bg-red-100 text-red-700" : ""
+      ]} role="alert">
+        {statusMessage}
+      </div>
+    )}
+
     <div class="max-w-md mx-auto bg-white shadow-md rounded-lg p-6">
       <div class="mb-4">
         <p><strong>Username:</strong> {user.username}</p>
         <p><strong>Email:</strong> {user.email}</p>
+        <p>
+          <strong>Email Status:</strong>
+          {user.isEmailVerified ? (
+            <span class="text-green-600 font-semibold">Verified</span>
+          ) : (
+            <span class="text-red-600 font-semibold">Not Verified</span>
+            // We can add a "Resend verification email" button here later
+          )}
+        </p>
         <p><strong>Display Name:</strong> <span id="currentDisplayName">{initialDisplayName}</span></p>
         <p><strong>Bio:</strong> <span id="currentBio">{initialBio || 'No bio set.'}</span></p>
         {user.createdAt && <p><strong>Joined:</strong> {new Date(user.createdAt).toLocaleDateString()}</p>}

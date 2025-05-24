@@ -18,6 +18,7 @@ This document outlines the high-level design for integrating MongoDB Atlas into 
     *   `isEmailVerified`: `Boolean` (default `false`)
     *   `emailVerificationToken`: `String` (nullable)
     *   `emailVerificationTokenExpires`: `Date` (nullable)
+    *   `credits`: `Number` (default: 0, stores the user's AI query credits)
 
 *   **1.2. Authentication/Authorization Strategy**
     *   **Authentication:** JWT (JSON Web Tokens) stored in HTTP-only cookies.
@@ -38,6 +39,44 @@ This document outlines the high-level design for integrating MongoDB Atlas into 
     *   **Modifications:** `src/components/ChatInterface.astro` to display auth state and links.
     *   **New Pages:** `/login`, `/register`, `/profile`.
     *   **State Management:** Client-side store for auth state.
+
+*   **1.5. Credit System for AI Queries**
+    *   **1.5.1. User Data Model (`users` collection extension)**
+        *   The `users` collection (detailed in 1.1) is extended with:
+            *   `credits`: `Number` - Stores the available AI query credits for the user. Defaults to 0.
+    *   **1.5.2. Credit Allocation**
+        *   Upon successful email verification (via `GET /api/auth/verify-email`), users are allocated an initial 5 credits.
+    *   **1.5.3. Credit Deduction (in `src/pages/api/ai/chat.js`)**
+        *   **Pre-requisite:** User's email must be verified (`isEmailVerified: true`).
+        *   **Cost:** Each AI query to `src/pages/api/ai/chat.js` costs 1 credit.
+        *   **Process:**
+            1.  Before processing the AI query, the system checks if the user is email verified and has sufficient credits (>= 1).
+            2.  If checks pass, 1 credit is atomically deducted from the user's `credits` field in the database.
+            3.  After successful deduction, the system fetches the fresh (updated) credit balance.
+            4.  This updated balance is sent back to the client in the `X-User-Credits` HTTP header with the AI response stream.
+    *   **1.5.4. Error Handling (in `src/pages/api/ai/chat.js`)**
+        *   If email is not verified: API returns a `403 Forbidden` error with a message like "Email not verified. Please verify your email to use AI features."
+        *   If insufficient credits: API returns a `402 Payment Required` error with a message like "Insufficient credits. You need at least 1 credit to make an AI query."
+    *   **1.5.5. API Endpoint Modifications for Credit System**
+        *   `src/pages/api/auth/verify-email.js`:
+            *   Modified to grant 5 initial credits to the user upon successful email verification if they don't have any credits yet.
+        *   `src/pages/api/ai/chat.js`:
+            *   Modified to implement credit check, deduction, and sending the `X-User-Credits` header.
+            *   Handles errors for unverified email and insufficient credits.
+        *   `src/pages/api/auth/login.js` & `src/pages/api/auth/me.js`:
+            *   Modified to include the `credits` field in the user object returned to the client.
+        *   `src/middleware.js`:
+            *   Ensures user data (including credits) fetched by `me.js` is available for server-rendered components if needed, though primary updates are client-side or via API responses.
+    *   **1.5.6. UI/UX Changes for Credit System**
+        *   **Credit Display:**
+            *   [`src/components/Navbar.astro`](src/components/Navbar.astro:1): Displays the user's current credit balance.
+            *   [`src/pages/profile.astro`](src/pages/profile.astro:1): Displays the user's current credit balance.
+        *   **Client-Side Credit Update:**
+            *   [`src/components/ChatInterface.astro`](src/components/ChatInterface.astro:1):
+                *   Listens for the `X-User-Credits` header in responses from `src/pages/api/ai/chat.js`.
+                *   Upon receiving the header, it updates a client-side store or directly manipulates the DOM to reflect the new credit balance in the Navbar immediately, without requiring a page reload.
+        *   **Chat Interface Error Handling:**
+            *   [`src/components/ChatInterface.astro`](src/components/ChatInterface.astro:1): Modified to handle and display new API errors related to email verification and insufficient credits.
 
 **2. RAG with MongoDB Atlas Vector Search**
 

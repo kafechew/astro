@@ -29,6 +29,7 @@ It’s built for hackers, researchers, solopreneurs, and digital hermits seeking
 *   **User Authentication:** Secure user registration, login, and session management using MongoDB and JWTs.
 *   **Email Verification:** System for verifying user email addresses via token-based email links, including a resend option.
 *   **User Profiles:** Basic user profile viewing and updating capabilities.
+*   **Credit System for AI Queries:** Users receive 5 credits upon email verification. Each AI query costs 1 credit. The Navbar and Profile page display credits, with the Navbar updating immediately after a query via a special HTTP header.
 
 ## AI Chat Interface
 
@@ -114,10 +115,15 @@ The AI chat functionality, orchestrated by [`/api/ai/chat.js`](src/pages/api/ai/
 2.  **Mode 2: In-Process ReAct Loop (If `NODE_AGENT_SERVICE_URL` is NOT set - Current Default)**
     *   **User Input:** The user sends a message via [`ChatInterface.astro`](src/components/ChatInterface.astro:1).
     *   **API Request:** The interface makes a `POST` request to [`/api/ai/chat.js`](src/pages/api/ai/chat.js:1).
+    *   **Pre-checks (Credit System):** Before any LLM call, [`chat.js`](src/pages/api/ai/chat.js:1) verifies:
+        *   User's email is verified.
+        *   User has sufficient credits (>= 1).
+        *   If checks fail, an appropriate error (403 or 402) is returned.
+    *   **Credit Deduction:** If pre-checks pass, 1 credit is deducted.
     *   **First LLM Call (Vertex AI - Gemini):** [`chat.js`](src/pages/api/ai/chat.js:1) sends the query and history to Gemini ([`vertexAiService.js`](src/services/vertexAiService.js:1)) to determine if tools are needed.
     *   **Tool Execution (Direct BrightData APIs):** If a tool is identified (e.g., `search_engine`, `scrape_as_markdown`, `web_data_amazon_product`), [`chat.js`](src/pages/api/ai/chat.js:1) directly calls the relevant BrightData API (SERP, Request, Datasets) using `BRIGHTDATA_API_TOKEN` and `BRIGHTDATA_WEB_UNLOCKER_ZONE`.
     *   **Second LLM Call (Vertex AI - Gemini):** Tool results are sent back to Gemini for synthesis.
-    *   **Streaming Response:** The final answer is streamed to [`ChatInterface.astro`](src/components/ChatInterface.astro:1). This mode provides core functionality using a subset of BrightData tools available via direct API calls.
+    *   **Streaming Response & Credit Update:** The final answer is streamed to [`ChatInterface.astro`](src/components/ChatInterface.astro:1). The response includes an `X-User-Credits` header with the new credit balance, which [`ChatInterface.astro`](src/components/ChatInterface.astro:1) uses to update the Navbar display client-side immediately. This mode provides core functionality using a subset of BrightData tools available via direct API calls.
 
 This dual-mode architecture allows for basic, self-contained operation while providing a path for enhanced capabilities through an optional external service.
 
@@ -131,36 +137,40 @@ This dual-mode architecture allows for basic, self-contained operation while pro
 │   │   ├── ChatInterface.astro  # Astro: Interactive chat interface for the /ai page.
 │   │   ├── BlogList.jsx         # React: Displays blogs (potentially less central if Q&A is deprecated)
 │   │   ├── Footer.astro         # Astro: Site footer
-│   │   ├── Navbar.astro         # Astro: Site navigation
+│   │   ├── Navbar.astro         # Astro: Site navigation, displays user credits.
 │   │   └── QnaForm.astro        # Astro: Original Gemini Q&A form (role might be reduced or deprecated in favor of /ai)
 │   ├── layouts/                 # Astro layouts (MainLayout.astro, BlogPostLayout.astro etc.)
 │   ├── pages/
-│   │   ├── ai.astro             # Astro: Main AI chat page with two-panel layout.
+│   │   ├── ai.astro             # Astro: Main AI chat page with ChatInterface.astro.
 │   │   ├── index.astro          # Main page (original landing, /ai is the new chat focus)
+│   │   ├── login.astro          # Frontend page for user login.
+│   │   ├── register.astro       # Frontend page for user registration.
+│   │   ├── profile.astro        # Frontend page for user profile, displays user credits.
 │   │   ├── blog/                # Blog post markdown files
 │   │   └── api/
 │   │       ├── ai/
-│   │       │   └── chat.js      # API: Orchestrates AI responses, including tool decisions, BrightData direct APIs, and the planned Browser Automation Service.
+│   │       │   └── chat.js      # API: Orchestrates AI responses, handles credit checks/deduction, tool decisions, BrightData direct APIs, and the planned Browser Automation Service.
+│   │       ├── auth/            # Directory for authentication API endpoints:
+│   │       │   ├── login.js       # Handles user login, returns user data including credits.
+│   │       │   ├── me.js          # Fetches current user data, including credits.
+│   │       │   ├── register.js    # Handles user registration.
+│   │       │   ├── profile.js     # Handles profile updates.
+│   │       │   ├── verify-email.js # Verifies email and allocates initial credits.
+│   │       │   └── resend-verification-email.js # Resends verification email.
 │   │       ├── askQna.json.js   # API: Original Q&A endpoint (superseded by /api/ai/chat.js for new functionality)
 │   │       └── getPermissions.json.js # API: Handles blog permissions (review for removal if unused by new chat)
 │   ├── services/
 │   │   ├── vertexAiService.js   # Module for Vertex AI (Gemini model) interaction.
 │   │   └── geminiService.js     # Module for original Gemini API interaction (review for relevance)
-│   └── utils/
-│       └── blogs.js             # Sample blog data
 │   ├── lib/
 │   │   ├── mongodb.js           # MongoDB connection utility.
 │   │   └── emailService.js      # Service for sending emails.
-│   ├── middleware.js          # Astro middleware for JWT authentication and session management.
-│   ├── pages/
-│   │   ├── login.astro          # Frontend page for user login.
-│   │   ├── register.astro       # Frontend page for user registration.
-│   │   ├── profile.astro        # Frontend page for user profile.
-│   │   └── api/
-│   │       ├── auth/            # Directory for authentication API endpoints (register, login, me, profile, verify-email, resend-verification-email).
+│   ├── middleware.js          # Astro middleware for JWT authentication, session management, and making user data (including credits) available.
+│   └── utils/
+│       └── blogs.js             # Sample blog data
 │   ├── components/
 │   │   └── Auth/              # Directory for authentication UI components (RegisterForm, LoginForm).
-├── mongo.md                   # Design document for MongoDB integration.
+├── mongo.md                   # Design document for MongoDB integration, including credit system details.
 ├── BrowserAutomationService/    # (Separate Project - Planned for Render.com)
 ├── .env                       # (Create this) Stores API keys for Vertex AI, BrightData, and potentially Gemini
 ├── astro.config.mjs           # Astro configuration

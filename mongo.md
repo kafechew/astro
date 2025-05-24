@@ -15,6 +15,9 @@ This document outlines the high-level design for integrating MongoDB Atlas into 
     *   `roles`: `Array` of `String` (e.g., `["user", "admin"]`)
     *   `lastLoginAt`: `Date` (optional)
     *   `preferences`: `Object` (optional, e.g., `theme`, `defaultKnowledgeBaseId`)
+    *   `isEmailVerified`: `Boolean` (default `false`)
+    *   `emailVerificationToken`: `String` (nullable)
+    *   `emailVerificationTokenExpires`: `Date` (nullable)
 
 *   **1.2. Authentication/Authorization Strategy**
     *   **Authentication:** JWT (JSON Web Tokens) stored in HTTP-only cookies.
@@ -26,6 +29,8 @@ This document outlines the high-level design for integrating MongoDB Atlas into 
     *   `POST /logout`: Clears JWT cookie.
     *   `GET /me` (Protected): Returns current user's profile.
     *   `PUT /profile` (Protected): Updates user profile/preferences.
+    *   `GET /verify-email?token=<token>`: Verifies the email using the provided token.
+    *   `POST /resend-verification-email` (Protected): Allows a logged-in, unverified user to request a new verification email.
     *   (Optional Future) `POST /forgot-password`, `POST /reset-password`.
 
 *   **1.4. Frontend Integration**
@@ -76,6 +81,7 @@ This document outlines the high-level design for integrating MongoDB Atlas into 
     *   `jsonwebtoken` (JWT handling)
     *   `@google-cloud/aiplatform` (for Vertex AI Embeddings)
     *   `pdf-parse` (PDF text extraction)
+    *   `nodemailer` (for sending emails)
 
 *   **3.2. MongoDB Atlas Free-Tier (M0 Cluster) Limitations:**
     *   **Storage:** 512 MB (significant for RAG).
@@ -93,6 +99,14 @@ This document outlines the high-level design for integrating MongoDB Atlas into 
         *   `src/components/RAG/` (for `DocumentUploadForm.astro`)
         *   New pages: `/login.astro`, `/register.astro`, `/profile.astro`
         *   Astro middleware for auth (`src/middleware.js`).
+    *   **3.4. SMTP Configuration:**
+        *   For email verification and other email-related features to work, the following SMTP server details must be configured as environment variables:
+            *   `SMTP_HOST`: Hostname of the SMTP server.
+            *   `SMTP_PORT`: Port number for the SMTP server.
+            *   `SMTP_USER`: Username for SMTP authentication.
+            *   `SMTP_PASSWORD`: Password for SMTP authentication.
+            *   `SMTP_FROM_EMAIL`: The "From" email address for outgoing emails.
+            *   `APP_BASE_URL`: The base URL of the application (e.g., `http://localhost:4321` or `https://yourapp.com`), used for constructing verification links.
 
 **4. Diagrams**
 

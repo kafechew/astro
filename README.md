@@ -26,6 +26,9 @@ It’s built for hackers, researchers, solopreneurs, and digital hermits seeking
 *   **Astro API Routes:** The new [`/api/ai/chat.js`](src/pages/api/ai/chat.js:1) route orchestrates interactions between the frontend, Vertex AI, and BrightData.
 *   **Secure API Key Management:** Uses a `.env` file for `GOOGLE_PROJECT_ID`, `GOOGLE_CLIENT_EMAIL`, `GOOGLE_PRIVATE_KEY` (for Vertex AI), `BRIGHTDATA_API_TOKEN`, `BRIGHTDATA_WEB_UNLOCKER_ZONE` (for BrightData), and `GEMINI_API_KEY` (backup).
 *   **Planned Browser Automation:** Upcoming capability for advanced browser automation to handle interactive web tasks.
+*   **User Authentication:** Secure user registration, login, and session management using MongoDB and JWTs.
+*   **Email Verification:** System for verifying user email addresses via token-based email links, including a resend option.
+*   **User Profiles:** Basic user profile viewing and updating capabilities.
 
 ## AI Chat Interface
 
@@ -145,6 +148,19 @@ This dual-mode architecture allows for basic, self-contained operation while pro
 │   │   └── geminiService.js     # Module for original Gemini API interaction (review for relevance)
 │   └── utils/
 │       └── blogs.js             # Sample blog data
+│   ├── lib/
+│   │   ├── mongodb.js           # MongoDB connection utility.
+│   │   └── emailService.js      # Service for sending emails.
+│   ├── middleware.js          # Astro middleware for JWT authentication and session management.
+│   ├── pages/
+│   │   ├── login.astro          # Frontend page for user login.
+│   │   ├── register.astro       # Frontend page for user registration.
+│   │   ├── profile.astro        # Frontend page for user profile.
+│   │   └── api/
+│   │       ├── auth/            # Directory for authentication API endpoints (register, login, me, profile, verify-email, resend-verification-email).
+│   ├── components/
+│   │   └── Auth/              # Directory for authentication UI components (RegisterForm, LoginForm).
+├── mongo.md                   # Design document for MongoDB integration.
 ├── BrowserAutomationService/    # (Separate Project - Planned for Render.com)
 ├── .env                       # (Create this) Stores API keys for Vertex AI, BrightData, and potentially Gemini
 ├── astro.config.mjs           # Astro configuration
@@ -160,6 +176,8 @@ This dual-mode architecture allows for basic, self-contained operation while pro
 *   Service account credentials (JSON key file or individual environment variables) for Vertex AI.
 *   BrightData account and SERP API credentials (API Token, Zone).
 *   A [Google AI / Gemini API Key](https://aistudio.google.com/app/apikey) (if `geminiService.js` is retained for other purposes or as a fallback).
+*   MongoDB Atlas account and connection URI.
+*   SMTP server access (host, port, user, password) for email verification.
 
 ## Setup Instructions
 
@@ -189,6 +207,22 @@ This dual-mode architecture allows for basic, self-contained operation while pro
 
         # Node.js Agent & Tool Service URL (Optional)
         NODE_AGENT_SERVICE_URL="<URL_OF_THE_EXTERNAL_NODE_JS_AGENT_SERVICE>" # e.g., https://your-agent-service.onrender.com. If set, chat.js proxies requests here for advanced agentic behavior and full BrightData MCP tool usage (including browser tools). If not set, chat.js uses its internal ReAct loop with direct BrightData API tools.
+
+        # MongoDB Configuration (Required for User Management)
+        MONGODB_URI="mongodb+srv://<user>:<password>@<cluster-url>/<database-name>?retryWrites=true&w=majority" # Your MongoDB Atlas connection string
+
+        # JWT Configuration (Required for Authentication)
+        JWT_SECRET="<YOUR_VERY_STRONG_JWT_SECRET_KEY>" # A long, random, and strong secret key
+
+        # SMTP Email Configuration (Required for Email Verification)
+        SMTP_HOST="<YOUR_SMTP_HOST>"                 # e.g., smtp.example.com
+        SMTP_PORT="587"                               # e.g., 587 for TLS, 465 for SSL
+        SMTP_USER="<YOUR_SMTP_USERNAME>"             # Your SMTP username
+        SMTP_PASSWORD="<YOUR_SMTP_PASSWORD>"         # Your SMTP password
+        SMTP_FROM_EMAIL="<YOUR_SENDER_EMAIL_ADDRESS>" # e.g., no-reply@example.com
+
+        # Application Base URL (Required for Email Verification Links)
+        APP_BASE_URL="http://localhost:4321" # Or your production URL, e.g., https://yourapp.com
 
         # Optional: Original Gemini API Key (if still used for other purposes)
         # GEMINI_API_KEY="<YOUR_GEMINI_API_KEY>"

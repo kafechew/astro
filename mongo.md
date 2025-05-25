@@ -90,13 +90,20 @@ This section outlines the Retrieval Augmented Generation (RAG) capabilities inte
         *   UI for these are available on the user's profile page ([`src/pages/profile.astro`](src/pages/profile.astro:1)).
     *   **Data Processing:** Ingested content is chunked. Embeddings are generated using `@google/generative-ai`'s `models/text-embedding-004` model via `getEmbeddingForQuery(text, "RETRIEVAL_DOCUMENT")` in `src/services/ragService.js`.
     *   **Storage:** Processed data (chunks, 768-dim embeddings) are stored in the `knowledge_documents` collection, scoped by `userId`.
-    *   **Hybrid Retrieval and Augmentation (in `src/pages/api/ai/chat.js`):**
-        1.  User query is embedded using `getEmbeddingForQuery(query, "RETRIEVAL_QUERY")`.
-        2.  `fetchRagContext` from `src/services/ragService.js` performs a vector search against the user's documents using the `$vectorSearch` pipeline (index: `vector_index_knowledge_cosine`, filter by `userId`, projects `score`).
-        3.  **Relevance Check:** If the top retrieved document's score meets or exceeds `RELEVANCE_THRESHOLD` (e.g., 0.75):
-            *   The retrieved context is used to directly synthesize an answer with the LLM, using a specialized prompt that instructs the LLM to answer *only* from the provided context. The ReAct tool decision is bypassed.
-        4.  **Fallback to ReAct:** If no documents are found, or the top score is below the threshold:
-            *   The system proceeds with the standard ReAct agent flow, using the original user query to decide if a tool needs to be called.
+    *   **RAG-Aware Tool Decision and Synthesis Flow (Core logic in `src/pages/api/ai/chat.js` and `src/services/reactProcessorService.js`):**
+        1.  The user's query is embedded using `getEmbeddingForQuery(query, "RETRIEVAL_QUERY")`.
+        2.  `fetchRagContext` from `src/services/ragService.js` performs a vector search against the user's documents (filtered by `userId`, using index `vector_index_knowledge_cosine`, projecting `score`).
+        3.  **Relevance-Based Context Passing:**
+            *   If the top retrieved RAG document's score meets `RELEVANCE_THRESHOLD` (e.g., 0.75), the `ragContext` string is passed to `executeInProcessReActLoop` in `reactProcessorService.js`. Otherwise, `null` is passed.
+        4.  **Intelligent Tool Decision:**
+            *   `reactProcessorService.js` constructs a `firstPassPrompt` for the LLM. If `ragContext` was provided, it's included in this prompt.
+            *   The LLM then decides on a `tool_name` (which can be 'none') by considering the `originalUserQuery`, available tools, AND the provided `ragContext`. This allows the system to intelligently leverage RAG context before committing to a tool.
+        5.  **Conditional Synthesis:**
+            *   If a tool is chosen and executed, synthesis uses tool output.
+            *   If `tool_name` is 'none':
+                *   And `ragContext` was used in the decision: a strict RAG synthesis prompt is used.
+                *   And no `ragContext` was used: a general knowledge synthesis prompt is used.
+        6.  **Full Details:** The comprehensive logic, including the exact prompt structures for tool decision and various synthesis paths, is documented in **[`rag_design_spec.md`](rag_design_spec.md:1)**.
 
 *   **2.2. Key MongoDB Components:**
     *   **Collection:** `knowledge_documents` (stores text chunks, 768-dim `embedding` from `models/text-embedding-004`, and `userId`).

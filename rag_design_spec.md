@@ -152,110 +152,116 @@ The RAG logic is primarily encapsulated in `src/services/ragService.js` and then
             *   `const context = relevantDocs.map(doc => \`Document (Source: \${doc.sourceType}, Title: \${doc.title || 'N/A'}\${doc.originalFilename ? ', File: ' + doc.originalFilename : ''}\${doc.sourceUrl ? ', URL: ' + doc.sourceUrl : ''}, Score: \${doc.score.toFixed(4)}):\\n\${doc.content}\`).join("\\n\\n---\\n\\n");`
         4.  **Return Value:** Returns an object `{ context: string | null, documents: Array<any> }`.
 
-*   **4.2. `src/pages/api/ai/chat.js` - Hybrid RAG and Tool Use Decision Logic:**
+*   **4.2. RAG-Aware Tool Decision and Synthesis Flow (`chat.js` and `reactProcessorService.js`)**
 
-    1.  **Initial Checks:** User authentication, email verification, credit deduction.
-    2.  **Attempt RAG Context Retrieval:**
-        *   `const { context: ragContext, documents: ragDocuments } = await fetchRagContext({ userId: new ObjectId(user._id), originalUserQuery });`
-    3.  **Hybrid Decision Logic (using `RELEVANCE_THRESHOLD`):**
-        *   A `RELEVANCE_THRESHOLD` (e.g., 0.75, configurable via environment variable `RAG_RELEVANCE_THRESHOLD`) is defined.
-        *   `let shouldUseRag = false;`
-        *   `if (ragDocuments && ragDocuments.length > 0 && ragDocuments[0].score >= RELEVANCE_THRESHOLD) { shouldUseRag = true; }`
-    4.  **LLM Call Strategy:**
-        *   **If `shouldUseRag` is `true` (High-Relevance RAG):**
-            *   The LLM is called directly with a specific prompt for RAG synthesis, bypassing the ReAct tool decision logic.
-            *   The prompt emphasizes using the provided `ragContext`.
-            *   **System Instruction for RAG Synthesis:**
-                ```
-                You are hermitAI, an expert at answering questions based *solely* on the provided context.
-                Analyze the following "Context from Knowledge Base" carefully. It contains one or more documents retrieved because they are considered highly relevant to the "Original Query".
-                Your primary goal is to synthesize an answer to the "Original Query" using *only* the information found within this "Context from Knowledge Base".
-                Do not use any external knowledge or make assumptions beyond what is explicitly stated in the context.
-                If the context directly answers the query, provide that answer.
-                If the context contains relevant information but doesn't fully answer the query, explain what information is available and what is missing.
-                If the context, despite being retrieved, appears to be irrelevant to the Original Query, state that the provided documents do not seem to contain the answer.
-                Structure your answer clearly. If citing information from multiple documents, you can refer to them generally (e.g., "One document mentions...", "Another piece of context states...").
-                Focus on accuracy and adherence to the provided text.
+    The system employs a sophisticated flow where RAG context informs the tool decision process within the ReAct agent.
 
-                Context from Knowledge Base:
-                ---
-                ${ragContext}
-                ---
+    1.  **Initial Checks (`chat.js`):**
+        *   User authentication, email verification, credit deduction.
 
-                Original Query: ${originalUserQuery}
-                ```
-        *   **Else (Low-Relevance RAG or No RAG Documents):**
-            *   The system proceeds to the ReAct agent / tool decision logic using the `originalUserQuery`.
-            *   If the ReAct agent decides no tool is needed, a general LLM call is made with the `originalUserQuery` (potentially with a generic system prompt, but not the RAG-specific one).
-    5.  **Response Streaming:** The LLM response (either from RAG synthesis or ReAct flow) is streamed back to the client.
+    2.  **RAG Context Retrieval (`chat.js`):**
+        *   `const { context: ragContextFromSearch, documents: ragDocuments } = await fetchRagContext({ userId: new ObjectId(user._id), originalUserQuery });`
+        *   The `ragContextFromSearch` is a string containing concatenated relevant document chunks, and `ragDocuments` is an array of these documents including their scores.
+
+    3.  **Relevance Check and `ragContextForReAct` Preparation (`chat.js`):**
+        *   A `RELEVANCE_THRESHOLD` (e.g., 0.75, configurable via `process.env.RAG_RELEVANCE_THRESHOLD`) is used.
+        *   `let ragContextForReAct = null;`
+        *   `if (ragDocuments && ragDocuments.length > 0 && ragDocuments[0].score >= RELEVANCE_THRESHOLD) { ragContextForReAct = ragContextFromSearch; }`
+        *   If the top RAG document's score meets or exceeds the threshold, `ragContextForReAct` (the string of context) is passed to the ReAct loop. Otherwise, `null` is passed.
+
+    4.  **Invoke ReAct Loop with Potential RAG Context (`chat.js` calls `reactProcessorService.js`):**
+        *   `chat.js` calls `executeInProcessReActLoop(originalUserQuery, ragContextForReAct, context)` in `reactProcessorService.js`.
+        *   `originalUserQuery` is the user's raw query.
+        *   `ragContextForReAct` is the RAG context string if deemed highly relevant, otherwise `null`.
+
+    5.  **Tool Decision (`firstPassPrompt` in `reactProcessorService.js`):**
+        *   `reactProcessorService.js` constructs a `firstPassPrompt` for the LLM.
+        *   **Crucially, if `ragContextForReAct` was provided (i.e., not `null`), it is injected into this `firstPassPrompt`**, instructing the LLM to consider this knowledge base context *before* deciding whether to use a tool or select `tool_name: "none"`.
+        *   The LLM responds with a JSON object: `{ "tool_name": "chosen_tool_or_none", "arguments": { ... } }`.
+
+    6.  **Execution and Synthesis Path (`reactProcessorService.js`):**
+        *   **A. If a specific tool is chosen (e.g., `search_engine`):**
+            *   The tool is executed.
+            *   The final answer is synthesized using the `originalUserQuery` and the `toolOutput` (see Section 5.4).
+        *   **B. If `tool_name: "none"` is chosen by the LLM:**
+            *   **B1. If `ragContextForReAct` was provided to `executeInProcessReActLoop`:**
+                *   This means the LLM, after considering the RAG context in the `firstPassPrompt`, decided it was sufficient.
+                *   A strict RAG synthesis prompt is used, combining `originalUserQuery` and the `ragContextForReAct` (see Section 5.2).
+            *   **B2. If `ragContextForReAct` was `null` (not provided or not relevant enough):**
+                *   This means the LLM decided its general knowledge was sufficient without needing tools or specific RAG.
+                *   A general knowledge synthesis prompt is used with the `originalUserQuery` (see Section 5.3).
+
+    7.  **Response Streaming:** The LLM's synthesized response is streamed back to the client.
 
 **5. Prompting Strategies for Synthesis and Tool Decision**
 
-This section details the key prompt structures used in the system, primarily within `src/services/reactProcessorService.js` and influenced by logic in `src/pages/api/ai/chat.js`.
+This section details the key prompt structures used in `src/services/reactProcessorService.js`.
 
-*   **5.1. Tool Decision Prompt (`firstPassPrompt` in `reactProcessorService.js`)**
-    *   This prompt is used by the ReAct agent in `reactProcessorService.js` to determine if a tool is necessary to answer the user's query.
-    *   **Template:**
+*   **5.1. Tool Decision Prompt (`firstPassPrompt`)**
+    *   This prompt is dynamically constructed in `reactProcessorService.js` to guide the LLM in deciding whether a tool is needed, or if the (potentially provided) RAG context or its general knowledge is sufficient.
+    *   **Full Template (from `reactProcessorService.js` lines 196-211):**
         ```text
         You are a helpful AI assistant with access to the following tools:
         ${toolDescriptions}
 
         IMPORTANT INSTRUCTIONS FOR TOOL USE:
-        - Use your general knowledge for basic concepts, definitions, and explanations if you are confident in your answer.
-        - Prefer tools like 'search_engine' primarily for information that is time-sensitive (e.g., current prices, news), requires real-time data, or is highly specific and unlikely to be in your general training data.
-        - If the user's query can be adequately answered with your existing knowledge, choose 'none' for the tool.
+        - Review any 'ADDITIONAL CONTEXT FROM KNOWLEDGE BASE' provided below before making a tool decision.
+        - If the 'ADDITIONAL CONTEXT FROM KNOWLEDGE BASE' fully and accurately answers the 'User query', choose 'none' for the tool.
+        - Otherwise, if your general knowledge is sufficient, choose 'none'.
+        - Use tools like 'search_engine' for time-sensitive information (e.g., current prices, news), real-time data, or specifics not in your training or the provided context.
+        {{#if ragContext}}
+
+        ADDITIONAL CONTEXT FROM KNOWLEDGE BASE (Consider this before deciding on a tool):
+        ---
+        ${ragContext}
+        ---
+        {{/if}}
 
         User query: "${originalUserQuery}"
 
-        Based on the user query, the available tools, and the instructions above, do you need to use a tool?
-        If yes, respond ONLY with a JSON object specifying the "tool_name" and an "arguments" object for that tool. Example: {"tool_name": "search_engine", "arguments": {"query": "some search query"}}
-        If no tool is needed, respond ONLY with the JSON object: {"tool_name": "none"}.
+        Considering the user query, tools, instructions, and any additional context, do you need to use a tool? Or is the provided context/your general knowledge sufficient?
+        Respond ONLY with a JSON object specifying the "tool_name" (e.g., "search_engine", or "none" if no tool is needed) and, if a tool is chosen, an "arguments" object for that tool. Example for tool use: {"tool_name": "search_engine", "arguments": {"query": "latest Bitcoin news"}}. Example for no tool: {"tool_name": "none"}.
         ```
     *   **Notes:**
-        *   `${toolDescriptions}`: A dynamically generated string listing available tools, their descriptions, and arguments, derived from the `availableTools` array in `reactProcessorService.js`.
-        *   `${originalUserQuery}`: The raw query submitted by the user.
+        *   `${toolDescriptions}`: Dynamically generated string listing available tools.
+        *   `{{#if ragContext}} ... {{/if}}`: This block, including "ADDITIONAL CONTEXT FROM KNOWLEDGE BASE" and `${ragContext}`, is conditionally included if `ragContext` was passed to `executeInProcessReActLoop`.
+        *   `${ragContext}`: The RAG context string.
+        *   `${originalUserQuery}`: The user's raw query.
 
-*   **5.2. RAG Synthesis Prompt (High-Relevance RAG)**
-    *   When `chat.js` determines that RAG context is highly relevant (based on `RELEVANCE_THRESHOLD`), it constructs the following prompt structure. This is then passed as `queryForLLMSynthesis` to `reactProcessorService.js`, which is instructed to bypass tool decision (`forceToolName = "none"`) and use this directly for synthesis.
-    *   **Template (as constructed by `chat.js` and detailed in section 4.2):**
+*   **5.2. Strict RAG Synthesis Prompt (Tool: 'none', RAG Context Was Used for Decision)**
+    *   Used when the LLM decides `tool_name: "none"` *and* `ragContext` was provided to `executeInProcessReActLoop` (meaning the LLM found the RAG context sufficient).
+    *   **Full Template (from `reactProcessorService.js` lines 464-473):**
         ```text
-        You are hermitAI, an expert at answering questions based *solely* on the provided context.
-        Analyze the following "Context from Knowledge Base" carefully. It contains one or more documents retrieved because they are considered highly relevant to the "Original Query".
-        Your primary goal is to synthesize an answer to the "Original Query" using *only* the information found within this "Context from Knowledge Base".
-        Do not use any external knowledge or make assumptions beyond what is explicitly stated in the context.
-        If the context directly answers the query, provide that answer.
-        If the context contains relevant information but doesn't fully answer the query, explain what information is available and what is missing.
-        If the context, despite being retrieved, appears to be irrelevant to the Original Query, state that the provided documents do not seem to contain the answer.
-        Structure your answer clearly. If citing information from multiple documents, you can refer to them generally (e.g., "One document mentions...", "Another piece of context states...").
-        Focus on accuracy and adherence to the provided text.
-
+        SYSTEM INSTRUCTION: You are in STRICT CONTEXT-ONLY MODE. Your primary goal is to answer the user's query using ONLY the "Context from Knowledge Base" provided. Do not use any external knowledge or your general training data. If the context does not contain the answer, explicitly state that the information is not available in the provided context.
+        ROLE: You are hermitAI, an assistant that answers strictly from the provided text.
         Context from Knowledge Base:
         ---
         ${ragContext}
         ---
-
-        Original Query: ${originalUserQuery}
+        Original Query:
+        ${originalUserQuery}
+        Your answer (ONLY from the context provided):
         ```
     *   **Notes:**
-        *   `${ragContext}`: The concatenated content of relevant documents retrieved by `fetchRagContext`.
+        *   `${ragContext}`: The RAG context that was initially passed to `executeInProcessReActLoop` and considered by the LLM.
         *   `${originalUserQuery}`: The user's original query.
-        *   `reactProcessorService.js` uses this `queryForLLMSynthesis` directly when `forceToolName` is "none" and the query already contains "Context from Knowledge Base:".
 
-*   **5.3. Direct Answer Synthesis Prompt (No RAG, No Tool - "Even More Explicit Prompt")**
-    *   This prompt is constructed by `reactProcessorService.js` when the ReAct agent decides no tool is needed (`tool_name: "none"`) AND RAG context was not deemed relevant (so `queryForLLMSynthesis` is just the `originalUserQuery` and does not contain "Context from Knowledge Base:").
-    *   **Template (from `reactProcessorService.js`):**
+*   **5.3. General Knowledge Synthesis Prompt (Tool: 'none', No RAG Context Used for Decision)**
+    *   Used when the LLM decides `tool_name: "none"` *and* `ragContext` was *not* provided to `executeInProcessReActLoop` (or was `null`).
+    *   **Full Template (from `reactProcessorService.js` lines 475-480):**
         ```text
-        SYSTEM INSTRUCTION: You are hermitAI. Please provide a helpful and concise answer to the following user query.
+        SYSTEM INSTRUCTION: You are hermitAI. Please provide a helpful and concise answer to the following user query based on your general knowledge.
         User Query:
-        ${queryForLLMSynthesis}
+        "${originalUserQuery}"
+
+        Based on this, provide a direct answer.
         ```
     *   **Notes:**
-        *   `${queryForLLMSynthesis}`: In this scenario, this variable holds the `originalUserQuery`.
-        *   This structure ensures a clear instruction to the LLM for direct answers when no tools or specific RAG context are involved in the final synthesis step within `reactProcessorService.js`.
+        *   `${originalUserQuery}`: The user's original query.
 
 *   **5.4. Post-Tool Synthesis Prompt**
-    *   If the ReAct agent in `reactProcessorService.js` decides to use a tool and the tool executes successfully, this prompt is used to synthesize a final answer based on the tool's output.
-    *   **Template (from `reactProcessorService.js`):**
+    *   Used if a specific tool was chosen by the LLM and executed.
+    *   **Template (from `reactProcessorService.js` lines 484-488, adjusted for clarity):**
         ```text
         User query: "${originalUserQuery}"
         I used the '${effectiveToolName}' tool and received the following information:
@@ -265,7 +271,7 @@ This section details the key prompt structures used in the system, primarily wit
     *   **Notes:**
         *   `${originalUserQuery}`: The user's original query.
         *   `${effectiveToolName}`: The name of the tool that was executed.
-        *   `${JSON.stringify(toolOutput)}`: The output/results from the executed tool, stringified.
+        *   `${JSON.stringify(toolOutput)}`: The output/results from the executed tool.
 
 **6. Dependencies (Node.js)**
 

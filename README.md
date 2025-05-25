@@ -22,9 +22,10 @@ It’s built for hackers, researchers, solopreneurs, and digital hermits seeking
 
 *   **Google Vertex AI (Gemini model) Integration:** Utilizes Google's powerful Gemini model through Vertex AI for sophisticated language understanding and generation.
 *   **Live Data Access via BrightData APIs:** Enables the chatbot to fetch real-time information from the web (SERP API), scrape web content (Request API), and access structured datasets (Datasets API) to answer queries, ensuring responses are current and comprehensive.
-*   **Retrieval Augmented Generation (RAG) with Hybrid Approach:** Users can build a private knowledge base (PDF, TXT, MD, URLs, text). The AI uses this via MongoDB Atlas Vector Search. A relevance score from the search determines the chat flow:
-    *   **High Relevance:** If retrieved context scores above a threshold (e.g., 0.75), the AI directly answers based *only* on this context, bypassing tool decisions.
-    *   **Low Relevance / No Context:** The AI proceeds to a ReAct-style tool decision process with the original query.
+*   **Retrieval Augmented Generation (RAG) with RAG-Aware Tool Decision:** Users can build a private knowledge base. The AI uses this via MongoDB Atlas Vector Search.
+    *   `chat.js` fetches RAG context. If highly relevant (based on score vs. `RELEVANCE_THRESHOLD`), this context string (`ragContextForReAct`) is passed to `executeInProcessReActLoop` in `reactProcessorService.js`.
+    *   `reactProcessorService.js` incorporates `ragContextForReAct` (if provided) into the `firstPassPrompt` for tool decision. This allows the LLM to intelligently choose `tool_name: 'none'` if the RAG context is sufficient, or select a tool if it's not.
+    *   Synthesis paths vary: strict RAG synthesis if 'none' was chosen due to RAG context, tool-based synthesis if a tool was run, or general knowledge synthesis if 'none' was chosen without RAG context. Full details in [`rag_design_spec.md`](rag_design_spec.md:1).
 *   **Dynamic UI:** Interactive chat at `/ai` ([`src/components/ChatInterface.astro`](src/components/ChatInterface.astro:1)). RAG ingestion forms on user profile ([`src/pages/profile.astro`](src/pages/profile.astro:1)).
 *   **Astro API Routes:** [`/api/ai/chat.js`](src/pages/api/ai/chat.js:1) orchestrates AI, RAG, credits, and tools. RAG ingestion APIs under `src/pages/api/rag/ingest/`.
 *   **Secure API Key Management:** Uses `.env` for `GEMINI_API_KEY` (for `@google/generative-ai` embeddings), Google Cloud credentials (for Vertex AI chat), `MONGODB_URI`, `JWT_SECRET`, SMTP vars, `APP_BASE_URL`, `VECTOR_SEARCH_INDEX_NAME`, `RAG_RELEVANCE_THRESHOLD`.
@@ -107,35 +108,45 @@ The following additional tools are available in the BrightData MCP client and co
 
 ## How It Works: AI Chat Flow (`/ai` page)
 
-The AI chat functionality is orchestrated by [`/api/ai/chat.js`](src/pages/api/ai/chat.js:1) and follows a hybrid RAG and ReAct flow:
+The AI chat functionality, orchestrated by [`/api/ai/chat.js`](src/pages/api/ai/chat.js:1) and [`src/services/reactProcessorService.js`](src/services/reactProcessorService.js:1), follows this sophisticated RAG-aware ReAct flow:
 
-1.  **User Input & Pre-checks:**
-    *   User sends a message via [`ChatInterface.astro`](src/components/ChatInterface.astro:1) to [`/api/ai/chat.js`](src/pages/api/ai/chat.js:1).
-    *   **Authentication & Credit Check:** The system verifies user authentication (via `chatPreChecksService.js`), email verification status, and sufficient credits (>= 1). If checks fail, an error is returned.
-    *   **Credit Deduction:** If pre-checks pass, 1 credit is deducted.
+1.  **Authentication & Credit Checks (`chat.js` via `chatPreChecksService.js`):**
+    *   User sends a message.
+    *   System verifies authentication, email status, and credit balance (>= 1).
+    *   If checks pass, 1 credit is deducted.
 
-2.  **RAG Attempt (using `ragService.js`):**
-    *   The `originalUserQuery` is embedded using `@google/generative-ai`'s `models/text-embedding-004` (task type: `RETRIEVAL_QUERY`).
-    *   `fetchRagContext` performs a vector search on MongoDB Atlas (`vector_index_knowledge_cosine` index, filtered by `userId`) to find relevant documents. The search returns documents and their `vectorSearchScore`.
+2.  **RAG Attempt (`chat.js` via `ragService.js`):**
+    *   `originalUserQuery` is embedded.
+    *   `fetchRagContext` performs a vector search (MongoDB Atlas, `vector_index_knowledge_cosine` index, filtered by `userId`) to get `ragDocuments` and their scores.
 
-3.  **Hybrid Decision Logic (based on `RELEVANCE_THRESHOLD`):**
-    *   If `ragDocuments` are found and the top document's `score` is `>= RELEVANCE_THRESHOLD` (e.g., 0.75):
-        *   **Force RAG Synthesis:** The system bypasses the ReAct tool decision (`forceToolName: "none"` is passed to `reactProcessorService.js`).
-        *   An LLM call is made using a specific prompt structure (detailed in [`rag_design_spec.md`](rag_design_spec.md:1)) that instructs the AI to answer *solely* based on the `ragContext` provided within the `queryForLLMSynthesis` variable.
-        *   The response is streamed to the user.
+3.  **Relevance Check & Context Preparation (`chat.js`):**
+    *   `chat.js` checks if the top `ragDocument`'s score meets or exceeds `RELEVANCE_THRESHOLD` (e.g., 0.75).
+    *   If highly relevant, `ragContextForReAct` (the string of RAG context) is prepared. Otherwise, `ragContextForReAct` is `null`.
 
-4.  **ReAct Tool Decision (If RAG context is not highly relevant or not found):**
-    *   The system proceeds to the ReAct agent logic (managed by `reactProcessorService.js`) using the `originalUserQuery` for tool decision and `queryForLLMSynthesis` (which would be the `originalUserQuery` in this path) for final synthesis if no tool is used.
-    *   **First LLM Call (Tool Selection):** The LLM (e.g., Gemini via `vertexAiService.js`) determines if a tool is needed to answer the query.
-    *   **Tool Execution:** If a tool is chosen, it's executed (e.g., BrightData tools). The results are captured.
-    *   **Second LLM Call (Synthesis):** Tool results (or an indication that no tool was needed) are sent back to the LLM to synthesize the final answer. Specific prompt templates are used for synthesis based on whether a tool was used or not (details in [`rag_design_spec.md`](rag_design_spec.md:1)).
-    *   The response is streamed to the user.
+4.  **Invoke ReAct Loop (`chat.js` calls `reactProcessorService.js`):**
+    *   `executeInProcessReActLoop(originalUserQuery, ragContextForReAct, context)` is called.
+    *   `ragContextForReAct` is either the RAG context string or `null`.
 
-5.  **Streaming Response & Credit Update:**
-    *   The final answer (from either RAG synthesis or ReAct flow) is streamed to [`ChatInterface.astro`](src/components/ChatInterface.astro:1).
+5.  **RAG-Aware Tool Decision (`reactProcessorService.js`):**
+    *   A `firstPassPrompt` is constructed.
+    *   **Crucially, if `ragContextForReAct` was provided, it's included in this `firstPassPrompt`**. This allows the LLM to consider the knowledge base context *before* deciding on a tool.
+    *   The LLM responds with a JSON object: `{ "tool_name": "chosen_tool_or_none", "arguments": { ... } }`.
+
+6.  **Conditional Execution & Synthesis (`reactProcessorService.js`):**
+    *   **A. If `tool_name` is a specific tool:**
+        *   The tool is executed.
+        *   The final answer is synthesized using `originalUserQuery` and the `toolOutput`.
+    *   **B. If `tool_name` is 'none':**
+        *   **B1. If `ragContextForReAct` was provided (and thus considered by LLM for the 'none' decision):**
+            *   A strict RAG synthesis prompt is used, combining `originalUserQuery` and `ragContextForReAct`. The LLM answers *only* from this context.
+        *   **B2. If `ragContextForReAct` was `null` (no RAG context or not relevant enough for the 'none' decision):**
+            *   A general knowledge synthesis prompt is used with `originalUserQuery`. The LLM answers based on its general training.
+
+7.  **Streaming Response & Credit Update:**
+    *   The final synthesized answer is streamed to [`ChatInterface.astro`](src/components/ChatInterface.astro:1).
     *   The response includes an `X-User-Credits` header with the new credit balance.
 
-This flow prioritizes highly relevant private knowledge, falling back to a general tool-using agent if such knowledge isn't available or sufficiently relevant. The system employs sophisticated prompting strategies for both RAG synthesis and the ReAct tool decision/synthesis cycle, with full details available in [`rag_design_spec.md`](rag_design_spec.md:1) and [`mongo.md`](mongo.md:1). The optional `NODE_AGENT_SERVICE_URL` for an external agent service is still supported for more advanced/custom tool integrations if needed, but the primary flow is now in-process.
+This flow intelligently integrates RAG into the ReAct agent's decision-making process, prioritizing verified knowledge when available and relevant, while still allowing for tool use or general knowledge responses otherwise. Full prompt details are in [`rag_design_spec.md`](rag_design_spec.md:1).
 
 ## Project Structure Highlights
 

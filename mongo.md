@@ -80,7 +80,7 @@ This document outlines the high-level design for integrating MongoDB Atlas into 
 
 **2. RAG with MongoDB Atlas Vector Search**
 
-This section outlines the Retrieval Augmented Generation (RAG) capabilities integrated into hermitAI, leveraging MongoDB Atlas Vector Search. For a comprehensive and detailed breakdown of the RAG design, including data models, ingestion pipeline specifics, vector search index configuration, and the exact chat integration logic, please refer to the dedicated **[`rag_design_spec.md`](rag_design_spec.md:1)** document.
+This section outlines the Retrieval Augmented Generation (RAG) capabilities integrated into hermitAI, leveraging MongoDB Atlas Vector Search. For a comprehensive and detailed breakdown of the RAG design—including data models, ingestion pipeline specifics, vector search index configuration, the exact chat integration logic, and **detailed prompt templates** used for RAG synthesis and tool decision—please refer to the dedicated **[`rag_design_spec.md`](rag_design_spec.md:1)** document.
 
 *   **2.1. Implemented RAG Capabilities Summary:**
     *   **Data Ingestion:** Users can build their private knowledge base through:
@@ -105,10 +105,10 @@ This section outlines the Retrieval Augmented Generation (RAG) capabilities inte
         *   **Configuration:**
             *   Index the `embedding` field (Type: `vector`, Dimensions: `768`, Similarity: `cosine`).
             *   Crucially, the `userId` field **must be mapped as type `filter`** in the Atlas Search Index definition to enable filtering in the `$vectorSearch` stage.
-        *   Refer to [`rag_design_spec.md`](rag_design_spec.md:1) for more details.
+        *   Refer to [`rag_design_spec.md`](rag_design_spec.md:1) for full details on index setup and the RAG pipeline.
 
-*   **2.3. Detailed Design Document:**
-    *   For an in-depth understanding of the RAG architecture, data flow, API specifications, prompt engineering, and specific configurations, please consult the **[`rag_design_spec.md`](rag_design_spec.md:1)** file.
+*   **2.3. Detailed Design Document & Prompting Strategies:**
+    *   For an in-depth understanding of the RAG architecture, data flow, API specifications, specific configurations, and crucially, the **final prompt templates** for RAG synthesis and the ReAct agent's tool decision process, please consult the **[`rag_design_spec.md`](rag_design_spec.md:1)** file. That document contains the authoritative details on all prompting strategies.
 
 **3. General Considerations**
 

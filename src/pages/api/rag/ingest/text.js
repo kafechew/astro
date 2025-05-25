@@ -70,7 +70,7 @@ export async function POST({ request, locals }) {
       for (const chunk of chunks) {
         if (!chunk.trim()) continue;
         try {
-          const embedding = await getEmbeddingForQuery(chunk, "RETRIEVAL_DOCUMENT");
+          const embedding = await getEmbeddingForQuery(chunk); // taskType removed
           // Since getEmbeddingForQuery now throws on error, we only proceed if it's successful.
           // The 'else' case for a null embedding is no longer needed here as an error would have been thrown.
           embeddingsData.push({

@@ -193,7 +193,19 @@ export async function executeInProcessReActLoop(originalUserQuery, queryForLLMSy
             return `${t.name}: ${t.description} Arguments: ${JSON.stringify(t.arguments)}`;
         }).join('\\n');
 
-        let firstPassPrompt = `You are a helpful AI assistant with access to the following tools:\\n${toolDescriptions}\\n\\nUser query: "${originalUserQuery}"\\n\\nBased on the user query and the available tools, do you need to use a tool?\\nIf yes, respond ONLY with a JSON object specifying the "tool_name" and an "arguments" object for that tool. Example: {"tool_name": "search_engine", "arguments": {"query": "some search query"}}\\nIf no tool is needed, respond ONLY with the JSON object: {"tool_name": "none"}.`;
+        let firstPassPrompt = "You are a helpful AI assistant with access to the following tools:\n";
+        firstPassPrompt += toolDescriptions;
+        
+        firstPassPrompt += "\n\nIMPORTANT INSTRUCTIONS FOR TOOL USE:";
+        firstPassPrompt += "\n- Use your general knowledge for basic concepts, definitions, and explanations if you are confident in your answer.";
+        firstPassPrompt += "\n- Prefer tools like 'search_engine' primarily for information that is time-sensitive (e.g., current prices, news), requires real-time data, or is highly specific and unlikely to be in your general training data.";
+        firstPassPrompt += "\n- If the user's query can be adequately answered with your existing knowledge, choose 'none' for the tool.";
+
+        firstPassPrompt += "\n\nUser query: \"" + originalUserQuery + "\"";
+        firstPassPrompt += "\n\nBased on the user query, the available tools, and the instructions above, do you need to use a tool?";
+        firstPassPrompt += "\nIf yes, respond ONLY with a JSON object specifying the \"tool_name\" and an \"arguments\" object for that tool. Example: {\"tool_name\": \"search_engine\", \"arguments\": {\"query\": \"some search query\"}}";
+        firstPassPrompt += "\nIf no tool is needed, respond ONLY with the JSON object: {\"tool_name\": \"none\"}.";
+        console.log("REACT_PROCESSOR: First pass prompt for tool decision:", firstPassPrompt);
         
         const geminiRawResponse = await getVertexAiResponse(firstPassPrompt, context); // Pass context if needed by getVertexAiResponse
 

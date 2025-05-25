@@ -120,22 +120,22 @@ The AI chat functionality is orchestrated by [`/api/ai/chat.js`](src/pages/api/a
 
 3.  **Hybrid Decision Logic (based on `RELEVANCE_THRESHOLD`):**
     *   If `ragDocuments` are found and the top document's `score` is `>= RELEVANCE_THRESHOLD` (e.g., 0.75):
-        *   **Force RAG Synthesis:** The system bypasses the ReAct tool decision.
-        *   An LLM call is made using a specific "Even More Explicit Prompt" that instructs the AI to answer *solely* based on the `ragContext` provided.
+        *   **Force RAG Synthesis:** The system bypasses the ReAct tool decision (`forceToolName: "none"` is passed to `reactProcessorService.js`).
+        *   An LLM call is made using a specific prompt structure (detailed in [`rag_design_spec.md`](rag_design_spec.md:1)) that instructs the AI to answer *solely* based on the `ragContext` provided within the `queryForLLMSynthesis` variable.
         *   The response is streamed to the user.
 
 4.  **ReAct Tool Decision (If RAG context is not highly relevant or not found):**
-    *   The system proceeds to the ReAct agent logic (managed by `reactProcessorService.js`) using the `originalUserQuery`.
+    *   The system proceeds to the ReAct agent logic (managed by `reactProcessorService.js`) using the `originalUserQuery` for tool decision and `queryForLLMSynthesis` (which would be the `originalUserQuery` in this path) for final synthesis if no tool is used.
     *   **First LLM Call (Tool Selection):** The LLM (e.g., Gemini via `vertexAiService.js`) determines if a tool is needed to answer the query.
-    *   **Tool Execution:** If a tool is chosen, it's executed (e.g., BrightData tools).
-    *   **Second LLM Call (Synthesis):** Tool results (or an indication that no tool was needed) are sent back to the LLM to synthesize the final answer.
+    *   **Tool Execution:** If a tool is chosen, it's executed (e.g., BrightData tools). The results are captured.
+    *   **Second LLM Call (Synthesis):** Tool results (or an indication that no tool was needed) are sent back to the LLM to synthesize the final answer. Specific prompt templates are used for synthesis based on whether a tool was used or not (details in [`rag_design_spec.md`](rag_design_spec.md:1)).
     *   The response is streamed to the user.
 
 5.  **Streaming Response & Credit Update:**
     *   The final answer (from either RAG synthesis or ReAct flow) is streamed to [`ChatInterface.astro`](src/components/ChatInterface.astro:1).
     *   The response includes an `X-User-Credits` header with the new credit balance.
 
-This flow prioritizes highly relevant private knowledge, falling back to a general tool-using agent if such knowledge isn't available or sufficiently relevant. The optional `NODE_AGENT_SERVICE_URL` for an external agent service is still supported for more advanced/custom tool integrations if needed, but the primary flow is now in-process.
+This flow prioritizes highly relevant private knowledge, falling back to a general tool-using agent if such knowledge isn't available or sufficiently relevant. The system employs sophisticated prompting strategies for both RAG synthesis and the ReAct tool decision/synthesis cycle, with full details available in [`rag_design_spec.md`](rag_design_spec.md:1) and [`mongo.md`](mongo.md:1). The optional `NODE_AGENT_SERVICE_URL` for an external agent service is still supported for more advanced/custom tool integrations if needed, but the primary flow is now in-process.
 
 ## Project Structure Highlights
 
@@ -178,11 +178,12 @@ This flow prioritizes highly relevant private knowledge, falling back to a gener
 │   │   ├── vertexAiService.js   # Module for Vertex AI (Gemini chat model) interaction.
 │   │   ├── ragService.js        # Module for RAG embedding generation (@google/generative-ai) and context retrieval.
 │   │   ├── chatPreChecksService.js # Module for auth, email verification, and credit checks.
-│   │   ├── reactProcessorService.js # Module for managing the ReAct agent loop and tool execution.
-│   │   └── geminiService.js     # Potentially for other Gemini direct API uses (e.g. embeddings if not in ragService).
+│   │   ├── reactProcessorService.js # Module for managing the ReAct agent loop, tool execution, and associated prompting.
+│   │   └── geminiService.js     # Potentially for other Gemini direct API uses (e.g. embeddings if not in ragService, though ragService currently handles this).
 │   ├── lib/
 │   │   ├── mongodb.js           # MongoDB connection utility.
-│   │   └── emailService.js      # Service for sending emails.
+│   │   ├── emailService.js      # Service for sending emails.
+│   │   └── ai-tools/            # Directory for individual BrightData tool execution functions.
 │   ├── middleware.js          # Astro middleware for JWT authentication and session management.
 │   └── utils/
 │       └── blogs.js             # Sample blog data
@@ -246,9 +247,13 @@ This flow prioritizes highly relevant private knowledge, falling back to a gener
     
             # MongoDB Configuration (Required for User Management and RAG)
             MONGODB_URI="mongodb+srv://<user>:<password>@<cluster-url>/<database-name>?retryWrites=true&w=majority"
-            VECTOR_SEARCH_INDEX_NAME="vector_index_knowledge_cosine" # Name of your Atlas Vector Search Index
-    
+            # Name of your Atlas Vector Search Index. Must match the index created in Atlas.
+            # See mongo.md and rag_design_spec.md for details on index configuration.
+            VECTOR_SEARCH_INDEX_NAME="vector_index_knowledge_cosine"
+
             # RAG Configuration
+            # Defines the minimum vector search score for a document to be considered highly relevant
+            # and trigger the direct RAG synthesis flow, bypassing ReAct tool decision.
             RAG_RELEVANCE_THRESHOLD="0.75" # Threshold for forcing RAG context (0.0 to 1.0)
     
             # JWT Configuration (Required for Authentication)

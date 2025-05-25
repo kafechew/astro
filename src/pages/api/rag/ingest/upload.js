@@ -108,7 +108,7 @@ export async function POST({ request, locals }) {
       for (const chunk of chunks) {
         if (!chunk.trim()) continue; // Skip empty chunks
         try {
-          const embedding = await getEmbeddingForQuery(chunk, "RETRIEVAL_DOCUMENT");
+          const embedding = await getEmbeddingForQuery(chunk); // taskType removed
           embeddingsData.push({
             chunkText: chunk,
             embedding: embedding,

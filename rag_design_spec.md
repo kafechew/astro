@@ -189,7 +189,85 @@ The RAG logic is primarily encapsulated in `src/services/ragService.js` and then
             *   If the ReAct agent decides no tool is needed, a general LLM call is made with the `originalUserQuery` (potentially with a generic system prompt, but not the RAG-specific one).
     5.  **Response Streaming:** The LLM response (either from RAG synthesis or ReAct flow) is streamed back to the client.
 
-**5. Dependencies (Node.js)**
+**5. Prompting Strategies for Synthesis and Tool Decision**
+
+This section details the key prompt structures used in the system, primarily within `src/services/reactProcessorService.js` and influenced by logic in `src/pages/api/ai/chat.js`.
+
+*   **5.1. Tool Decision Prompt (`firstPassPrompt` in `reactProcessorService.js`)**
+    *   This prompt is used by the ReAct agent in `reactProcessorService.js` to determine if a tool is necessary to answer the user's query.
+    *   **Template:**
+        ```text
+        You are a helpful AI assistant with access to the following tools:
+        ${toolDescriptions}
+
+        IMPORTANT INSTRUCTIONS FOR TOOL USE:
+        - Use your general knowledge for basic concepts, definitions, and explanations if you are confident in your answer.
+        - Prefer tools like 'search_engine' primarily for information that is time-sensitive (e.g., current prices, news), requires real-time data, or is highly specific and unlikely to be in your general training data.
+        - If the user's query can be adequately answered with your existing knowledge, choose 'none' for the tool.
+
+        User query: "${originalUserQuery}"
+
+        Based on the user query, the available tools, and the instructions above, do you need to use a tool?
+        If yes, respond ONLY with a JSON object specifying the "tool_name" and an "arguments" object for that tool. Example: {"tool_name": "search_engine", "arguments": {"query": "some search query"}}
+        If no tool is needed, respond ONLY with the JSON object: {"tool_name": "none"}.
+        ```
+    *   **Notes:**
+        *   `${toolDescriptions}`: A dynamically generated string listing available tools, their descriptions, and arguments, derived from the `availableTools` array in `reactProcessorService.js`.
+        *   `${originalUserQuery}`: The raw query submitted by the user.
+
+*   **5.2. RAG Synthesis Prompt (High-Relevance RAG)**
+    *   When `chat.js` determines that RAG context is highly relevant (based on `RELEVANCE_THRESHOLD`), it constructs the following prompt structure. This is then passed as `queryForLLMSynthesis` to `reactProcessorService.js`, which is instructed to bypass tool decision (`forceToolName = "none"`) and use this directly for synthesis.
+    *   **Template (as constructed by `chat.js` and detailed in section 4.2):**
+        ```text
+        You are hermitAI, an expert at answering questions based *solely* on the provided context.
+        Analyze the following "Context from Knowledge Base" carefully. It contains one or more documents retrieved because they are considered highly relevant to the "Original Query".
+        Your primary goal is to synthesize an answer to the "Original Query" using *only* the information found within this "Context from Knowledge Base".
+        Do not use any external knowledge or make assumptions beyond what is explicitly stated in the context.
+        If the context directly answers the query, provide that answer.
+        If the context contains relevant information but doesn't fully answer the query, explain what information is available and what is missing.
+        If the context, despite being retrieved, appears to be irrelevant to the Original Query, state that the provided documents do not seem to contain the answer.
+        Structure your answer clearly. If citing information from multiple documents, you can refer to them generally (e.g., "One document mentions...", "Another piece of context states...").
+        Focus on accuracy and adherence to the provided text.
+
+        Context from Knowledge Base:
+        ---
+        ${ragContext}
+        ---
+
+        Original Query: ${originalUserQuery}
+        ```
+    *   **Notes:**
+        *   `${ragContext}`: The concatenated content of relevant documents retrieved by `fetchRagContext`.
+        *   `${originalUserQuery}`: The user's original query.
+        *   `reactProcessorService.js` uses this `queryForLLMSynthesis` directly when `forceToolName` is "none" and the query already contains "Context from Knowledge Base:".
+
+*   **5.3. Direct Answer Synthesis Prompt (No RAG, No Tool - "Even More Explicit Prompt")**
+    *   This prompt is constructed by `reactProcessorService.js` when the ReAct agent decides no tool is needed (`tool_name: "none"`) AND RAG context was not deemed relevant (so `queryForLLMSynthesis` is just the `originalUserQuery` and does not contain "Context from Knowledge Base:").
+    *   **Template (from `reactProcessorService.js`):**
+        ```text
+        SYSTEM INSTRUCTION: You are hermitAI. Please provide a helpful and concise answer to the following user query.
+        User Query:
+        ${queryForLLMSynthesis}
+        ```
+    *   **Notes:**
+        *   `${queryForLLMSynthesis}`: In this scenario, this variable holds the `originalUserQuery`.
+        *   This structure ensures a clear instruction to the LLM for direct answers when no tools or specific RAG context are involved in the final synthesis step within `reactProcessorService.js`.
+
+*   **5.4. Post-Tool Synthesis Prompt**
+    *   If the ReAct agent in `reactProcessorService.js` decides to use a tool and the tool executes successfully, this prompt is used to synthesize a final answer based on the tool's output.
+    *   **Template (from `reactProcessorService.js`):**
+        ```text
+        User query: "${originalUserQuery}"
+        I used the '${effectiveToolName}' tool and received the following information:
+        ${JSON.stringify(toolOutput)}
+        Based on this information, please provide a concise answer to the user's query. If the information is an error message, explain the error. If the information is complex, summarize it. Respond directly to the user.
+        ```
+    *   **Notes:**
+        *   `${originalUserQuery}`: The user's original query.
+        *   `${effectiveToolName}`: The name of the tool that was executed.
+        *   `${JSON.stringify(toolOutput)}`: The output/results from the executed tool, stringified.
+
+**6. Dependencies (Node.js)**
 
 Reconfirming and adding necessary dependencies to `package.json`:
 

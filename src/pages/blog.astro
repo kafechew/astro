@@ -371,12 +371,12 @@ import BlogList from '../components/BlogList';
 
 <script>
   // Newsletter form submission
-  const newsletterForm = document.querySelector('.newsletter-form');
+  const newsletterForm = document.querySelector('.newsletter-form') as HTMLFormElement | null;
   if (newsletterForm) {
     newsletterForm.addEventListener('submit', (e) => {
       e.preventDefault();
-      const emailInput = newsletterForm.querySelector('input[type="email"]');
-      if (emailInput) {
+      const emailInput = newsletterForm.querySelector('input[type="email"]') as HTMLInputElement | null;
+      if (emailInput && emailInput.value) {
         const email = emailInput.value;
         
         // Here you would typically send this to your newsletter service

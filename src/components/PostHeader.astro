@@ -14,11 +14,7 @@ const {
 } = Astro.props;
 
 // Format date with more details
-const formattedDate = formatDate(date, {
-  year: 'numeric',
-  month: 'long',
-  day: 'numeric'
-});
+const formattedDate = formatDate(date);
 
 // Calculate reading time if not provided
 const estimatedReadTime = readingTime || '5 min read';
@@ -45,9 +41,9 @@ const imageAlt = typeof image === 'object' ? image.alt : `Cover image for ${titl
     <div class="author-info">
       <div class="author-avatar">
         <img 
-          src={`/images/authors/${slugify(author)}.jpg`} 
+          src={`/images/authors/${slugify(author)}.jpg`}
           alt={`Avatar of ${author}`}
-          onerror={(e: Event) => (e.target as HTMLImageElement).src = '/images/authors/default-avatar.jpg'}
+          onerror="this.onerror=null; this.src='/images/authors/default-avatar.jpg';"
         />
       </div>
       <div class="author-meta">

@@ -27,7 +27,7 @@ if (message) {
     statusMessage = 'Your email has been successfully verified!';
     // Potentially update user object if it's not reflecting the change yet,
     // though a page reload or re-fetch from /api/auth/me would be more robust
-    if (user && !user.isEmailVerified) user.isEmailVerified = true;
+    if (user && !user.isVerified) user.isVerified = true;
   } else if (message === 'profile_updated') {
     statusMessage = 'Profile updated successfully!';
   } else {
@@ -47,13 +47,13 @@ if (message) {
 }
 
 // Format dates
-const formatDate = (dateString) => {
+const formatDate = (dateString: string | Date | undefined) => {
   if (!dateString) return '';
   const date = new Date(dateString);
   return date.toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' });
 };
 
-const formatDateTime = (dateString) => {
+const formatDateTime = (dateString: string | Date | undefined) => {
   if (!dateString) return '';
   const date = new Date(dateString);
   return date.toLocaleDateString(undefined, { 
@@ -150,12 +150,12 @@ const lastUpdated = formatDateTime(user.updatedAt);
         <div class="profile-email">
           <div class="email-header">
             <h3>Email Address</h3>
-            <div class:list={["email-status", user.isEmailVerified ? "verified" : "unverified"]}>
-              {user.isEmailVerified ? 'Verified' : 'Not Verified'}
+            <div class:list={["email-status", user.isVerified ? "verified" : "unverified"]}>
+              {user.isVerified ? 'Verified' : 'Not Verified'}
             </div>
           </div>
           <p class="email-value">{user.email}</p>
-          {!user.isEmailVerified && (
+          {!user.isVerified && (
             <button id="resendVerificationBtn" class="link secondary">
               <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                 <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38"></path>
@@ -486,15 +486,15 @@ const lastUpdated = formatDateTime(user.updatedAt);
 </style>
 
 <script>
-  const form = document.getElementById('profileUpdateForm');
-  const messageArea = document.getElementById('messageArea');
-  const currentDisplayNameElement = document.getElementById('currentDisplayName');
-  const currentBioElement = document.getElementById('currentBio');
-  const resendBtn = document.getElementById('resendVerificationBtn');
-  const changePasswordBtn = document.getElementById('changePasswordBtn');
+  const form = document.getElementById('profileUpdateForm') as HTMLFormElement | null;
+  const messageArea = document.getElementById('messageArea') as HTMLElement | null;
+  const currentDisplayNameElement = document.getElementById('currentDisplayName') as HTMLElement | null;
+  const currentBioElement = document.getElementById('currentBio') as HTMLElement | null;
+  const resendBtn = document.getElementById('resendVerificationBtn') as HTMLButtonElement | null;
+  const changePasswordBtn = document.getElementById('changePasswordBtn') as HTMLButtonElement | null;
 
   // Function to display messages in the main status area at the top
-  function showStatusMessage(text, type = 'info') {
+  function showStatusMessage(text: string, type: string = 'info') {
     let statusDiv = document.querySelector('div[role="alert"]');
     
     if (!statusDiv) {
@@ -524,7 +524,7 @@ const lastUpdated = formatDateTime(user.updatedAt);
   }
 
   // Function to display form-specific messages
-  function showFormMessage(element, text, type = 'info') {
+  function showFormMessage(element: HTMLElement | null, text: string, type: string = 'info') {
     if (!element) return;
     
     element.textContent = text;

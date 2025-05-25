@@ -38,7 +38,7 @@ const {
       };
 
       // Set theme on load
-      setTheme(getThemePreference());
+      setTheme(getThemePreference() || 'light');
 
       // Listen for theme toggle events from navbar
       document.addEventListener('themeToggle', (e: Event) => {

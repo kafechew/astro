@@ -1,48 +1,27 @@
 // src/pages/api/ai/chat.js
-import dotenv from 'dotenv';
 import jwt from 'jsonwebtoken'; // Added for JWT regeneration
 import { serialize } from 'cookie'; // Added for setting cookie
 import { connectToDatabase } from '../../../lib/mongodb.js';
 import { ObjectId } from 'mongodb';
+import { PredictionServiceClient } from '@google-cloud/aiplatform'; // Keep if used by RAG or other non-ReAct parts
+import { GoogleAuth } from 'google-auth-library'; // Keep if used by RAG or other non-ReAct parts
+import { fetchRagContext } from '../../../services/ragService.js';
+import { performPreChecksAndDeductCredits } from '../../../services/chatPreChecksService.js';
+import { executeInProcessReActLoop } from '../../../services/reactProcessorService.js'; // Import the new service
 
-dotenv.config(); // Load .env for this API route specifically
 
-const JWT_SECRET = import.meta.env.JWT_SECRET; // Added for JWT signing
+const JWT_SECRET = import.meta.env.JWT_SECRET;
 if (!JWT_SECRET) {
   console.error("FATAL ERROR: JWT_SECRET is not defined in .env file for AI chat route. JWT refresh will fail.");
 }
 
-const NODE_AGENT_SERVICE_URL = process.env.NODE_AGENT_SERVICE_URL;
+const VECTOR_SEARCH_INDEX_NAME = import.meta.env.VECTOR_SEARCH_INDEX_NAME;
+if (!VECTOR_SEARCH_INDEX_NAME) {
+  console.error("AI_CHAT_RAG: VECTOR_SEARCH_INDEX_NAME is not set in .env. RAG might fail or use a default index name.");
+}
+
+const NODE_AGENT_SERVICE_URL = import.meta.env.NODE_AGENT_SERVICE_URL;
 const COST_PER_QUERY = 1; // Define the cost per query
-// BROWSER_AUTOMATION_SERVICE_URL is not used if NODE_AGENT_SERVICE_URL handles all agent logic
-// const BROWSER_AUTOMATION_SERVICE_URL = process.env.BROWSER_AUTOMATION_SERVICE_URL; 
-
-// Imports needed for the fallback ReAct logic
-import { getVertexAiResponse } from '../../../services/vertexAiService.js';
-// Assuming all other necessary execute... function imports for ReAct tools are present here
-// For example (based on original file structure indications):
-import { executeGetYoutubeVideos } from '../../../lib/ai-tools/youtubeVideosTool.js';
-import { executeSessionStats } from '../../../lib/ai-tools/sessionStatsTool.js';
-// And others like:
-import { executeSearchEngine } from '../../../lib/ai-tools/searchEngineTool.js';
-import { executeScrapeMarkdown } from '../../../lib/ai-tools/scrapeMarkdownTool.js';
-import { executeScrapeHtml } from '../../../lib/ai-tools/scrapeHtmlTool.js';
-import { executeGetLinkedInProfile } from '../../../lib/ai-tools/linkedinProfileTool.js';
-import { executeGetAmazonProduct } from '../../../lib/ai-tools/amazonProductTool.js';
-import { executeGetAmazonProductReviews } from '../../../lib/ai-tools/amazonProductReviewsTool.js';
-import { executeGetLinkedInCompanyProfile } from '../../../lib/ai-tools/linkedinCompanyProfileTool.js';
-import { executeGetZoominfoCompanyProfile } from '../../../lib/ai-tools/zoominfoCompanyProfileTool.js';
-import { executeGetInstagramProfile } from '../../../lib/ai-tools/instagramProfileTool.js';
-import { executeGetInstagramPosts } from '../../../lib/ai-tools/instagramPostsTool.js';
-import { executeGetInstagramReels } from '../../../lib/ai-tools/instagramReelsTool.js';
-import { executeGetInstagramComments } from '../../../lib/ai-tools/instagramCommentsTool.js';
-import { executeGetFacebookPosts } from '../../../lib/ai-tools/facebookPostsTool.js';
-import { executeGetFacebookMarketplaceListings } from '../../../lib/ai-tools/facebookMarketplaceListingsTool.js';
-import { executeGetFacebookCompanyReviews } from '../../../lib/ai-tools/facebookCompanyReviewsTool.js';
-import { executeGetXPosts } from '../../../lib/ai-tools/xPostsTool.js';
-import { executeGetZillowPropertiesListing } from '../../../lib/ai-tools/zillowPropertiesListingTool.js';
-import { executeGetBookingHotelListings } from '../../../lib/ai-tools/bookingHotelListingsTool.js';
-
 
 export async function POST(context) {
   try {
@@ -57,65 +36,104 @@ export async function POST(context) {
       });
     }
 
-    if (!user.isEmailVerified) {
-      return new Response(JSON.stringify({ error: "email_not_verified", message: "Please verify your email to use the AI chat." }), {
-        status: 403,
+    // Connect to DB early as it's needed by pre-checks and RAG
+    const { db: dbInstance } = await connectToDatabase();
+    const usersCollection = dbInstance.collection('users'); // Keep usersCollection for JWT refresh logic later
+
+    // Perform pre-checks and deduct credits using the new service
+    const preCheckResult = await performPreChecksAndDeductCredits(user, COST_PER_QUERY, dbInstance);
+
+    if (preCheckResult.error) {
+      return new Response(JSON.stringify(preCheckResult.body), {
+        status: preCheckResult.status,
         headers: { 'Content-Type': 'application/json' },
       });
     }
 
-    if (user.credits < COST_PER_QUERY) {
-      return new Response(JSON.stringify({ error: "insufficient_credits", message: "You do not have enough credits to perform this action." }), {
-        status: 402,
-        headers: { 'Content-Type': 'application/json' },
-      });
-    }
-
-    // Attempt to decrement credits
-    const { db: dbInstance } = await connectToDatabase(); // Destructure to get the actual db instance
-    const usersCollection = dbInstance.collection('users');
-    
+    // If pre-checks passed and credits deducted, proceed.
+    // userIdToUpdate will be needed for RAG and JWT refresh.
     let userIdToUpdate;
     try {
       userIdToUpdate = new ObjectId(user.userId);
     } catch (e) {
-      console.error("Invalid userId format for ObjectId:", user.userId);
-      return new Response(JSON.stringify({ error: "internal_server_error", message: "Invalid user identifier." }), {
+      console.error("Invalid userId format for ObjectId after pre-checks:", user.userId, e);
+      // This should ideally not happen if user.userId is valid, but as a safeguard:
+      return new Response(JSON.stringify({ error: "internal_server_error", message: "Invalid user identifier post pre-checks." }), {
         status: 500,
         headers: { 'Content-Type': 'application/json' },
       });
     }
-
-    const updateResult = await usersCollection.updateOne(
-      { _id: userIdToUpdate, credits: { $gte: COST_PER_QUERY } },
-      { $inc: { credits: -COST_PER_QUERY } }
-    );
-
-    if (updateResult.modifiedCount === 0) {
-      // This could happen if credits dropped below COST_PER_QUERY between the check and update (race condition)
-      // or if the user document wasn't found with sufficient credits (less likely if initial check passed).
-      console.warn(`Failed to update credits for user ${user.userId}. Initial credits: ${user.credits}, Cost: ${COST_PER_QUERY}. Modified count: ${updateResult.modifiedCount}`);
-      return new Response(JSON.stringify({ error: "credit_deduction_failed", message: "Failed to update credits. Please try again or check your balance." }), {
-        status: 409, // Conflict or 402 Payment Required
-        headers: { 'Content-Type': 'application/json' },
-      });
-    }
     
-    // Credits successfully deducted, update in-memory user for this request if necessary (optional)
-    // Astro.locals.user.credits -= COST_PER_QUERY; // Not strictly needed as JWT is source of truth between requests
+    // Credits successfully deducted by the service.
+    // The in-memory user object (context.locals.user) might be stale regarding credits.
+    // The JWT refresh logic later will fetch the latest user data.
 
-    const { message: userMessage } = await context.request.json();
+    const { message: originalUserQuery } = await context.request.json();
 
-    if (!userMessage || typeof userMessage !== 'string' || userMessage.trim() === '') {
+    if (!originalUserQuery || typeof originalUserQuery !== 'string' || originalUserQuery.trim() === '') {
       return new Response(JSON.stringify({ error: 'Message cannot be empty.' }), {
         status: 400,
         headers: { 'Content-Type': 'application/json' },
       });
     }
 
+    const RELEVANCE_THRESHOLD = 0.75; // Example threshold for cosine similarity; may need tuning
+    let queryToSendToLLM;
+    let forceToolNameToReact = null; // Changed from forceNoTool to be more explicit
+
+    // Attempt RAG Context Retrieval First
+    try {
+      if (!userIdToUpdate) {
+        console.error("AI_CHAT: userIdToUpdate (ObjectId) not available for RAG. This should not happen. Proceeding with original query for LLM.");
+        queryToSendToLLM = originalUserQuery;
+        // forceToolNameToReact remains null
+      } else if (!VECTOR_SEARCH_INDEX_NAME) {
+        console.warn("AI_CHAT: VECTOR_SEARCH_INDEX_NAME is not set. Skipping RAG. Proceeding with original query for LLM.");
+        queryToSendToLLM = originalUserQuery;
+        // forceToolNameToReact remains null
+      } else {
+        // dbInstance was already fetched for credit deduction. Re-use it.
+        const ragResult = await fetchRagContext(originalUserQuery, userIdToUpdate, dbInstance, VECTOR_SEARCH_INDEX_NAME);
+
+        if (ragResult && ragResult.documents && ragResult.documents.length > 0 && ragResult.documents[0].score >= RELEVANCE_THRESHOLD) {
+          // Highly relevant RAG context found
+          queryToSendToLLM = `ROLE: You are hermitAI.
+TASK: You MUST answer using ONLY the information in the "Context from Knowledge Base" below.
+WARNING: Your training data may contain general information, but you MUST IGNORE it completely for this task.
+IMPORTANT: If the answer is in the context, quote it directly. Do not modify, interpret, or add to it.
+
+Context from Knowledge Base:
+---
+${ragResult.context}
+---
+
+Original Query:
+${originalUserQuery}
+
+Your answer (ONLY from the context provided):`;
+          forceToolNameToReact = "none";
+          console.log(`AI_CHAT: Highly relevant RAG context found (top score: ${ragResult.documents[0].score}). Forcing direct synthesis.`);
+        } else {
+          // RAG context not found or not relevant enough
+          queryToSendToLLM = originalUserQuery;
+          forceToolNameToReact = null; // Allow ReAct to decide tool
+          if (ragResult && ragResult.documents && ragResult.documents.length > 0) {
+            console.log(`AI_CHAT: RAG context found but top score (${ragResult.documents[0].score}) is below threshold (${RELEVANCE_THRESHOLD}). Proceeding to tool decision/general synthesis.`);
+          } else {
+            console.log("AI_CHAT: No relevant RAG context found. Proceeding to tool decision/general synthesis.");
+          }
+        }
+      }
+    } catch (ragError) {
+      console.error("AI_CHAT: Error during RAG processing. Proceeding with original query for LLM.", ragError);
+      queryToSendToLLM = originalUserQuery; // Fallback
+      forceToolNameToReact = null; // Ensure it's null on error
+    }
+
     let agentServiceSucceeded = false;
     let agentReply = null;
 
+    console.log("AI_CHAT_FINAL_PROMPT: Sending to LLM:", queryToSendToLLM);
     if (NODE_AGENT_SERVICE_URL) {
       console.log("Attempting to use Node.js Agent Service via URL:", NODE_AGENT_SERVICE_URL);
       try {
@@ -125,7 +143,7 @@ export async function POST(context) {
             'Content-Type': 'application/json',
             // Add any other headers your agent service might expect, e.g., API keys
           },
-          body: JSON.stringify({ message: userMessage /*, other_params_if_needed */ }),
+          body: JSON.stringify({ message: queryToSendToLLM /*, other_params_if_needed */ }),
           // Consider adding a timeout for this fetch call
           // signal: AbortSignal.timeout(10000) // Example: 10 second timeout (requires Node 16+ for AbortSignal.timeout)
         });
@@ -198,550 +216,24 @@ export async function POST(context) {
         console.log("NODE_AGENT_SERVICE_URL not set. Using in-process ReAct logic.");
       }
       
-      // IN-PROCESS RE-ACT LOGIC (copied from original file's else block)
-      const availableTools = [
-      {
-        name: "search_engine",
-        description: "Performs a web search using Google (via BrightData SERP API) to find relevant information or URLs. Returns structured search results.",
-        arguments: {
-          query: "string (the search query)"
-        }
-      },
-      {
-        name: "scrape_as_markdown",
-        description: "Fetches the content of a given URL as Markdown text using BrightData Crawl API. Use this if you have a specific URL and need its textual content.",
-        arguments: {
-          url: "string (the URL to scrape)"
-        }
-      },
-      {
-        name: "scrape_as_html",
-        description: "Scrape a single webpage URL with advanced options for content extraction and get back the results in HTML. This tool can unlock any webpage even if it uses bot detection or CAPTCHA.",
-        arguments: {
-          url: "string (the URL to scrape)"
-        }
-      },
-      {
-        name: "web_data_linkedin_person_profile",
-        description: "Quickly read structured LinkedIn people profile data using a specific LinkedIn profile URL. This can be a cache lookup, so it can be more reliable than scraping directly.",
-        arguments: {
-          url: "string (the full LinkedIn profile URL)"
-        }
-      },
-      {
-        name: "web_data_amazon_product",
-        description: "Quickly read structured Amazon product data. Requires a valid Amazon product URL with /dp/ in it. This can be a cache lookup, so it can be more reliable than scraping directly.",
-        arguments: {
-          url: "string (the full Amazon product URL containing /dp/)"
-        }
-      },
-      {
-        name: "web_data_amazon_product_reviews",
-        description: "Quickly read structured Amazon product review data. Requires a valid Amazon product URL with /dp/ in it. This can be a cache lookup, so it can be more reliable than scraping directly.",
-        arguments: {
-          url: "string (the full Amazon product URL containing /dp/)"
-        }
-      },
-      {
-        name: "web_data_linkedin_company_profile",
-        description: "Quickly read structured LinkedIn company profile data using a specific LinkedIn company URL.",
-        arguments: {
-          url: "string (the full LinkedIn company profile URL)"
-        }
-      },
-      {
-        name: "web_data_zoominfo_company_profile",
-        description: "Quickly read structured ZoomInfo company profile data. Requires a valid ZoomInfo company URL.",
-        arguments: {
-          url: "string (the full ZoomInfo company profile URL)"
-        }
-      },
-      {
-        name: "web_data_instagram_profiles",
-        description: "Quickly read structured Instagram profile data. Requires a valid Instagram URL.",
-        arguments: {
-          url: "string (the full Instagram profile URL)"
-        }
-      },
-      {
-        name: "web_data_instagram_posts",
-        description: "Quickly read structured Instagram post data. Requires a valid Instagram URL (can be a profile URL to get posts from, or a specific post URL).",
-        arguments: {
-          url: "string (the Instagram profile or post URL)"
-        }
-      },
-      {
-        name: "web_data_instagram_reels",
-        description: "Quickly read structured Instagram reel data. Requires a valid Instagram URL (can be a profile URL to get reels from, or a specific reel URL).",
-        arguments: {
-          url: "string (the Instagram profile or reel URL)"
-        }
-      },
-      {
-        name: "session_stats",
-        description: "Provides information about tool usage in the current interaction.",
-        arguments: {} // No arguments needed
-      },
-      {
-        name: "web_data_instagram_comments",
-        description: "Quickly read structured Instagram comments data for a specific Instagram post or reel. Requires a valid Instagram post/reel URL.",
-        arguments: {
-          url: "string (the Instagram post or reel URL)"
-        }
-      },
-      {
-        name: "web_data_facebook_posts",
-        description: "Quickly read structured Facebook post data. Requires a valid Facebook post URL.",
-        arguments: {
-          url: "string (the Facebook post URL)"
-        }
-      },
-      {
-        name: "web_data_facebook_marketplace_listings",
-        description: "Quickly read structured Facebook marketplace listing data. Requires a valid Facebook marketplace listing URL.",
-        arguments: {
-          url: "string (the Facebook marketplace listing URL)"
-        }
-      },
-      {
-        name: "web_data_facebook_company_reviews",
-        description: "Quickly read structured Facebook company reviews data. Requires a valid Facebook company URL and the number of reviews to fetch.",
-        arguments: {
-          url: "string (the Facebook company URL)",
-          num_of_reviews: "string (the number of reviews to fetch, e.g., '10')"
-        }
-      },
-      {
-        name: "web_data_x_posts",
-        description: "Quickly read structured X (formerly Twitter) post data. Requires a valid X post URL.",
-        arguments: {
-          url: "string (the X post URL)"
-        }
-      },
-      {
-        name: "web_data_zillow_properties_listing",
-        description: "Quickly read structured Zillow properties listing data. Requires a valid Zillow properties listing URL.",
-        arguments: {
-          url: "string (the Zillow properties listing URL)"
-        }
-      },
-      {
-        name: "web_data_booking_hotel_listings",
-        description: "Quickly read structured Booking.com hotel listings data. Requires a valid Booking.com hotel listing URL.",
-        arguments: {
-          url: "string (the Booking.com hotel listing URL)"
-        }
-      },
-      {
-        name: "web_data_youtube_videos",
-        description: "Quickly read structured YouTube videos data. Requires a valid YouTube video URL.",
-        arguments: {
-          url: "string (the YouTube video URL)"
-        }
-      },
-      {
-        name: "scraping_browser_navigate",
-        description: "Navigates a remote browser to a new URL. Use this as the first step for interactive browser tasks.",
-        arguments: {
-          url: "string (The URL to navigate to)"
-        }
-      },
-      {
-        name: "scraping_browser_get_text",
-        description: "Gets the visible text content of the current page in a remote browser session. Should be used after navigating to a page.",
-        arguments: {} // No arguments needed for get_text itself, assumes prior navigation
-      }
-    ];
-    
-    const toolDescriptions = availableTools.map(t => {
-      return t.name + ": " + t.description + " Arguments: " + JSON.stringify(t.arguments);
-    }).join('\\n');
+      // Call the new ReAct processor service
+      const reactContext = {
+        db: dbInstance,
+        user: user, // user object from context.locals.user
+        userIdToUpdate: userIdToUpdate, // ObjectId
+        JWT_SECRET: JWT_SECRET,
+        COST_PER_QUERY: COST_PER_QUERY,
+        // request: context.request, // Pass if any tool needs raw request details like headers
+      };
 
-    let firstPassPrompt = "You are a helpful AI assistant with access to the following tools:\\n";
-    firstPassPrompt += toolDescriptions;
-    firstPassPrompt += "\\n\\nUser query: \"" + userMessage + "\"";
-    firstPassPrompt += "\\n\\nBased on the user query and the available tools, do you need to use a tool?";
-    firstPassPrompt += "\\nIf yes, respond ONLY with a JSON object specifying the \"tool_name\" and an \"arguments\" object for that tool. Example: {\"tool_name\": \"search_engine\", \"arguments\": {\"query\": \"some search query\"}}";
-    firstPassPrompt += "\\nIf no tool is needed, respond ONLY with the JSON object: {\"tool_name\": \"none\"}.";
-
-    const geminiRawResponse = await getVertexAiResponse(firstPassPrompt);
-
-    if (geminiRawResponse !== null) {
-      try {
-        let cleanedResponse = geminiRawResponse;
-        if (cleanedResponse.startsWith("```json")) {
-          cleanedResponse = cleanedResponse.substring(7); 
-        }
-        if (cleanedResponse.endsWith("```")) {
-          cleanedResponse = cleanedResponse.substring(0, cleanedResponse.length - 3);
-        }
-        cleanedResponse = cleanedResponse.trim(); 
-
-        const toolDecision = JSON.parse(cleanedResponse);
-        console.log("Gemini tool decision (after cleaning):", toolDecision);
-
-        let toolOutput = null; 
-
-        if (toolDecision && toolDecision.tool_name && toolDecision.tool_name !== "none") {
-          const effectiveToolName = toolDecision.tool_name;
-
-          if (toolDecision.tool_name === "search_engine") {
-            if (toolDecision.arguments && toolDecision.arguments.query) {
-              const brightDataApiToken = process.env.BRIGHTDATA_API_TOKEN;
-              const brightDataZone = process.env.BRIGHTDATA_WEB_UNLOCKER_ZONE;
-              toolOutput = await executeSearchEngine(toolDecision.arguments.query, brightDataApiToken, brightDataZone);
-            } else {
-              console.error("Missing query argument for search_engine tool.");
-              toolOutput = "Error: Query argument missing for search_engine tool.";
-            }
-          } else if (toolDecision.tool_name === "scrape_as_markdown") {
-            if (toolDecision.arguments && toolDecision.arguments.url) {
-              const brightDataApiToken = process.env.BRIGHTDATA_API_TOKEN;
-              const brightDataZone = process.env.BRIGHTDATA_WEB_UNLOCKER_ZONE || 'mcp_unlocker'; 
-              toolOutput = await executeScrapeMarkdown(toolDecision.arguments.url, brightDataApiToken, brightDataZone);
-            } else {
-              console.error("Missing URL argument for scrape_as_markdown tool.");
-              toolOutput = "Error: URL argument missing for scrape_as_markdown tool.";
-            }
-          } else if (toolDecision.tool_name === "scrape_as_html") {
-            if (toolDecision.arguments && toolDecision.arguments.url) {
-              const brightDataApiToken = process.env.BRIGHTDATA_API_TOKEN;
-              const brightDataZone = process.env.BRIGHTDATA_WEB_UNLOCKER_ZONE;
-              toolOutput = await executeScrapeHtml(toolDecision.arguments.url, brightDataApiToken, brightDataZone);
-            } else {
-              console.error("Missing URL argument for scrape_as_html tool.");
-              toolOutput = "Error: URL argument missing for scrape_as_html tool.";
-            }
-          } else if (toolDecision.tool_name === "web_data_linkedin_person_profile") {
-            if (toolDecision.arguments && toolDecision.arguments.url) {
-              const brightDataApiToken = process.env.BRIGHTDATA_API_TOKEN;
-              toolOutput = await executeGetLinkedInProfile(toolDecision.arguments.url, brightDataApiToken);
-            } else {
-              console.error("Missing URL argument for web_data_linkedin_person_profile tool.");
-              toolOutput = "Error: URL argument missing for web_data_linkedin_person_profile tool.";
-            }
-        } else if (toolDecision.tool_name === "web_data_amazon_product") {
-          if (toolDecision.arguments && toolDecision.arguments.url) {
-            const brightDataApiToken = process.env.BRIGHTDATA_API_TOKEN;
-            toolOutput = await executeGetAmazonProduct(toolDecision.arguments.url, brightDataApiToken);
-          } else {
-            console.error("Missing URL argument for web_data_amazon_product tool.");
-            toolOutput = "Error: URL argument missing for web_data_amazon_product tool.";
-          }
-          } else if (toolDecision.tool_name === "web_data_amazon_product_reviews") {
-            if (toolDecision.arguments && toolDecision.arguments.url) {
-              const brightDataApiToken = process.env.BRIGHTDATA_API_TOKEN;
-              toolOutput = await executeGetAmazonProductReviews(toolDecision.arguments.url, brightDataApiToken);
-            } else {
-              console.error("Missing URL argument for web_data_amazon_product_reviews tool.");
-              toolOutput = "Error: URL argument missing for web_data_amazon_product_reviews tool.";
-            }
-          } else if (toolDecision.tool_name === "web_data_linkedin_company_profile") {
-            if (toolDecision.arguments && toolDecision.arguments.url) {
-              const brightDataApiToken = process.env.BRIGHTDATA_API_TOKEN;
-              toolOutput = await executeGetLinkedInCompanyProfile(toolDecision.arguments.url, brightDataApiToken);
-            } else {
-              console.error("Missing URL argument for web_data_linkedin_company_profile tool.");
-              toolOutput = "Error: URL argument missing for web_data_linkedin_company_profile tool.";
-            }
-          } else if (toolDecision.tool_name === "web_data_zoominfo_company_profile") {
-            if (toolDecision.arguments && toolDecision.arguments.url) {
-              const brightDataApiToken = process.env.BRIGHTDATA_API_TOKEN;
-              toolOutput = await executeGetZoominfoCompanyProfile(toolDecision.arguments.url, brightDataApiToken);
-            } else {
-              console.error("Missing URL argument for web_data_zoominfo_company_profile tool.");
-              toolOutput = "Error: URL argument missing for web_data_zoominfo_company_profile tool.";
-            }
-          } else if (toolDecision.tool_name === "web_data_instagram_profiles") {
-            if (toolDecision.arguments && toolDecision.arguments.url) {
-              const brightDataApiToken = process.env.BRIGHTDATA_API_TOKEN;
-              toolOutput = await executeGetInstagramProfile(toolDecision.arguments.url, brightDataApiToken);
-            } else {
-              console.error("Missing URL argument for web_data_instagram_profiles tool.");
-              toolOutput = "Error: URL argument missing for web_data_instagram_profiles tool.";
-            }
-          } else if (toolDecision.tool_name === "web_data_instagram_posts") {
-            if (toolDecision.arguments && toolDecision.arguments.url) {
-              const brightDataApiToken = process.env.BRIGHTDATA_API_TOKEN;
-              toolOutput = await executeGetInstagramPosts(toolDecision.arguments.url, brightDataApiToken);
-            } else {
-              console.error("Missing URL argument for web_data_instagram_posts tool.");
-              toolOutput = "Error: URL argument missing for web_data_instagram_posts tool.";
-            }
-          } else if (toolDecision.tool_name === "web_data_instagram_reels") {
-            if (toolDecision.arguments && toolDecision.arguments.url) {
-              const brightDataApiToken = process.env.BRIGHTDATA_API_TOKEN;
-              toolOutput = await executeGetInstagramReels(toolDecision.arguments.url, brightDataApiToken);
-            } else {
-              console.error("Missing URL argument for web_data_instagram_reels tool.");
-              toolOutput = "Error: URL argument missing for web_data_instagram_reels tool.";
-            }
-          } else if (toolDecision.tool_name === "web_data_instagram_comments") {
-            if (toolDecision.arguments && toolDecision.arguments.url) {
-              const brightDataApiToken = process.env.BRIGHTDATA_API_TOKEN;
-              toolOutput = await executeGetInstagramComments(toolDecision.arguments.url, brightDataApiToken);
-            } else {
-              console.error("Missing URL argument for web_data_instagram_comments tool.");
-              toolOutput = "Error: URL argument missing for web_data_instagram_comments tool.";
-            }
-          } else if (toolDecision.tool_name === "web_data_facebook_posts") {
-            if (toolDecision.arguments && toolDecision.arguments.url) {
-              const brightDataApiToken = process.env.BRIGHTDATA_API_TOKEN;
-              toolOutput = await executeGetFacebookPosts(toolDecision.arguments.url, brightDataApiToken);
-            } else {
-              console.error("Missing URL argument for web_data_facebook_posts tool.");
-              toolOutput = "Error: URL argument missing for web_data_facebook_posts tool.";
-            }
-          } else if (toolDecision.tool_name === "web_data_facebook_marketplace_listings") {
-            if (toolDecision.arguments && toolDecision.arguments.url) {
-              const brightDataApiToken = process.env.BRIGHTDATA_API_TOKEN;
-              toolOutput = await executeGetFacebookMarketplaceListings(toolDecision.arguments.url, brightDataApiToken);
-            } else {
-              console.error("Missing URL argument for web_data_facebook_marketplace_listings tool.");
-              toolOutput = "Error: URL argument missing for web_data_facebook_marketplace_listings tool.";
-            }
-          } else if (toolDecision.tool_name === "web_data_facebook_company_reviews") {
-            if (toolDecision.arguments && toolDecision.arguments.url && toolDecision.arguments.num_of_reviews) {
-              const brightDataApiToken = process.env.BRIGHTDATA_API_TOKEN;
-              toolOutput = await executeGetFacebookCompanyReviews(toolDecision.arguments.url, toolDecision.arguments.num_of_reviews, brightDataApiToken);
-            } else {
-              console.error("Missing URL or num_of_reviews argument for web_data_facebook_company_reviews tool.");
-              toolOutput = "Error: URL or num_of_reviews argument missing for web_data_facebook_company_reviews tool.";
-            }
-          } else if (toolDecision.tool_name === "session_stats") {
-            toolOutput = executeSessionStats(availableTools);
-          } else if (toolDecision.tool_name === "web_data_x_posts") {
-            if (toolDecision.arguments && toolDecision.arguments.url) {
-              const brightDataApiToken = process.env.BRIGHTDATA_API_TOKEN;
-              toolOutput = await executeGetXPosts(toolDecision.arguments.url, brightDataApiToken);
-            } else {
-              console.error("Missing URL argument for web_data_x_posts tool.");
-              toolOutput = "Error: URL argument missing for web_data_x_posts tool.";
-            }
-          } else if (toolDecision.tool_name === "web_data_zillow_properties_listing") {
-            if (toolDecision.arguments && toolDecision.arguments.url) {
-              const brightDataApiToken = process.env.BRIGHTDATA_API_TOKEN;
-              toolOutput = await executeGetZillowPropertiesListing(toolDecision.arguments.url, brightDataApiToken);
-            } else {
-              console.error("Missing URL argument for web_data_zillow_properties_listing tool.");
-              toolOutput = "Error: URL argument missing for web_data_zillow_properties_listing tool.";
-            }
-          } else if (toolDecision.tool_name === "web_data_booking_hotel_listings") {
-            if (toolDecision.arguments && toolDecision.arguments.url) {
-              const brightDataApiToken = process.env.BRIGHTDATA_API_TOKEN;
-              toolOutput = await executeGetBookingHotelListings(toolDecision.arguments.url, brightDataApiToken);
-            } else {
-              console.error("Missing URL argument for web_data_booking_hotel_listings tool.");
-              toolOutput = "Error: URL argument missing for web_data_booking_hotel_listings tool.";
-            }
-          } else if (toolDecision.tool_name === "web_data_youtube_videos") {
-            if (toolDecision.arguments && toolDecision.arguments.url) {
-              const brightDataApiToken = process.env.BRIGHTDATA_API_TOKEN;
-              toolOutput = await executeGetYoutubeVideos(toolDecision.arguments.url, brightDataApiToken);
-            } else {
-              console.error("Missing URL argument for web_data_youtube_videos tool.");
-              toolOutput = "Error: URL argument missing for web_data_youtube_videos tool.";
-            }
-          } else if (toolDecision.tool_name === "scraping_browser_navigate") {
-            const targetUrl = toolDecision.arguments?.url;
-            toolOutput = "Attempting to navigate browser to: " + (targetUrl || "No URL provided") + "\\n";
-            const BROWSER_AUTOMATION_SERVICE_URL = process.env.BROWSER_AUTOMATION_SERVICE_URL;
-
-            if (!BROWSER_AUTOMATION_SERVICE_URL) {
-              console.error("BROWSER_AUTOMATION_SERVICE_URL is not configured in environment variables.");
-              toolOutput += "Error: Browser automation service is not configured.";
-            } else if (!targetUrl || typeof targetUrl !== 'string' || !targetUrl.startsWith('http')) {
-              console.error("Invalid or missing URL for browser navigation:", targetUrl);
-              toolOutput += "Error: A valid URL is required for browser navigation.";
-            } else {
-              try {
-                console.log('Calling browser automation service to navigate to: ' + targetUrl);
-                const serviceEndpoint = BROWSER_AUTOMATION_SERVICE_URL.replace(/\/$/, "") + '/navigate'; 
-                
-                const browserResponse = await fetch(serviceEndpoint, {
-                  method: 'POST',
-                  headers: { 'Content-Type': 'application/json' /* Add any auth headers if your service needs them */ },
-                  body: JSON.stringify({ url: targetUrl })
-                });
-
-                if (browserResponse.ok) {
-                  const responseData = await browserResponse.json();
-                  toolOutput = "Browser navigation initiated. Service response: " + JSON.stringify(responseData);
-                  console.log("Browser automation service (navigate) response:", responseData);
-                } else {
-                  const errorText = await browserResponse.text();
-                  console.error("Browser automation service (navigate) error:", browserResponse.status, errorText);
-                  toolOutput += "Error from browser navigation service: " + browserResponse.status + " " + errorText;
-                }
-              } catch (serviceError) {
-                console.error("Error calling browser navigation service:", serviceError);
-                toolOutput += "Exception during browser navigation service call: " + serviceError.message;
-              }
-            }
-          } else if (toolDecision.tool_name === "scraping_browser_get_text") {
-            toolOutput = "Attempting to get text from current browser page.\\n";
-            const BROWSER_AUTOMATION_SERVICE_URL = process.env.BROWSER_AUTOMATION_SERVICE_URL;
-
-            if (!BROWSER_AUTOMATION_SERVICE_URL) {
-              console.error("BROWSER_AUTOMATION_SERVICE_URL is not configured in environment variables.");
-              toolOutput += "Error: Browser automation service is not configured.";
-            } else {
-              try {
-                console.log('Calling browser automation service to get text.');
-                const serviceEndpoint = BROWSER_AUTOMATION_SERVICE_URL.replace(/\/$/, "") + '/get_text'; 
-                
-                const browserResponse = await fetch(serviceEndpoint, {
-                  method: 'GET', // Or POST if it needs a session ID or other context in body
-                  headers: { /* Add any auth headers if your service needs them */ }
-                });
-
-                if (browserResponse.ok) {
-                  const responseData = await browserResponse.json(); // Assuming service returns { text: "..." }
-                  toolOutput = "Browser page text content: " + JSON.stringify(responseData); // Or just responseData.text
-                  console.log("Browser automation service (get_text) response:", responseData);
-                } else {
-                  const errorText = await browserResponse.text();
-                  console.error("Browser automation service (get_text) error:", browserResponse.status, errorText);
-                  toolOutput += "Error from browser get_text service: " + browserResponse.status + " " + errorText;
-                }
-              } catch (serviceError) {
-                console.error("Error calling browser get_text service:", serviceError);
-                toolOutput += "Exception during browser get_text service call: " + serviceError.message;
-              }
-            }
-          } else {
-            console.warn("Tool recognized by AI but no specific command construction logic or arguments missing:", toolDecision);
-            toolOutput = "Error: AI selected tool '" + toolDecision.tool_name + "' but it's not configured for execution or arguments are invalid.";
-          }
-
-          let finalPrompt;
-          if (toolOutput) { 
-            finalPrompt = "User query: \"" + userMessage + "\"" +
-                          "\\nI used the '" + effectiveToolName + "' tool and received the following information:" +
-                          "\\n" + JSON.stringify(toolOutput) +
-                          "\\nBased on this information, please provide a concise answer to the user's query. If the information is an error message, explain the error. If the information is complex, summarize it. Respond directly to the user.";
-            
-            const finalAiResponse = await getVertexAiResponse(finalPrompt);
-            const updatedUser = await usersCollection.findOne({ _id: userIdToUpdate });
-            const newCreditBalance = updatedUser ? updatedUser.credits : user.credits - COST_PER_QUERY; // Fallback
-
-console.log('AI_CHAT_DEBUG: User credits in DB after update (ReAct Path - Tool Used):', updatedUser?.credits);
-            console.log('AI_CHAT_DEBUG: New credit balance calculated (ReAct Path - Tool Used):', newCreditBalance);
-            console.log('AI_CHAT_DEBUG: X-User-Credits header value (ReAct Path - Tool Used):', newCreditBalance.toString());
-
-            const userForToken_ReActTool = await usersCollection.findOne({ _id: userIdToUpdate });
-            let newCookie_ReActTool = null;
-
-            if (userForToken_ReActTool && JWT_SECRET) {
-              const tokenPayload_ReActTool = {
-                userId: userForToken_ReActTool._id.toString(),
-                username: userForToken_ReActTool.username,
-                email: userForToken_ReActTool.email,
-                roles: userForToken_ReActTool.roles,
-                isEmailVerified: userForToken_ReActTool.isEmailVerified,
-                credits: userForToken_ReActTool.credits, // This will be the new balance
-              };
-              const newToken_ReActTool = jwt.sign(tokenPayload_ReActTool, JWT_SECRET, { expiresIn: '1h' });
-              const cookieOptions = {
-                httpOnly: true,
-                secure: import.meta.env.MODE !== 'development',
-                maxAge: 60 * 60, // 1 hour
-                path: '/',
-                sameSite: 'lax',
-              };
-              newCookie_ReActTool = serialize('authToken', newToken_ReActTool, cookieOptions);
-            } else {
-              console.error('AI_CHAT_DEBUG: Failed to fetch user for token regeneration or JWT_SECRET missing (ReAct Path - Tool Used).');
-            }
-
-            const responseHeaders_ReActTool = {
-              'Content-Type': 'application/json',
-              'X-User-Credits': newCreditBalance.toString()
-            };
-            if (newCookie_ReActTool) {
-              responseHeaders_ReActTool['Set-Cookie'] = newCookie_ReActTool;
-            }
-
-            return new Response(JSON.stringify({ reply: finalAiResponse || "Tool executed, but no final response generated." }), {
-              status: 200,
-              headers: responseHeaders_ReActTool,
-            });
-          } else {
-            return new Response(JSON.stringify({ error: 'Failed to get tool output or an issue occurred before final AI synthesis.', reply: "I encountered an issue after selecting a tool but before generating the final answer." }), {
-                status: 500,
-                headers: { 'Content-Type': 'application/json' },
-            });
-          }
-        } else if (toolDecision && toolDecision.tool_name === "none") {
-          // No tool needed, directly answer
-          const finalPrompt = "User query: \"" + userMessage + "\"" +
-                              "\\nNo tool was needed. Please provide a direct answer to the user's query.";
-          const finalAiResponse = await getVertexAiResponse(finalPrompt);
-          const updatedUser = await usersCollection.findOne({ _id: userIdToUpdate });
-          const newCreditBalance = updatedUser ? updatedUser.credits : user.credits - COST_PER_QUERY; // Fallback
-
-console.log('AI_CHAT_DEBUG: User credits in DB after update (ReAct Path - No Tool):', updatedUser?.credits);
-            console.log('AI_CHAT_DEBUG: New credit balance calculated (ReAct Path - No Tool):', newCreditBalance);
-            console.log('AI_CHAT_DEBUG: X-User-Credits header value (ReAct Path - No Tool):', newCreditBalance.toString());
-          const userForToken_ReActNoTool = await usersCollection.findOne({ _id: userIdToUpdate });
-          let newCookie_ReActNoTool = null;
-
-          if (userForToken_ReActNoTool && JWT_SECRET) {
-            const tokenPayload_ReActNoTool = {
-              userId: userForToken_ReActNoTool._id.toString(),
-              username: userForToken_ReActNoTool.username,
-              email: userForToken_ReActNoTool.email,
-              roles: userForToken_ReActNoTool.roles,
-              isEmailVerified: userForToken_ReActNoTool.isEmailVerified,
-              credits: userForToken_ReActNoTool.credits, // This will be the new balance
-            };
-            const newToken_ReActNoTool = jwt.sign(tokenPayload_ReActNoTool, JWT_SECRET, { expiresIn: '1h' });
-            const cookieOptions = {
-              httpOnly: true,
-              secure: import.meta.env.MODE !== 'development',
-              maxAge: 60 * 60, // 1 hour
-              path: '/',
-              sameSite: 'lax',
-            };
-            newCookie_ReActNoTool = serialize('authToken', newToken_ReActNoTool, cookieOptions);
-          } else {
-            console.error('AI_CHAT_DEBUG: Failed to fetch user for token regeneration or JWT_SECRET missing (ReAct Path - No Tool).');
-          }
-
-          const responseHeaders_ReActNoTool = {
-            'Content-Type': 'application/json',
-            'X-User-Credits': newCreditBalance.toString()
-          };
-          if (newCookie_ReActNoTool) {
-            responseHeaders_ReActNoTool['Set-Cookie'] = newCookie_ReActNoTool;
-          }
-
-          return new Response(JSON.stringify({ reply: finalAiResponse || "I received your message but have no specific answer." }), {
-            status: 200,
-            headers: responseHeaders_ReActNoTool,
-          });
-        } else { // Error in toolDecision structure
-          console.error("Unexpected format for AI tool decision:", toolDecision, "Raw:", geminiRawResponse);
-          return new Response(JSON.stringify({ error: "Unexpected format for AI tool decision.", reply: "I received an unexpected decision format from my reasoning module." }), {
-            status: 500,
-            headers: { 'Content-Type': 'application/json' },
-          });
-        }
-      } catch (parseError) { // Catch for JSON.parse(cleanedResponse) and subsequent logic
-        console.error("Error processing AI tool decision:", parseError, "Raw response:", geminiRawResponse);
-        return new Response(JSON.stringify({ error: "Failed to parse AI's tool decision.", details: geminiRawResponse, reply: "I had trouble understanding the decision from my reasoning module." }), {
-          status: 500,
-          headers: { 'Content-Type': 'application/json' },
-        });
-      }
-    } else { // geminiRawResponse is null
-      console.error("Failed to get response from AI service for tool decision (geminiRawResponse is null).");
-      return new Response(JSON.stringify({ error: 'Failed to get response from AI service for tool decision.', reply: "I couldn't get a response from my reasoning module to decide on a tool." }), {
-        status: 500,
-        headers: { 'Content-Type': 'application/json' },
+      // Pass originalUserQuery for tool decision, and queryToSendToLLM for synthesis
+      // Also pass forceNoTool to potentially bypass tool decision in ReAct loop
+      const reactResult = await executeInProcessReActLoop(originalUserQuery, queryToSendToLLM, reactContext, forceToolNameToReact);
+      
+      return new Response(JSON.stringify(reactResult.body), {
+        status: reactResult.status,
+        headers: reactResult.headers || { 'Content-Type': 'application/json' },
       });
-    }
-    // END OF IN-PROCESS RE-ACT LOGIC
     }
     
   } catch (error) { // Outer error handling for request parsing etc.

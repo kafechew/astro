@@ -80,37 +80,35 @@ This document outlines the high-level design for integrating MongoDB Atlas into 
 
 **2. RAG with MongoDB Atlas Vector Search**
 
-*   **2.1. Data Model (MongoDB Collection: `knowledge_documents`)**
-    *   `_id`: `ObjectId`
-    *   `userId`: `ObjectId` (indexed, scopes documents to a user)
-    *   `sourceUrl`: `String` (optional)
-    *   `sourceType`: `String` (e.g., "pdf", "webpage", "text_input")
-    *   `originalFilename`: `String` (optional)
-    *   `title`: `String` (optional)
-    *   `content`: `String` (raw text content or chunk)
-    *   `chunkId`: `String` (optional, for multi-chunk documents)
-    *   `embedding`: `Array` of `Float` (vector embedding of `content`, indexed for vector search)
-    *   `metadata`: `Object` (e.g., page numbers, source document ID)
-    *   `createdAt`: `Date`
-    *   `updatedAt`: `Date`
+This section outlines the Retrieval Augmented Generation (RAG) capabilities integrated into hermitAI, leveraging MongoDB Atlas Vector Search. For a comprehensive and detailed breakdown of the RAG design, including data models, ingestion pipeline specifics, vector search index configuration, and the exact chat integration logic, please refer to the dedicated **[`rag_design_spec.md`](rag_design_spec.md:1)** document.
 
-*   **2.2. Data Ingestion Pipeline**
-    1.  **Source Input:** User uploads (PDF, TXT, MD), web content (via BrightData), direct text.
-    2.  **Preprocessing:** Text extraction (e.g., `pdf-parse`), HTML cleaning, document chunking.
-    3.  **Embedding Generation:** Use Vertex AI Embeddings API (e.g., `textembedding-gecko`) for consistency.
-    4.  **Storage:** Store text chunk, embedding, `userId`, and metadata in `knowledge_documents`.
-    5.  **Vector Index:** Create a Vector Search Index in MongoDB Atlas on the `embedding` field (e.g., HNSW or IVF, cosine similarity).
-    *   **New API Endpoints (Astro, under `/api/rag/ingest/`, Protected):**
-        *   `POST /upload`: Handles file uploads.
-        *   `POST /url`: Handles URL submissions for scraping.
-        *   `POST /text`: Handles direct text input.
+*   **2.1. Implemented RAG Capabilities Summary:**
+    *   **Data Ingestion:** Users can build their private knowledge base through:
+        *   File Uploads (PDF, TXT, MD): [`/api/rag/ingest/upload`](src/pages/api/rag/ingest/upload.js:1)
+        *   URL Submissions: [`/api/rag/ingest/url`](src/pages/api/rag/ingest/url.js:1)
+        *   Direct Text Input: [`/api/rag/ingest/text`](src/pages/api/rag/ingest/text.js:1)
+        *   UI for these are available on the user's profile page ([`src/pages/profile.astro`](src/pages/profile.astro:1)).
+    *   **Data Processing:** Ingested content is chunked. Embeddings are generated using `@google/generative-ai`'s `models/text-embedding-004` model via `getEmbeddingForQuery(text, "RETRIEVAL_DOCUMENT")` in `src/services/ragService.js`.
+    *   **Storage:** Processed data (chunks, 768-dim embeddings) are stored in the `knowledge_documents` collection, scoped by `userId`.
+    *   **Hybrid Retrieval and Augmentation (in `src/pages/api/ai/chat.js`):**
+        1.  User query is embedded using `getEmbeddingForQuery(query, "RETRIEVAL_QUERY")`.
+        2.  `fetchRagContext` from `src/services/ragService.js` performs a vector search against the user's documents using the `$vectorSearch` pipeline (index: `vector_index_knowledge_cosine`, filter by `userId`, projects `score`).
+        3.  **Relevance Check:** If the top retrieved document's score meets or exceeds `RELEVANCE_THRESHOLD` (e.g., 0.75):
+            *   The retrieved context is used to directly synthesize an answer with the LLM, using a specialized prompt that instructs the LLM to answer *only* from the provided context. The ReAct tool decision is bypassed.
+        4.  **Fallback to ReAct:** If no documents are found, or the top score is below the threshold:
+            *   The system proceeds with the standard ReAct agent flow, using the original user query to decide if a tool needs to be called.
 
-*   **2.3. Vector Search Query Integration into `src/pages/api/ai/chat.js`**
-    1.  **Embed User Query:** Convert the incoming user query to an embedding.
-    2.  **Vector Search:** Before the main LLM call, perform a `$vectorSearch` on `knowledge_documents` using the query embedding and `userId` to find relevant text chunks.
-    3.  **Context Augmentation:** Concatenate retrieved chunks into a context string.
-    4.  **Modified LLM Prompt:** Include the retrieved context in the prompt to Gemini, instructing it to use this context.
-    5.  **LLM Response:** Gemini generates a response informed by private knowledge. The rest of the ReAct loop proceeds.
+*   **2.2. Key MongoDB Components:**
+    *   **Collection:** `knowledge_documents` (stores text chunks, 768-dim `embedding` from `models/text-embedding-004`, and `userId`).
+    *   **Vector Search Index:**
+        *   **Manual Creation Required:** An Atlas Search Index named `vector_index_knowledge_cosine` (or as per `VECTOR_SEARCH_INDEX_NAME` env var) must be created on the `knowledge_documents` collection.
+        *   **Configuration:**
+            *   Index the `embedding` field (Type: `vector`, Dimensions: `768`, Similarity: `cosine`).
+            *   Crucially, the `userId` field **must be mapped as type `filter`** in the Atlas Search Index definition to enable filtering in the `$vectorSearch` stage.
+        *   Refer to [`rag_design_spec.md`](rag_design_spec.md:1) for more details.
+
+*   **2.3. Detailed Design Document:**
+    *   For an in-depth understanding of the RAG architecture, data flow, API specifications, prompt engineering, and specific configurations, please consult the **[`rag_design_spec.md`](rag_design_spec.md:1)** file.
 
 **3. General Considerations**
 
@@ -118,9 +116,10 @@ This document outlines the high-level design for integrating MongoDB Atlas into 
     *   `mongodb` (official driver)
     *   `bcryptjs` (password hashing)
     *   `jsonwebtoken` (JWT handling)
-    *   `@google-cloud/aiplatform` (for Vertex AI Embeddings)
-    *   `pdf-parse` (PDF text extraction)
-    *   `nodemailer` (for sending emails)
+    *   `@google-cloud/aiplatform` (for Vertex AI LLM, if used)
+        *   `@google/generative-ai` (for Gemini embeddings and potentially LLM)
+        *   `pdf-parse` (PDF text extraction)
+        *   `nodemailer` (for sending emails)
 
 *   **3.2. MongoDB Atlas Free-Tier (M0 Cluster) Limitations:**
     *   **Storage:** 512 MB (significant for RAG).

@@ -26,8 +26,11 @@ The proposed schema in `mongo.md` is largely suitable. We'll refine it slightly 
     *   `updatedAt`: `Date` (Timestamp of last document update.)
 
 *   **Embedding Generation Strategy:**
-    *   **Model:** Google Vertex AI `textembedding-gecko@003` (or the latest stable equivalent). This model provides a good balance of performance and cost.
-    *   **Dimensions:** `textembedding-gecko@003` produces 768-dimensional embeddings. The `embedding` field should store these.
+    *   **Model:** `@google/generative-ai` library, specifically the `models/text-embedding-004` model.
+    *   **Dimensions:** `models/text-embedding-004` produces 768-dimensional embeddings.
+    *   **Function:** Embeddings are generated using the `getEmbeddingForQuery(text, taskType)` function in `src/services/ragService.js`.
+        *   `taskType: "RETRIEVAL_DOCUMENT"` is used for ingesting and chunking documents.
+        *   `taskType: "RETRIEVAL_QUERY"` is used for embedding user queries at search time.
 
 **2. Data Ingestion Pipeline - Detailed Steps & API Design**
 
@@ -76,8 +79,8 @@ The ingestion pipeline will handle various input types, process them into chunks
 
     2.  **Embedding Generation:**
         *   For each text chunk:
-            *   Call the Vertex AI `textembedding-gecko@003` model (via `src/services/vertexAiService.js` or a similar dedicated service) to get its 768-dimension embedding.
-            *   Handle potential API errors from Vertex AI (e.g., rate limits, invalid input).
+            *   Call the `getEmbeddingForQuery(chunkText, "RETRIEVAL_DOCUMENT")` function from `src/services/ragService.js` to get its 768-dimension embedding using `@google/generative-ai`'s `models/text-embedding-004`.
+            *   Handle potential API errors (e.g., rate limits, invalid input).
 
     3.  **Storage:**
         *   For each chunk and its embedding:
@@ -101,93 +104,98 @@ The ingestion pipeline will handle various input types, process them into chunks
 
 **3. Vector Search Index (MongoDB Atlas)**
 
-*   **Index Name:** A descriptive name, e.g., `idx_vector_embedding_content`
+*   **Index Name:** `vector_index_knowledge_cosine` (This is the exact name used in `src/services/ragService.js` and should be stored in `process.env.VECTOR_SEARCH_INDEX_NAME`).
 *   **Field to Index:** `embedding` (the array of floats)
 *   **Index Type:** **`vectorSearch` index type in Atlas.**
-    *   Within the `vectorSearch` index definition, Atlas offers methods like HNSW (Hierarchical Navigable Small World) or IVF (Inverted File Index). **HNSW** is generally recommended for a good balance of speed and accuracy for many use cases. This should be the default choice.
-    *   Configuration for HNSW:
-        *   `numDimensions`: 768 (matching the `textembedding-gecko@003` output)
-        *   `similarity`: **`cosine`** (common and effective for text embeddings)
-        *   `m`: (Max connections per layer, default 16 is often fine, can be tuned)
-        *   `efConstruction`: (Size of dynamic list for candidates during construction, default 100, can be tuned)
-*   **Creation:** This index needs to be created in the MongoDB Atlas UI, via the Atlas Admin API, or using a provisioning script (e.g., using `mongosh` or a Node.js script with the MongoDB driver) that defines the index. It's not automatically created by the application code merely by defining the schema.
-*   **Filtering:** The vector search query will also need to filter by `userId` to ensure data privacy. This is done in the query itself, not typically as part of the vector index definition directly, but the `userId` field should be regularly indexed for efficient filtering.
+    *   Within the `vectorSearch` index definition:
+        *   `numDimensions`: 768 (matching the `models/text-embedding-004` output)
+        *   `similarity`: **`cosine`**
+        *   Atlas offers methods like HNSW or IVF. HNSW is generally recommended.
+*   **Creation:** This index needs to be **manually created** in the MongoDB Atlas UI for the `knowledge_documents` collection. The `userId` field must be mapped as type `filter` in the index definition for it to be usable in the `$vectorSearch` stage's `filter` option.
 
-**4. Vector Search Query Integration into `src/pages/api/ai/chat.js`**
+**4. RAG Logic and Integration (`src/services/ragService.js` and `src/pages/api/ai/chat.js`)**
 
-The RAG logic will be integrated into the existing chat API endpoint to augment LLM queries with relevant context from the user's `knowledge_documents`.
+The RAG logic is primarily encapsulated in `src/services/ragService.js` and then integrated into `src/pages/api/ai/chat.js`.
 
-*   **Trigger:**
-    *   RAG will be **always on** for authenticated users who have ingested documents. If a user has no documents in `knowledge_documents`, the vector search step will simply return no results, and the chat will proceed as normal without augmented context.
+*   **4.1. `src/services/ragService.js` - Core RAG Functions:**
 
-*   **Location in `src/pages/api/ai/chat.js`:**
-    *   The RAG steps should occur *after* user authentication, email verification, and credit checks.
-    *   It should occur *before* the existing logic that calls `NODE_AGENT_SERVICE_URL` or falls back to the in-process ReAct logic.
+    *   **`getEmbeddingForQuery(text, taskType)`:**
+        *   Uses `@google/generative-ai`'s `models/text-embedding-004`.
+        *   Accepts `text` to embed and `taskType` ("RETRIEVAL_DOCUMENT" for ingestion, "RETRIEVAL_QUERY" for search).
 
-*   **Detailed Steps within `chat.js`:**
+    *   **`fetchRagContext({ userId, originalUserQuery, limit = 3, numCandidates = 100 })`:**
+        1.  **Embed User Query:**
+            *   `const userQueryEmbedding = await getEmbeddingForQuery(originalUserQuery, "RETRIEVAL_QUERY");`
+        2.  **Perform Vector Search:**
+            *   Constructs a MongoDB aggregation pipeline using `$vectorSearch`.
+            *   `const pipeline = [`
+                *   `  {`
+                *   `    $vectorSearch: {`
+                *   `      index: process.env.VECTOR_SEARCH_INDEX_NAME || "vector_index_knowledge_cosine",`
+                *   `      path: "embedding",`
+                *   `      queryVector: userQueryEmbedding,`
+                *   `      numCandidates: numCandidates,`
+                *   `      limit: limit,`
+                *   `      filter: { userId: new ObjectId(userId) } // Filter by the current user's ObjectId`
+                *   `    }`
+                *   `  },`
+                *   `  {`
+                *   `    $project: {`
+                *   `      _id: 0, content: 1, sourceType: 1, originalFilename: 1, sourceUrl: 1, title: 1,`
+                *   `      score: { $meta: "vectorSearchScore" } // Crucial for relevance assessment`
+                *   `    }`
+                *   `  }`
+                *   `];`
+            *   `const relevantDocs = await knowledgeDocumentsCollection.aggregate(pipeline).toArray();`
+        3.  **Context Formatting:**
+            *   If `relevantDocs` are found, their `content` is concatenated.
+            *   `const context = relevantDocs.map(doc => \`Document (Source: \${doc.sourceType}, Title: \${doc.title || 'N/A'}\${doc.originalFilename ? ', File: ' + doc.originalFilename : ''}\${doc.sourceUrl ? ', URL: ' + doc.sourceUrl : ''}, Score: \${doc.score.toFixed(4)}):\\n\${doc.content}\`).join("\\n\\n---\\n\\n");`
+        4.  **Return Value:** Returns an object `{ context: string | null, documents: Array<any> }`.
 
-    1.  **Embed User Query:**
-        *   Take the incoming `userMessage`.
-        *   Generate an embedding for `userMessage` using the same Vertex AI model (`textembedding-gecko@003`) and service used for document ingestion.
-        *   `const userQueryEmbedding = await getVertexEmbedding(userMessage);`
+*   **4.2. `src/pages/api/ai/chat.js` - Hybrid RAG and Tool Use Decision Logic:**
 
-    2.  **Perform Vector Search:**
-        *   Construct a MongoDB aggregation pipeline using the `$vectorSearch` stage.
-        *   `const { db } = await connectToDatabase();`
-        *   `const knowledgeCollection = db.collection('knowledge_documents');`
-        *   `const relevantChunks = await knowledgeCollection.aggregate([`
-            *   `  {`
-            *   `    $vectorSearch: {`
-            *   `      index: "idx_vector_embedding_content", // Your Atlas Vector Search index name`
-            *   `      path: "embedding", // Field containing the vector`
-            *   `      queryVector: userQueryEmbedding,`
-            *   `      numCandidates: 100, // Number of candidates to consider (tunable)`
-            *   `      limit: 3, // Number of top results to return (tunable, e.g., 3-5)`
-            *   `      filter: { userId: new ObjectId(user.userId) } // CRITICAL: Filter by userId`
-            *   `    }`
-            *   `  },`
-            *   `  {`
-            *   `    $project: { // Optionally project only necessary fields`
-            *   `      _id: 0,`
-            *   `      content: 1,`
-            *   `      sourceUrl: 1,`
-            *   `      originalFilename: 1,`
-            *   `      title: 1,`
-            *   `      score: { $meta: "vectorSearchScore" } // Include search score if needed for ranking/thresholding`
-            *   `    }`
-            *   `  }`
-            *   `]).toArray();`
+    1.  **Initial Checks:** User authentication, email verification, credit deduction.
+    2.  **Attempt RAG Context Retrieval:**
+        *   `const { context: ragContext, documents: ragDocuments } = await fetchRagContext({ userId: new ObjectId(user._id), originalUserQuery });`
+    3.  **Hybrid Decision Logic (using `RELEVANCE_THRESHOLD`):**
+        *   A `RELEVANCE_THRESHOLD` (e.g., 0.75, configurable via environment variable `RAG_RELEVANCE_THRESHOLD`) is defined.
+        *   `let shouldUseRag = false;`
+        *   `if (ragDocuments && ragDocuments.length > 0 && ragDocuments[0].score >= RELEVANCE_THRESHOLD) { shouldUseRag = true; }`
+    4.  **LLM Call Strategy:**
+        *   **If `shouldUseRag` is `true` (High-Relevance RAG):**
+            *   The LLM is called directly with a specific prompt for RAG synthesis, bypassing the ReAct tool decision logic.
+            *   The prompt emphasizes using the provided `ragContext`.
+            *   **System Instruction for RAG Synthesis:**
+                ```
+                You are hermitAI, an expert at answering questions based *solely* on the provided context.
+                Analyze the following "Context from Knowledge Base" carefully. It contains one or more documents retrieved because they are considered highly relevant to the "Original Query".
+                Your primary goal is to synthesize an answer to the "Original Query" using *only* the information found within this "Context from Knowledge Base".
+                Do not use any external knowledge or make assumptions beyond what is explicitly stated in the context.
+                If the context directly answers the query, provide that answer.
+                If the context contains relevant information but doesn't fully answer the query, explain what information is available and what is missing.
+                If the context, despite being retrieved, appears to be irrelevant to the Original Query, state that the provided documents do not seem to contain the answer.
+                Structure your answer clearly. If citing information from multiple documents, you can refer to them generally (e.g., "One document mentions...", "Another piece of context states...").
+                Focus on accuracy and adherence to the provided text.
 
-    3.  **Context Augmentation:**
-        *   If `relevantChunks` are found:
-            *   Concatenate the `content` of these chunks into a single context string.
-            *   `const contextString = relevantChunks.map(chunk => chunk.content).join("\\n\\n---\\n\\n");`
-            *   Consider adding source information to the context if desired, e.g., `Source: ${chunk.title || chunk.originalFilename || chunk.sourceUrl}`.
+                Context from Knowledge Base:
+                ---
+                ${ragContext}
+                ---
 
-    4.  **Modified LLM Prompt / Agent Input:**
-        *   If `contextString` is not empty:
-            *   Prepend or append this context to the user's original query when forming the input for the LLM (either the `NODE_AGENT_SERVICE_URL` or the in-process ReAct logic).
-            *   **Example for `NODE_AGENT_SERVICE_URL`:**
-                *   The body sent to the agent service could be modified:
-                    `{ message: userMessage, rag_context: contextString }`
-                    (The agent service would then need to be updated to handle this `rag_context`).
-            *   **Example for in-process ReAct logic:**
-                *   Modify `firstPassPrompt` (or the prompt sent directly to `getVertexAiResponse` if no tools are used):
-                    `let augmentedUserMessage = userMessage;`
-                    `if (contextString) {`
-                    `  augmentedUserMessage = "Use the following context to answer the user's query:\\n\\nContext:\\n\"\"\"\\n" + contextString + "\\n\"\"\"\\n\\nUser Query: " + userMessage;`
-                    `}`
-                    `// ... then use augmentedUserMessage in prompts`
-        *   The prompt should clearly instruct the LLM to prioritize the provided context if relevant.
-
-    5.  **Proceed with existing chat logic:** The rest of the chat flow (agent call or ReAct loop, response streaming, credit update in JWT) continues, now potentially using the augmented context.
+                Original Query: ${originalUserQuery}
+                ```
+        *   **Else (Low-Relevance RAG or No RAG Documents):**
+            *   The system proceeds to the ReAct agent / tool decision logic using the `originalUserQuery`.
+            *   If the ReAct agent decides no tool is needed, a general LLM call is made with the `originalUserQuery` (potentially with a generic system prompt, but not the RAG-specific one).
+    5.  **Response Streaming:** The LLM response (either from RAG synthesis or ReAct flow) is streamed back to the client.
 
 **5. Dependencies (Node.js)**
 
 Reconfirming and adding necessary dependencies to `package.json`:
 
 *   `mongodb`: (Already listed, official MongoDB driver)
-*   `@google-cloud/aiplatform`: (Already listed, for Vertex AI embeddings and LLM)
+*   `@google-cloud/aiplatform`: (For Vertex AI LLM calls, if still used for the chat model itself)
+*   `@google/generative-ai`: (For Gemini embeddings - `models/text-embedding-004` and potentially Gemini chat models)
 *   `pdf-parse`: (Already listed, for PDF text extraction)
 *   `uuid`: For generating `chunkId`s (e.g., `npm install uuid` and `import { v4 as uuidv4 } from 'uuid';`)
 *   Optional (Chunking):

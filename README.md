@@ -22,10 +22,18 @@ It’s built for hackers, researchers, solopreneurs, and digital hermits seeking
 
 *   **Google Vertex AI (Gemini model) Integration:** Utilizes Google's powerful Gemini model through Vertex AI for sophisticated language understanding and generation.
 *   **Live Data Access via BrightData APIs:** Enables the chatbot to fetch real-time information from the web (SERP API), scrape web content (Request API), and access structured datasets (Datasets API) to answer queries, ensuring responses are current and comprehensive.
-*   **Dynamic UI:** A new interactive chat interface at `/ai` (powered by [`src/components/ChatInterface.astro`](src/components/ChatInterface.astro:1)) provides a modern user experience.
-*   **Astro API Routes:** The new [`/api/ai/chat.js`](src/pages/api/ai/chat.js:1) route orchestrates interactions between the frontend, Vertex AI, and BrightData.
-*   **Secure API Key Management:** Uses a `.env` file for `GOOGLE_PROJECT_ID`, `GOOGLE_CLIENT_EMAIL`, `GOOGLE_PRIVATE_KEY` (for Vertex AI), `BRIGHTDATA_API_TOKEN`, `BRIGHTDATA_WEB_UNLOCKER_ZONE` (for BrightData), and `GEMINI_API_KEY` (backup).
+*   **Retrieval Augmented Generation (RAG) with RAG-Aware Tool Decision:** Users can build a private knowledge base. The AI uses this via MongoDB Atlas Vector Search.
+    *   `chat.js` fetches RAG context. If highly relevant (based on score vs. `RELEVANCE_THRESHOLD`), this context string (`ragContextForReAct`) is passed to `executeInProcessReActLoop` in `reactProcessorService.js`.
+    *   `reactProcessorService.js` incorporates `ragContextForReAct` (if provided) into the `firstPassPrompt` for tool decision. This allows the LLM to intelligently choose `tool_name: 'none'` if the RAG context is sufficient, or select a tool if it's not.
+    *   Synthesis paths vary: strict RAG synthesis if 'none' was chosen due to RAG context, tool-based synthesis if a tool was run, or general knowledge synthesis if 'none' was chosen without RAG context. Full details in [`rag_design_spec.md`](rag_design_spec.md:1).
+*   **Dynamic UI:** Interactive chat at `/ai` ([`src/components/ChatInterface.astro`](src/components/ChatInterface.astro:1)). RAG ingestion forms on user profile ([`src/pages/profile.astro`](src/pages/profile.astro:1)).
+*   **Astro API Routes:** [`/api/ai/chat.js`](src/pages/api/ai/chat.js:1) orchestrates AI, RAG, credits, and tools. RAG ingestion APIs under `src/pages/api/rag/ingest/`.
+*   **Secure API Key Management:** Uses `.env` for `GEMINI_API_KEY` (for `@google/generative-ai` embeddings), Google Cloud credentials (for Vertex AI chat), `MONGODB_URI`, `JWT_SECRET`, SMTP vars, `APP_BASE_URL`, `VECTOR_SEARCH_INDEX_NAME`, `RAG_RELEVANCE_THRESHOLD`.
 *   **Planned Browser Automation:** Upcoming capability for advanced browser automation to handle interactive web tasks.
+*   **User Authentication:** Secure user registration, login, and session management using MongoDB and JWTs.
+*   **Email Verification:** System for verifying user email addresses via token-based email links, including a resend option.
+*   **User Profiles:** Basic user profile viewing and updating capabilities, including access to RAG document ingestion forms.
+*   **Credit System for AI Queries:** Users receive 5 credits upon email verification. Each AI query costs 1 credit. The Navbar and Profile page display credits, with the Navbar updating immediately after a query via a special HTTP header.
 
 ## AI Chat Interface
 
@@ -100,23 +108,45 @@ The following additional tools are available in the BrightData MCP client and co
 
 ## How It Works: AI Chat Flow (`/ai` page)
 
-The AI chat functionality, orchestrated by [`/api/ai/chat.js`](src/pages/api/ai/chat.js:1), operates in one of two modes depending on the `NODE_AGENT_SERVICE_URL` environment variable:
+The AI chat functionality, orchestrated by [`/api/ai/chat.js`](src/pages/api/ai/chat.js:1) and [`src/services/reactProcessorService.js`](src/services/reactProcessorService.js:1), follows this sophisticated RAG-aware ReAct flow:
 
-1.  **Mode 1: External Agent Service (If `NODE_AGENT_SERVICE_URL` is set)**
-    *   **User Input:** The user sends a message via [`ChatInterface.astro`](src/components/ChatInterface.astro:1).
-    *   **Proxy to External Service:** [`chat.js`](src/pages/api/ai/chat.js:1) acts as a proxy, forwarding the request to the external Node.js Agent & Tool Service specified by `NODE_AGENT_SERVICE_URL`.
-    *   **Advanced Agentic Logic:** This external service handles more complex agentic logic, including a ReAct loop, and has full integration with the BrightData MCP (Model Context Protocol) client. This enables the use of a wider range of tools, including advanced browser automation tools (`scraping_browser_*`).
-    *   **Response:** The external service processes the request, potentially using various tools, and streams the response back through [`chat.js`](src/pages/api/ai/chat.js:1) to the user. This mode is designed for future advanced capabilities and comprehensive tool usage.
+1.  **Authentication & Credit Checks (`chat.js` via `chatPreChecksService.js`):**
+    *   User sends a message.
+    *   System verifies authentication, email status, and credit balance (>= 1).
+    *   If checks pass, 1 credit is deducted.
 
-2.  **Mode 2: In-Process ReAct Loop (If `NODE_AGENT_SERVICE_URL` is NOT set - Current Default)**
-    *   **User Input:** The user sends a message via [`ChatInterface.astro`](src/components/ChatInterface.astro:1).
-    *   **API Request:** The interface makes a `POST` request to [`/api/ai/chat.js`](src/pages/api/ai/chat.js:1).
-    *   **First LLM Call (Vertex AI - Gemini):** [`chat.js`](src/pages/api/ai/chat.js:1) sends the query and history to Gemini ([`vertexAiService.js`](src/services/vertexAiService.js:1)) to determine if tools are needed.
-    *   **Tool Execution (Direct BrightData APIs):** If a tool is identified (e.g., `search_engine`, `scrape_as_markdown`, `web_data_amazon_product`), [`chat.js`](src/pages/api/ai/chat.js:1) directly calls the relevant BrightData API (SERP, Request, Datasets) using `BRIGHTDATA_API_TOKEN` and `BRIGHTDATA_WEB_UNLOCKER_ZONE`.
-    *   **Second LLM Call (Vertex AI - Gemini):** Tool results are sent back to Gemini for synthesis.
-    *   **Streaming Response:** The final answer is streamed to [`ChatInterface.astro`](src/components/ChatInterface.astro:1). This mode provides core functionality using a subset of BrightData tools available via direct API calls.
+2.  **RAG Attempt (`chat.js` via `ragService.js`):**
+    *   `originalUserQuery` is embedded.
+    *   `fetchRagContext` performs a vector search (MongoDB Atlas, `vector_index_knowledge_cosine` index, filtered by `userId`) to get `ragDocuments` and their scores.
 
-This dual-mode architecture allows for basic, self-contained operation while providing a path for enhanced capabilities through an optional external service.
+3.  **Relevance Check & Context Preparation (`chat.js`):**
+    *   `chat.js` checks if the top `ragDocument`'s score meets or exceeds `RELEVANCE_THRESHOLD` (e.g., 0.75).
+    *   If highly relevant, `ragContextForReAct` (the string of RAG context) is prepared. Otherwise, `ragContextForReAct` is `null`.
+
+4.  **Invoke ReAct Loop (`chat.js` calls `reactProcessorService.js`):**
+    *   `executeInProcessReActLoop(originalUserQuery, ragContextForReAct, context)` is called.
+    *   `ragContextForReAct` is either the RAG context string or `null`.
+
+5.  **RAG-Aware Tool Decision (`reactProcessorService.js`):**
+    *   A `firstPassPrompt` is constructed.
+    *   **Crucially, if `ragContextForReAct` was provided, it's included in this `firstPassPrompt`**. This allows the LLM to consider the knowledge base context *before* deciding on a tool.
+    *   The LLM responds with a JSON object: `{ "tool_name": "chosen_tool_or_none", "arguments": { ... } }`.
+
+6.  **Conditional Execution & Synthesis (`reactProcessorService.js`):**
+    *   **A. If `tool_name` is a specific tool:**
+        *   The tool is executed.
+        *   The final answer is synthesized using `originalUserQuery` and the `toolOutput`.
+    *   **B. If `tool_name` is 'none':**
+        *   **B1. If `ragContextForReAct` was provided (and thus considered by LLM for the 'none' decision):**
+            *   A strict RAG synthesis prompt is used, combining `originalUserQuery` and `ragContextForReAct`. The LLM answers *only* from this context.
+        *   **B2. If `ragContextForReAct` was `null` (no RAG context or not relevant enough for the 'none' decision):**
+            *   A general knowledge synthesis prompt is used with `originalUserQuery`. The LLM answers based on its general training.
+
+7.  **Streaming Response & Credit Update:**
+    *   The final synthesized answer is streamed to [`ChatInterface.astro`](src/components/ChatInterface.astro:1).
+    *   The response includes an `X-User-Credits` header with the new credit balance.
+
+This flow intelligently integrates RAG into the ReAct agent's decision-making process, prioritizing verified knowledge when available and relevant, while still allowing for tool use or general knowledge responses otherwise. Full prompt details are in [`rag_design_spec.md`](rag_design_spec.md:1).
 
 ## Project Structure Highlights
 
@@ -128,25 +158,52 @@ This dual-mode architecture allows for basic, self-contained operation while pro
 │   │   ├── ChatInterface.astro  # Astro: Interactive chat interface for the /ai page.
 │   │   ├── BlogList.jsx         # React: Displays blogs (potentially less central if Q&A is deprecated)
 │   │   ├── Footer.astro         # Astro: Site footer
-│   │   ├── Navbar.astro         # Astro: Site navigation
+│   │   ├── Navbar.astro         # Astro: Site navigation, displays user credits.
 │   │   └── QnaForm.astro        # Astro: Original Gemini Q&A form (role might be reduced or deprecated in favor of /ai)
 │   ├── layouts/                 # Astro layouts (MainLayout.astro, BlogPostLayout.astro etc.)
 │   ├── pages/
-│   │   ├── ai.astro             # Astro: Main AI chat page with two-panel layout.
+│   │   ├── ai.astro             # Astro: Main AI chat page with ChatInterface.astro.
 │   │   ├── index.astro          # Main page (original landing, /ai is the new chat focus)
+│   │   ├── login.astro          # Frontend page for user login.
+│   │   ├── register.astro       # Frontend page for user registration.
+│   │   ├── profile.astro        # Frontend page for user profile, displays user credits, and hosts RAG ingestion forms.
 │   │   ├── blog/                # Blog post markdown files
 │   │   └── api/
 │   │       ├── ai/
-│   │       │   └── chat.js      # API: Orchestrates AI responses, including tool decisions, BrightData direct APIs, and the planned Browser Automation Service.
-│   │       ├── askQna.json.js   # API: Original Q&A endpoint (superseded by /api/ai/chat.js for new functionality)
-│   │       └── getPermissions.json.js # API: Handles blog permissions (review for removal if unused by new chat)
+│   │       │   └── chat.js      # API: Orchestrates AI responses, RAG, credit checks/deduction, tool decisions, BrightData APIs.
+│   │       ├── auth/            # Directory for authentication API endpoints.
+│   │       │   ├── login.js       # Handles user login.
+│   │       │   ├── me.js          # Fetches current user data.
+│   │       │   ├── register.js    # Handles user registration.
+│   │       │   ├── profile.js     # Handles profile updates.
+│   │       │   ├── verify-email.js # Verifies email and allocates initial credits.
+│   │       │   └── resend-verification-email.js # Resends verification email.
+│   │       ├── rag/
+│   │       │   └── ingest/        # Directory for RAG data ingestion APIs:
+│   │       │       ├── upload.js  # API for file-based RAG ingestion.
+│   │       │       ├── url.js     # API for URL-based RAG ingestion.
+│   │       │       └── text.js    # API for text-based RAG ingestion.
+│   │       ├── askQna.json.js   # API: Original Q&A endpoint (superseded by /api/ai/chat.js)
+│   │       └── getPermissions.json.js # API: Handles blog permissions (review for removal)
 │   ├── services/
-│   │   ├── vertexAiService.js   # Module for Vertex AI (Gemini model) interaction.
-│   │   └── geminiService.js     # Module for original Gemini API interaction (review for relevance)
+│   │   ├── vertexAiService.js   # Module for Vertex AI (Gemini chat model) interaction.
+│   │   ├── ragService.js        # Module for RAG embedding generation (@google/generative-ai) and context retrieval.
+│   │   ├── chatPreChecksService.js # Module for auth, email verification, and credit checks.
+│   │   ├── reactProcessorService.js # Module for managing the ReAct agent loop, tool execution, and associated prompting.
+│   │   └── geminiService.js     # Potentially for other Gemini direct API uses (e.g. embeddings if not in ragService, though ragService currently handles this).
+│   ├── lib/
+│   │   ├── mongodb.js           # MongoDB connection utility.
+│   │   ├── emailService.js      # Service for sending emails.
+│   │   └── ai-tools/            # Directory for individual BrightData tool execution functions.
+│   ├── middleware.js          # Astro middleware for JWT authentication and session management.
 │   └── utils/
 │       └── blogs.js             # Sample blog data
+│   ├── components/
+│   │   └── Auth/              # Directory for authentication UI components (RegisterForm, LoginForm).
+├── mongo.md                   # Design document for MongoDB integration, including RAG and credit system details.
+├── rag_design_spec.md         # Detailed design document for the RAG implementation.
 ├── BrowserAutomationService/    # (Separate Project - Planned for Render.com)
-├── .env                       # (Create this) Stores API keys for Vertex AI, BrightData, and potentially Gemini
+├── .env                       # (Create this) Stores API keys for Vertex AI, BrightData, etc.
 ├── astro.config.mjs           # Astro configuration
 ├── package.json
 └── README.md
@@ -160,6 +217,9 @@ This dual-mode architecture allows for basic, self-contained operation while pro
 *   Service account credentials (JSON key file or individual environment variables) for Vertex AI.
 *   BrightData account and SERP API credentials (API Token, Zone).
 *   A [Google AI / Gemini API Key](https://aistudio.google.com/app/apikey) (if `geminiService.js` is retained for other purposes or as a fallback).
+*   MongoDB Atlas account and connection URI.
+*   SMTP server access (host, port, user, password) for email verification.
+*   **Crucially for RAG:** Ability to create a Vector Search Index in your MongoDB Atlas cluster.
 
 ## Setup Instructions
 
@@ -176,23 +236,86 @@ This dual-mode architecture allows for basic, self-contained operation while pro
 
 3.  **Configure Environment Variables:**
     *   Create a `.env` file in the project root.
-    *   Add your API keys and configuration. Handle multi-line private keys carefully (e.g., by wrapping in quotes or using `\\n` for newlines if your environment loader supports it).
-        ```env
-        # Google Vertex AI Credentials (Required for both modes, or by the external service)
-        GOOGLE_PROJECT_ID="<YOUR_GCP_PROJECT_ID>"
-        GOOGLE_CLIENT_EMAIL="<YOUR_GCP_SERVICE_ACCOUNT_EMAIL>"
-        GOOGLE_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\\nYOUR_KEY_PART_1\\nYOUR_KEY_PART_2\\n-----END PRIVATE KEY-----\\n" # Ensure newlines are correctly formatted
+    *   Add your API keys and configuration.
+            ```env
+            # Google Gemini API Key (Required for RAG Embeddings via @google/generative-ai)
+            GEMINI_API_KEY="<YOUR_GOOGLE_AI_GEMINI_API_KEY>"
+    
+            # Google Vertex AI Credentials (Required for LLM chat model, if using Vertex AI)
+            # Option 1: Service Account Key JSON path
+            # GOOGLE_APPLICATION_CREDENTIALS="/path/to/your/service-account-file.json"
+            # Option 2: Individual credentials
+            GOOGLE_PROJECT_ID="<YOUR_GCP_PROJECT_ID>"
+            GOOGLE_CLIENT_EMAIL="<YOUR_GCP_SERVICE_ACCOUNT_EMAIL>"
+            GOOGLE_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\\nYOUR_KEY_PART_1\\nYOUR_KEY_PART_2\\n-----END PRIVATE KEY-----\\n"
+    
+            # BrightData Credentials (Required for web scraping tools)
+            BRIGHTDATA_API_TOKEN="<YOUR_BRIGHTDATA_API_TOKEN>"
+            BRIGHTDATA_WEB_UNLOCKER_ZONE="<YOUR_BRIGHTDATA_ZONE>" # Or relevant SERP zone
+    
+            # Node.js Agent & Tool Service URL (Optional, for advanced external tool integrations)
+            # NODE_AGENT_SERVICE_URL="<URL_OF_THE_EXTERNAL_NODE_JS_AGENT_SERVICE>"
+    
+            # MongoDB Configuration (Required for User Management and RAG)
+            MONGODB_URI="mongodb+srv://<user>:<password>@<cluster-url>/<database-name>?retryWrites=true&w=majority"
+            # Name of your Atlas Vector Search Index. Must match the index created in Atlas.
+            # See mongo.md and rag_design_spec.md for details on index configuration.
+            VECTOR_SEARCH_INDEX_NAME="vector_index_knowledge_cosine"
 
-        # BrightData Credentials (Required for both modes, or by the external service)
-        BRIGHTDATA_API_TOKEN="<YOUR_BRIGHTDATA_API_TOKEN>"
-        BRIGHTDATA_WEB_UNLOCKER_ZONE="<YOUR_BRIGHTDATA_ZONE>" # Or relevant SERP zone
-
-        # Node.js Agent & Tool Service URL (Optional)
-        NODE_AGENT_SERVICE_URL="<URL_OF_THE_EXTERNAL_NODE_JS_AGENT_SERVICE>" # e.g., https://your-agent-service.onrender.com. If set, chat.js proxies requests here for advanced agentic behavior and full BrightData MCP tool usage (including browser tools). If not set, chat.js uses its internal ReAct loop with direct BrightData API tools.
-
-        # Optional: Original Gemini API Key (if still used for other purposes)
-        # GEMINI_API_KEY="<YOUR_GEMINI_API_KEY>"
+            # RAG Configuration
+            # Defines the minimum vector search score for a document to be considered highly relevant
+            # and trigger the direct RAG synthesis flow, bypassing ReAct tool decision.
+            RAG_RELEVANCE_THRESHOLD="0.75" # Threshold for forcing RAG context (0.0 to 1.0)
+    
+            # JWT Configuration (Required for Authentication)
+            JWT_SECRET="<YOUR_VERY_STRONG_JWT_SECRET_KEY>"
+    
+            # SMTP Email Configuration (Required for Email Verification)
+            SMTP_HOST="<YOUR_SMTP_HOST>"
+            SMTP_PORT="587" # Or your SMTP port
+            SMTP_USER="<YOUR_SMTP_USERNAME>"
+            SMTP_PASSWORD="<YOUR_SMTP_PASSWORD>"
+            SMTP_FROM_EMAIL="<YOUR_SENDER_EMAIL_ADDRESS>"
+    
+            # Application Base URL (Required for Email Verification Links)
+            APP_BASE_URL="http://localhost:4321" # Or your production URL
         ```
+
+4.  **Create MongoDB Atlas Vector Search Index (CRITICAL FOR RAG):**
+    *   For RAG to work, **manually create a Vector Search Index** in MongoDB Atlas for the `knowledge_documents` collection.
+        *   **Index Name:** Use the value from `VECTOR_SEARCH_INDEX_NAME` (default: `vector_index_knowledge_cosine`).
+        *   **Atlas Search Index Definition (JSON editor):**
+            ```json
+            {
+              "mappings": {
+                "dynamic": true,
+                "fields": {
+                  "embedding": {
+                    "type": "vector",
+                    "dimensions": 768,
+                    "similarity": "cosine"
+                  },
+                  "userId": {
+                    "type": "string",
+                    "analyzer": "keyword", // Important for exact matches
+                    "indexOptions": "docs",
+                    "norms": "omit",
+                    // Crucially, ensure it's available for filtering.
+                    // In newer Atlas UIs, you might define this as a 'filter' type field directly
+                    // or ensure it's indexed appropriately to be used in the $vectorSearch 'filter' stage.
+                    // The key is that `userId` must be queryable as a filter.
+                    // A simple string index with keyword analyzer usually works.
+                    // For Atlas Search UI: Add `userId` as a field, type `Token` (which becomes `string` with `keyword` analyzer).
+                    // Or, more directly if available: map `userId` as type `filter`.
+                  }
+                }
+              }
+            }
+            ```
+        *   **Field Mappings:**
+            *   `embedding`: Type `vector`, `768` dimensions (for `models/text-embedding-004`), `cosine` similarity.
+            *   `userId`: **Crucially, ensure `userId` is mapped as type `filter` or an equivalent (e.g., `string` with `keyword` analyzer) that allows it to be used in the `$vectorSearch` stage's `filter` option.** This is vital for data isolation.
+        *   Refer to MongoDB Atlas documentation and [`rag_design_spec.md`](rag_design_spec.md:1) for more details.
 
     *   **External Node.js Agent & Tool Service (e.g., on Render.com) - Key Environment Variables (If you deploy it):**
         If you set up the external service, it will typically require its own set of environment variables, including:

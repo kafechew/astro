@@ -1,0 +1,469 @@
+---
+import MainLayout from '../layouts/MainLayout.astro';
+
+// Authentication Check
+if (!Astro.locals.user) {
+  return Astro.redirect('/login');
+}
+
+const { user } = Astro.locals;
+---
+<MainLayout title="Knowledge Base Management" description="Add content to your AI's knowledge base">
+  <div class="container">
+    <header>
+      <h1 class="h2">Knowledge Base <span>Management</span></h1>
+      <p>Add content to your AI assistant to improve responses with your own data.</p>
+    </header>
+
+    <div class="rag-container">
+      <!-- Tabs Navigation -->
+      <nav class="rag-tabs">
+        <button id="tab-url" class="tab-button active">URL Import</button>
+        <button id="tab-text" class="tab-button">Text Input</button>
+        <button id="tab-file" class="tab-button">File Upload</button>
+      </nav>
+
+      <!-- Tab Content -->
+      <div class="rag-content">
+        <!-- URL Ingestion Form -->
+        <div id="content-url" class="tab-content">
+          <div class="content-header">
+            <h2 class="h3">Import from URL</h2>
+            <p>Add content from any webpage to your knowledge base.</p>
+          </div>
+          
+          <form id="urlIngestionForm" class="rag-form">
+            <div class="form-group">
+              <label for="knowledgeUrl">Website URL</label>
+              <input 
+                type="url" 
+                id="knowledgeUrl" 
+                name="knowledgeUrl" 
+                placeholder="https://example.com/article" 
+                required
+              >
+              <small>We'll extract and process the main content from this URL.</small>
+            </div>
+            
+            <div class="form-actions">
+              <button type="submit" class="link primary filled">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
+                  <path fill-rule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM6.293 6.707a1 1 0 010-1.414l3-3a1 1 0 011.414 0l3 3a1 1 0 01-1.414 1.414L11 5.414V13a1 1 0 11-2 0V5.414L7.707 6.707a1 1 0 01-1.414 0z" clip-rule="evenodd" />
+                </svg>
+                Import Content
+              </button>
+            </div>
+            
+            <div id="urlIngestionMessage" class="form-message hidden"></div>
+          </form>
+        </div>
+
+        <!-- Text Input Form -->
+        <div id="content-text" class="tab-content hidden">
+          <div class="content-header">
+            <h2 class="h3">Add Text Content</h2>
+            <p>Directly add text information to your knowledge base.</p>
+          </div>
+          
+          <form id="textIngestionForm" class="rag-form">
+            <div class="form-group">
+              <label for="knowledgeTitle">Title</label>
+              <input 
+                type="text" 
+                id="knowledgeTitle" 
+                name="knowledgeTitle" 
+                placeholder="Give your content a descriptive title"
+              >
+            </div>
+            
+            <div class="form-group">
+              <label for="knowledgeText">Content</label>
+              <textarea 
+                id="knowledgeText" 
+                name="knowledgeText" 
+                rows="8" 
+                placeholder="Paste or type your content here..." 
+                required
+              ></textarea>
+            </div>
+            
+            <div class="form-actions">
+              <button type="submit" class="link primary filled">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
+                  <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-11a1 1 0 10-2 0v2H7a1 1 0 100 2h2v2a1 1 0 102 0v-2h2a1 1 0 100-2h-2V7z" clip-rule="evenodd" />
+                </svg>
+                Add to Knowledge Base
+              </button>
+            </div>
+            
+            <div id="textIngestionMessage" class="form-message hidden"></div>
+          </form>
+        </div>
+
+        <!-- File Upload Form (Disabled but styled) -->
+        <div id="content-file" class="tab-content hidden">
+          <div class="content-header">
+            <h2 class="h3">Upload Document</h2>
+            <p>Upload PDF, Word, or text files to add to your knowledge base.</p>
+          </div>
+          
+          <div class="file-upload-placeholder">
+            <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 13h6m-3-3v6m5 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+            </svg>
+            <p>File uploads coming soon!</p>
+            <small>This feature is currently under development.</small>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Knowledge Base Status -->
+    <div class="kb-status">
+      <h2 class="h4">Knowledge Base Status</h2>
+      <div class="status-info">
+        <p>Your knowledge base is ready to use with AI chat.</p>
+        <span class="status-badge active">
+          <span class="status-indicator"></span>
+          Active
+        </span>
+      </div>
+    </div>
+  </div>
+</MainLayout>
+
+<style>
+  /* RAG Management specific styles */
+  .rag-container {
+    background-color: hsl(var(--muted));
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-md);
+    overflow: hidden;
+    margin-block: var(--space-lg);
+  }
+
+  .rag-tabs {
+    display: flex;
+    border-bottom: 1px solid hsl(var(--txt) / 0.1);
+    background-color: hsl(var(--bkg));
+  }
+
+  .tab-button {
+    padding: var(--space-sm) var(--space-md);
+    background: none;
+    border: none;
+    color: hsl(var(--txt) / 0.7);
+    font-size: var(--fs-md);
+    cursor: pointer;
+    border-bottom: 3px solid transparent;
+    width: auto;
+    height: auto;
+    box-shadow: none;
+    transition: all var(--transition-ease-fast);
+  }
+
+  .tab-button.active {
+    color: hsl(var(--accent));
+    border-bottom-color: hsl(var(--accent));
+  }
+
+  .tab-button:hover:not(.active) {
+    color: hsl(var(--txt));
+    background-color: hsl(var(--bkg) / 0.5);
+  }
+
+  .rag-content {
+    padding: var(--space-md);
+  }
+
+  .content-header {
+    margin-bottom: var(--space-md);
+  }
+
+  .content-header h2 {
+    margin-bottom: var(--space-xs);
+  }
+
+  .rag-form {
+    display: grid;
+    gap: var(--space-md);
+  }
+
+  .form-group {
+    display: grid;
+    gap: var(--space-xs);
+  }
+
+  .form-group label {
+    font-weight: bold;
+    font-size: var(--fs-md);
+  }
+
+  .form-group input,
+  .form-group textarea {
+    padding: var(--space-sm);
+    border-radius: var(--radius-sm);
+    border: 1px solid hsl(var(--txt) / 0.3);
+    background-color: hsl(var(--bkg));
+    color: hsl(var(--txt));
+    font-size: var(--fs-md);
+    width: 100%;
+  }
+
+  .form-group small {
+    color: hsl(var(--txt) / 0.7);
+  }
+
+  .form-actions {
+    margin-top: var(--space-xs);
+  }
+
+  .form-actions button {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .form-message {
+    padding: var(--space-sm);
+    border-radius: var(--radius-sm);
+    font-size: var(--fs-sm);
+  }
+
+  .form-message.text-green-600 {
+    background-color: hsl(142, 76%, 95%);
+    color: hsl(142, 76%, 36%);
+  }
+
+  .form-message.text-red-600 {
+    background-color: hsl(0, 76%, 95%);
+    color: hsl(0, 76%, 36%);
+  }
+
+  .form-message.text-blue-700 {
+    background-color: hsl(210, 76%, 95%);
+    color: hsl(210, 76%, 36%);
+  }
+
+  .hidden {
+    display: none;
+  }
+
+  .file-upload-placeholder {
+    border: 2px dashed hsl(var(--txt) / 0.2);
+    border-radius: var(--radius-md);
+    padding: var(--space-lg);
+    text-align: center;
+    color: hsl(var(--txt) / 0.7);
+  }
+
+  .file-upload-placeholder svg {
+    margin: 0 auto var(--space-sm);
+  }
+
+  .kb-status {
+    background-color: hsl(var(--bkg));
+    border: 1px solid hsl(var(--txt) / 0.1);
+    border-radius: var(--radius-md);
+    padding: var(--space-md);
+    margin-top: var(--space-lg);
+  }
+
+  .status-info {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: var(--space-xs);
+  }
+
+  .status-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: var(--space-2xs) var(--space-xs);
+    border-radius: var(--radius-full);
+    font-size: var(--fs-sm);
+  }
+
+  .status-badge.active {
+    background-color: hsl(142, 76%, 95%);
+    color: hsl(142, 76%, 36%);
+  }
+
+  .status-indicator {
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    margin-right: var(--space-2xs);
+  }
+
+  .status-badge.active .status-indicator {
+    background-color: hsl(142, 76%, 36%);
+  }
+
+  /* Responsive adjustments */
+  @media (min-width: 768px) {
+    .form-actions button {
+      width: auto;
+    }
+  }
+</style>
+
+<script>
+  // Tab functionality
+  const tabButtons = document.querySelectorAll('.tab-button');
+  const tabContents = document.querySelectorAll('.tab-content');
+
+  function setActiveTab(tabId) {
+    // Hide all tab contents
+    tabContents.forEach(content => {
+      content.classList.add('hidden');
+    });
+    
+    // Remove active state from all tabs
+    tabButtons.forEach(button => {
+      button.classList.remove('active');
+    });
+    
+    // Show selected tab content
+    const selectedContent = document.getElementById(`content-${tabId.split('-')[1]}`);
+    if (selectedContent) {
+      selectedContent.classList.remove('hidden');
+    }
+    
+    // Set active state on selected tab
+    const selectedTab = document.getElementById(tabId);
+    if (selectedTab) {
+      selectedTab.classList.add('active');
+    }
+  }
+
+  tabButtons.forEach(button => {
+    button.addEventListener('click', () => {
+      setActiveTab(button.id);
+    });
+  });
+
+  // Helper to display messages for RAG forms
+  function showRagMessage(element, message, type = 'info') {
+    if (!element) return;
+    element.textContent = message;
+    element.classList.remove('hidden', 'text-green-600', 'text-red-600', 'text-blue-700');
+    
+    if (type === 'success') {
+      element.classList.add('text-green-600');
+    } else if (type === 'error') {
+      element.classList.add('text-red-600');
+    } else { // info or default
+      element.classList.add('text-blue-700');
+    }
+  }
+
+  // URL Ingestion Form Handler
+  const urlIngestionForm = document.getElementById('urlIngestionForm');
+  const urlIngestionMessage = document.getElementById('urlIngestionMessage');
+
+  if (urlIngestionForm) {
+    urlIngestionForm.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      const knowledgeUrlInput = document.getElementById('knowledgeUrl');
+      const knowledgeUrl = knowledgeUrlInput ? knowledgeUrlInput.value : '';
+
+      if (!knowledgeUrl) {
+        showRagMessage(urlIngestionMessage, 'Please enter a valid URL.', 'error');
+        return;
+      }
+      
+      urlIngestionMessage.classList.remove('hidden');
+      showRagMessage(urlIngestionMessage, 'Importing content from URL...', 'info');
+      
+      const submitButton = urlIngestionForm.querySelector('button[type="submit"]');
+      if(submitButton) {
+        submitButton.disabled = true;
+        const originalContent = submitButton.innerHTML;
+        submitButton.innerHTML = '<svg class="animate-spin -ml-1 mr-2 h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> Importing...';
+      }
+
+      try {
+        const response = await fetch('/api/rag/ingest/url', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ url: knowledgeUrl }),
+        });
+      const result = await response.json();
+        
+        if (response.ok) {
+          showRagMessage(urlIngestionMessage, result.message || 'Content successfully imported!', 'success');
+          urlIngestionForm.reset();
+        } else {
+          showRagMessage(urlIngestionMessage, `Error: ${result.message || 'Failed to import content.'}`, 'error');
+        }
+      } catch (error) {
+        console.error('URL ingestion error:', error);
+        showRagMessage(urlIngestionMessage, 'An unexpected error occurred. Please try again.', 'error');
+      } finally {
+        if(submitButton) {
+          submitButton.disabled = false;
+          submitButton.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM6.293 6.707a1 1 0 010-1.414l3-3a1 1 0 011.414 0l3 3a1 1 0 01-1.414 1.414L11 5.414V13a1 1 0 11-2 0V5.414L7.707 6.707a1 1 0 01-1.414 0z" clip-rule="evenodd" /></svg> Import Content';
+        }
+      }
+    });
+  }
+
+  // Text Ingestion Form Handler
+  const textIngestionForm = document.getElementById('textIngestionForm');
+  const textIngestionMessage = document.getElementById('textIngestionMessage');
+
+  if (textIngestionForm) {
+    textIngestionForm.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      const knowledgeTitleInput = document.getElementById('knowledgeTitle');
+      const knowledgeTextInput = document.getElementById('knowledgeText');
+      const knowledgeTitle = knowledgeTitleInput ? knowledgeTitleInput.value : '';
+      const knowledgeText = knowledgeTextInput ? knowledgeTextInput.value : '';
+
+      if (!knowledgeText) {
+        showRagMessage(textIngestionMessage, 'Please enter text content.', 'error');
+        return;
+      }
+      
+      textIngestionMessage.classList.remove('hidden');
+      showRagMessage(textIngestionMessage, 'Adding content to knowledge base...', 'info');
+      
+      const submitButton = textIngestionForm.querySelector('button[type="submit"]');
+      if(submitButton) {
+        submitButton.disabled = true;
+        const originalContent = submitButton.innerHTML;
+        submitButton.innerHTML = '<svg class="animate-spin -ml-1 mr-2 h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> Processing...';
+      }
+
+      try {
+        const response = await fetch('/api/rag/ingest/text', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ title: knowledgeTitle, text: knowledgeText }),
+        });
+        const result = await response.json();
+        
+        if (response.ok) {
+          showRagMessage(textIngestionMessage, result.message || 'Content successfully added to knowledge base!', 'success');
+          textIngestionForm.reset();
+        } else {
+          showRagMessage(textIngestionMessage, `Error: ${result.message || 'Failed to add content.'}`, 'error');
+        }
+      } catch (error) {
+        console.error('Text ingestion error:', error);
+        showRagMessage(textIngestionMessage, 'An unexpected error occurred. Please try again.', 'error');
+      } finally {
+        if(submitButton) {
+          submitButton.disabled = false;
+          submitButton.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-11a1 1 0 10-2 0v2H7a1 1 0 100 2h2v2a1 1 0 102 0v-2h2a1 1 0 100-2h-2V7z" clip-rule="evenodd" /></svg> Add to Knowledge Base';
+        }
+      }
+    });
+  }
+
+  // Initialize the first tab as active
+  document.addEventListener('DOMContentLoaded', () => {
+    setActiveTab('tab-url');
+  });
+</script>

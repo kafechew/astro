@@ -1,0 +1,181 @@
+---
+// Props for the component
+export interface Props {
+  headings: Array<{
+    depth: number;
+    slug: string;
+    text: string;
+  }>;
+  maxDepth?: number;
+}
+
+const { headings = [], maxDepth = 3 } = Astro.props;
+
+// Filter headings by depth and create a nested structure
+const filteredHeadings = headings
+  .filter(heading => heading.depth >= 2 && heading.depth <= maxDepth)
+  .map(heading => ({
+    ...heading,
+    children: []
+  }));
+
+// Function to check if the current URL has a hash that matches a heading
+const isActiveHeading = (slug: string) => {
+  if (typeof window !== 'undefined') {
+    return window.location.hash === `#${slug}`;
+  }
+  return false;
+};
+---
+
+<nav class="table-of-contents">
+  {filteredHeadings.length > 0 ? (
+    <ul class="toc-list">
+      {filteredHeadings.map(heading => (
+        <li class={`toc-item depth-${heading.depth}`}>
+          <a 
+            href={`#${heading.slug}`} 
+            class={`toc-link ${isActiveHeading(heading.slug) ? 'active' : ''}`}
+            data-depth={heading.depth}
+          >
+            {heading.text}
+          </a>
+        </li>
+      ))}
+    </ul>
+  ) : (
+    <p class="no-headings">No headings available</p>
+  )}
+</nav>
+
+<style>
+  .table-of-contents {
+    position: relative;
+  }
+  
+  .toc-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-xs);
+  }
+  
+  .toc-item {
+    margin: 0;
+    padding: 0;
+  }
+  
+  .toc-link {
+    display: block;
+    padding: var(--space-xs) 0;
+    color: hsl(var(--txt) / 0.7);
+    text-decoration: none;
+    font-size: var(--fs-sm);
+    transition: all var(--transition-ease-fast);
+    border-left: 2px solid hsl(var(--txt) / 0.1);
+    padding-left: calc(var(--space-sm) * var(--depth, 1));
+  }
+  
+  .toc-link:hover {
+    color: hsl(var(--txt));
+    border-left-color: hsl(var(--txt) / 0.3);
+    text-decoration: none;
+  }
+  
+  .toc-link.active {
+    color: hsl(var(--accent));
+    border-left-color: hsl(var(--accent));
+    font-weight: 500;
+  }
+  
+  .depth-2 {
+    --depth: 1;
+  }
+  
+  .depth-3 {
+    --depth: 2;
+  }
+  
+  .depth-4 {
+    --depth: 3;
+  }
+  
+  .no-headings {
+    color: hsl(var(--txt) / 0.5);
+    font-size: var(--fs-sm);
+    font-style: italic;
+    margin: 0;
+  }
+  
+  /* Active heading indicator */
+  .toc-link::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    width: 2px;
+    height: 0;
+    background-color: hsl(var(--accent));
+    transition: height var(--transition-ease-fast);
+  }
+  
+  .toc-link.active::before {
+    height: 100%;
+  }
+</style>
+
+<script>
+  // Update active link based on scroll position
+  document.addEventListener('DOMContentLoaded', () => {
+    const tocLinks = document.querySelectorAll('.toc-link');
+    
+    // Set initial active state based on URL hash
+    const setInitialActive = () => {
+      const hash = window.location.hash;
+      if (hash) {
+        tocLinks.forEach(link => {
+          if (link.getAttribute('href') === hash) {
+            link.classList.add('active');
+          } else {
+            link.classList.remove('active');
+          }
+        });
+      } else if (tocLinks.length > 0) {
+        // If no hash, set first link as active
+        tocLinks[0].classList.add('active');
+      }
+    };
+    
+    setInitialActive();
+    
+    // Update active link on hash change
+    window.addEventListener('hashchange', setInitialActive);
+    
+    // Add click event to smooth scroll
+    tocLinks.forEach(link => {
+      link.addEventListener('click', (e) => {
+        e.preventDefault();
+        
+        const targetId = link.getAttribute('href')?.substring(1);
+        if (!targetId) return;
+        
+        const targetElement = document.getElementById(targetId);
+        if (!targetElement) return;
+        
+        // Smooth scroll to target
+        window.scrollTo({
+          top: targetElement.offsetTop - 100, // Offset for fixed header
+          behavior: 'smooth'
+        });
+        
+        // Update URL hash without scrolling
+        history.pushState(null, '', `#${targetId}`);
+        
+        // Update active class
+        tocLinks.forEach(l => l.classList.remove('active'));
+        link.classList.add('active');
+      });
+    });
+  });
+</script>

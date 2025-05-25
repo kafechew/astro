@@ -1,55 +1,74 @@
 ---
 // component import
 import MainHead from "./MainHead.astro";
-import Navbar from "../components/Navbar.astro"; // Import Navbar
-import Footer from "../components/Footer.astro"; // Import Footer
+import Navbar from "../components/Navbar.astro";
+import Footer from "../components/Footer.astro";
 
 // style import
 import "../styles/global.css";
 
 const {
   title = "HermitAI",
-  description = "Fine-Grained AI Access Control, Astro & Gemini",
+  description = "Your Personal AI Twin with Web Agent & RAG",
 } = Astro.props;
 ---
 
 <html lang="en">
   <MainHead {title} {description} />
   <body>
-    <Navbar /> {/* Add Navbar */}
+    <Navbar />
     <main>
-      <slot> Default Text</slot>
+      <slot />
     </main>
-    <Footer /> {/* Add Footer */}
-    <!--Start of Tawk.to Script-->
-    <!--<script type="text/javascript">
-    var Tawk_API=Tawk_API||{}, Tawk_LoadStart=new Date();
-    (function(){
-    var s1=document.createElement("script"),s0=document.getElementsByTagName("script")[0];
-    s1.async=true;
-    s1.src='https://embed.tawk.to/680fac81e616e1190d99d08e/1ipujjmkv';
-    s1.charset='UTF-8';
-    s1.setAttribute('crossorigin','*');
-    s0.parentNode.insertBefore(s1,s0);
-    })();
-    </script>-->
-    <!--End of Tawk.to Script-->
+    <Footer />
+    
+    <!-- Script for theme toggle functionality -->
+    <script>
+      // Check for saved theme preference or use the system preference
+      const getThemePreference = () => {
+        if (typeof localStorage !== 'undefined' && localStorage.getItem('theme')) {
+          return localStorage.getItem('theme');
+        }
+        return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+      };
+
+      const setTheme = (theme) => {
+        document.documentElement.setAttribute('data-theme', theme);
+        localStorage.setItem('theme', theme);
+      };
+
+      // Set theme on load
+      setTheme(getThemePreference());
+
+      // Listen for theme toggle events from navbar
+      document.addEventListener('themeToggle', (e) => {
+        const newTheme = e.detail.theme;
+        setTheme(newTheme);
+      });
+    </script>
   </body>
 </html>
 
 <style>
-  /* Override global body centering for Navbar and Footer */
-  body > :global(nav), /* Target Navbar directly under body */
-  body > :global(footer) { /* Target Footer directly under body */
+  /* This ensures the body takes up the full viewport height */
+  body {
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
     width: 100%;
-    place-self: stretch; /* Make them stretch to fill the grid cell width */
   }
 
-  /* Ensure main content still respects container/centering if needed */
-  /* (This might need adjustment based on desired main content layout) */
+  /* This ensures the navbar and footer span the full width */
+  body > :global(nav),
+  body > :global(footer) {
+    width: 100%;
+  }
+
+  /* This makes the main content area flexible to fill available space */
   main {
-     width: 100%; /* Allow main to take full width if its content dictates */
-     /* max-width: 1600px; /* Example: Re-apply max-width if needed */
-     /* margin-inline: auto; /* Example: Re-apply centering if needed */
+    flex: 1;
+    width: 100%;
+    display: flex;
+    flex-direction: column;
   }
 </style>

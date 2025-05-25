@@ -1,0 +1,145 @@
+---
+// Props for the component
+export interface Props {
+  title: string;
+  description?: string;
+  url?: string;
+}
+
+const { 
+  title, 
+  description = "", 
+  url = Astro.url.href 
+} = Astro.props;
+
+// Encode the URL parameters
+const encodedUrl = encodeURIComponent(url);
+const encodedTitle = encodeURIComponent(title);
+const encodedDescription = encodeURIComponent(description);
+
+// Social share URLs
+const twitterUrl = `https://twitter.com/intent/tweet?text=${encodedTitle}&url=${encodedUrl}`;
+const facebookUrl = `https://www.facebook.com/sharer/sharer.php?u=${encodedUrl}`;
+const linkedinUrl = `https://www.linkedin.com/sharing/share-offsite/?url=${encodedUrl}`;
+---
+
+<div class="share-buttons">
+  <span class="share-label">Share:</span>
+  <div class="social-buttons">
+    <a href={twitterUrl} target="_blank" rel="noopener noreferrer" class="social-button twitter" aria-label="Share on Twitter">
+      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M22 4s-.7 2.1-2 3.4c1.6 10-9.4 17.3-18 11.6 2.2.1 4.4-.6 6-2C3 15.5.5 9.6 3 5c2.2 2.6 5.6 4.1 9 4-.9-4.2 4-6.6 7-3.8 1.1 0 3-1.2 3-1.2z"></path>
+      </svg>
+    </a>
+    <a href={facebookUrl} target="_blank" rel="noopener noreferrer" class="social-button facebook" aria-label="Share on Facebook">
+      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"></path>
+      </svg>
+    </a>
+    <a href={linkedinUrl} target="_blank" rel="noopener noreferrer" class="social-button linkedin" aria-label="Share on LinkedIn">
+      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-2-2 2 2 0 0 0-2 2v7h-4v-7a6 6 0 0 1 6-6z"></path>
+        <rect x="2" y="9" width="4" height="12"></rect>
+        <circle cx="4" cy="4" r="2"></circle>
+      </svg>
+    </a>
+    <button class="social-button copy" id="copy-link-button" aria-label="Copy link">
+      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path>
+        <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path>
+      </svg>
+    </button>
+  </div>
+</div>
+
+<style>
+  .share-buttons {
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+  }
+  
+  .share-label {
+    font-size: var(--fs-sm);
+    color: hsl(var(--txt) / 0.7);
+  }
+  
+  .social-buttons {
+    display: flex;
+    gap: var(--space-xs);
+  }
+  
+  .social-button {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    border-radius: var(--radius-full);
+    background-color: hsl(var(--txt) / 0.1);
+    color: hsl(var(--txt));
+    transition: all var(--transition-ease-fast);
+    cursor: pointer;
+    border: none;
+  }
+  
+  .social-button:hover {
+    transform: translateY(-2px);
+  }
+  
+  .social-button.twitter:hover {
+    background-color: #1DA1F2;
+    color: white;
+  }
+  
+  .social-button.facebook:hover {
+    background-color: #4267B2;
+    color: white;
+  }
+  
+  .social-button.linkedin:hover {
+    background-color: #0077B5;
+    color: white;
+  }
+  
+  .social-button.copy:hover {
+    background-color: hsl(var(--accent));
+    color: white;
+  }
+  
+  @media (max-width: 480px) {
+    .share-buttons {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: var(--space-xs);
+    }
+  }
+</style>
+
+<script>
+  // Copy link functionality
+  const copyLinkButton = document.getElementById('copy-link-button');
+  
+  if (copyLinkButton) {
+    copyLinkButton.addEventListener('click', () => {
+      const currentUrl = window.location.href;
+      
+      navigator.clipboard.writeText(currentUrl).then(() => {
+        // Show success feedback
+        const originalHTML = copyLinkButton.innerHTML;
+        copyLinkButton.innerHTML = `
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M20 6L9 17l-5-5"></path>
+          </svg>
+        `;
+        
+        // Reset after 2 seconds
+        setTimeout(() => {
+          copyLinkButton.innerHTML = originalHTML;
+        }, 2000);
+      }).catch(err => {
+        console.error('Could not copy text: ', err);
+      });
+    });
+  }
+</script>

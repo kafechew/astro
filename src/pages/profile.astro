@@ -1,0 +1,641 @@
+---
+import MainLayout from '../layouts/MainLayout.astro';
+
+// 1. Check if user is logged in
+if (!Astro.locals.user) {
+  return Astro.redirect('/login');
+}
+
+// 2. Fetch User Data (Astro.locals.user should have it)
+const user = Astro.locals.user;
+const profile = user.profile || {}; // Ensure profile object exists
+
+let initialDisplayName = profile.displayName || user.username; // Fallback to username if displayName is not set
+let initialBio = profile.bio || '';
+
+// Get messages from URL query parameters
+const urlParams = new URLSearchParams(Astro.url.search);
+const message = urlParams.get('message');
+const error = urlParams.get('error');
+
+let statusMessage = '';
+let statusMessageType = ''; // 'success' or 'error'
+
+if (message) {
+  statusMessageType = 'success';
+  if (message === 'email_verified_successfully') {
+    statusMessage = 'Your email has been successfully verified!';
+    // Potentially update user object if it's not reflecting the change yet,
+    // though a page reload or re-fetch from /api/auth/me would be more robust
+    if (user && !user.isEmailVerified) user.isEmailVerified = true;
+  } else if (message === 'profile_updated') {
+    statusMessage = 'Profile updated successfully!';
+  } else {
+    statusMessage = decodeURIComponent(message);
+  }
+} else if (error) {
+  statusMessageType = 'error';
+  if (error === 'verification_failed_or_expired') {
+    statusMessage = 'Email verification failed. The link may be invalid or expired.';
+  } else if (error === 'verification_update_failed') {
+    statusMessage = 'There was an issue updating your email verification status. Please try again or contact support.';
+  } else if (error === 'verification_error') {
+    statusMessage = 'An unexpected error occurred during email verification. Please try again.';
+  } else {
+    statusMessage = decodeURIComponent(error);
+  }
+}
+
+// Format dates
+const formatDate = (dateString) => {
+  if (!dateString) return '';
+  const date = new Date(dateString);
+  return date.toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' });
+};
+
+const formatDateTime = (dateString) => {
+  if (!dateString) return '';
+  const date = new Date(dateString);
+  return date.toLocaleDateString(undefined, { 
+    year: 'numeric', 
+    month: 'long', 
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit'
+  });
+};
+
+const joinDate = formatDate(user.createdAt);
+const lastUpdated = formatDateTime(user.updatedAt);
+---
+
+<MainLayout title="My Account">
+  <div class="container">
+    <header>
+      <h1 class="h2">My <span>Account</span></h1>
+      <p>Manage your profile and account settings</p>
+    </header>
+
+    {statusMessage && (
+      <div class:list={[
+        "alert",
+        statusMessageType === 'success' ? "alert-success" : "",
+        statusMessageType === 'error' ? "alert-error" : ""
+      ]} role="alert">
+        {statusMessage}
+      </div>
+    )}
+
+    <div class="profile-container">
+      <!-- Profile Overview Card -->
+      <section class="profile-card">
+        <div class="profile-header">
+          <div class="avatar-container">
+            <div class="avatar">
+              {initialDisplayName.charAt(0).toUpperCase()}
+            </div>
+          </div>
+          <div class="profile-title">
+            <h2 id="currentDisplayName">{initialDisplayName}</h2>
+            <p class="username">@{user.username}</p>
+          </div>
+        </div>
+
+        <div class="profile-stats">
+          <div class="stat-item">
+            <span class="stat-icon">
+              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                <circle cx="12" cy="7" r="4"></circle>
+              </svg>
+            </span>
+            <div class="stat-content">
+              <span class="stat-label">Member Since</span>
+              <span class="stat-value">{joinDate}</span>
+            </div>
+          </div>
+          
+          <div class="stat-item">
+            <span class="stat-icon">
+              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="10"></circle>
+                <polyline points="12 6 12 12 16 14"></polyline>
+              </svg>
+            </span>
+            <div class="stat-content">
+              <span class="stat-label">Last Updated</span>
+              <span class="stat-value">{lastUpdated}</span>
+            </div>
+          </div>
+          
+          <div class="stat-item">
+            <span class="stat-icon">
+              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="8" r="7"></circle>
+                <polyline points="8.21 13.89 7 23 12 20 17 23 15.79 13.88"></polyline>
+              </svg>
+            </span>
+            <div class="stat-content">
+              <span class="stat-label">Credits</span>
+              <span class="stat-value">{Astro.locals.user?.credits ?? 0}</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="profile-bio">
+          <h3>About Me</h3>
+          <p id="currentBio">{initialBio || 'No bio set yet. Tell us about yourself!'}</p>
+        </div>
+
+        <div class="profile-email">
+          <div class="email-header">
+            <h3>Email Address</h3>
+            <div class:list={["email-status", user.isEmailVerified ? "verified" : "unverified"]}>
+              {user.isEmailVerified ? 'Verified' : 'Not Verified'}
+            </div>
+          </div>
+          <p class="email-value">{user.email}</p>
+          {!user.isEmailVerified && (
+            <button id="resendVerificationBtn" class="link secondary">
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38"></path>
+              </svg>
+              Resend Verification Email
+            </button>
+          )}
+        </div>
+      </section>
+
+      <!-- Edit Profile Form -->
+      <section class="edit-profile">
+        <h2 class="h3">Edit Profile</h2>
+        <form id="profileUpdateForm">
+          <div class="form-group">
+            <label for="displayName">Display Name</label>
+            <input type="text" id="displayName" name="displayName" value={initialDisplayName}>
+            <small>This is how your name will appear to other users</small>
+          </div>
+          
+          <div class="form-group">
+            <label for="bio">Bio</label>
+            <textarea id="bio" name="bio" rows="4">{initialBio}</textarea>
+            <small>Tell others a bit about yourself</small>
+          </div>
+          
+          <div class="form-actions">
+            <button type="submit" class="link primary filled">
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path>
+                <polyline points="17 21 17 13 7 13 7 21"></polyline>
+                <polyline points="7 3 7 8 15 8"></polyline>
+              </svg>
+              Save Changes
+            </button>
+          </div>
+          
+          <div id="messageArea" class="form-message hidden"></div>
+        </form>
+      </section>
+    </div>
+
+    <!-- Account Actions -->
+    <section class="account-actions">
+      <h2 class="h3">Account Actions</h2>
+      <div class="actions-container">
+        <a href="/api/auth/logout" class="link bordered">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+            <polyline points="16 17 21 12 16 7"></polyline>
+            <line x1="21" y1="12" x2="9" y2="12"></line>
+          </svg>
+          Sign Out
+        </a>
+        
+        <button id="changePasswordBtn" class="link bordered">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+            <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+          </svg>
+          Change Password
+        </button>
+      </div>
+    </section>
+  </div>
+</MainLayout>
+
+<style>
+  .container {
+    max-width: 1000px;
+    margin: 0 auto;
+    padding: var(--space-md);
+  }
+
+  header {
+    margin-bottom: var(--space-lg);
+  }
+
+  .alert {
+    padding: var(--space-sm);
+    border-radius: var(--radius-md);
+    margin-bottom: var(--space-md);
+    font-size: var(--fs-sm);
+  }
+
+  .alert-success {
+    background-color: hsl(142, 76%, 95%);
+    color: hsl(142, 76%, 36%);
+  }
+
+  .alert-error {
+    background-color: hsl(0, 76%, 95%);
+    color: hsl(0, 76%, 36%);
+  }
+
+  .profile-container {
+    display: grid;
+    gap: var(--space-lg);
+    margin-bottom: var(--space-xl);
+  }
+
+  @media (min-width: 768px) {
+    .profile-container {
+      grid-template-columns: 1fr 1fr;
+      align-items: start;
+    }
+  }
+
+  .profile-card, .edit-profile, .account-actions {
+    background-color: hsl(var(--muted));
+    border-radius: var(--radius-md);
+    padding: var(--space-md);
+    box-shadow: var(--shadow-sm);
+  }
+
+  .profile-header {
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+    margin-bottom: var(--space-md);
+  }
+
+  .avatar-container {
+    flex-shrink: 0;
+  }
+
+  .avatar {
+    width: 64px;
+    height: 64px;
+    background-color: hsl(var(--accent));
+    color: hsl(var(--bkg));
+    border-radius: var(--radius-full);
+    display: grid;
+    place-items: center;
+    font-size: var(--fs-xl);
+    font-weight: bold;
+  }
+
+  .profile-title {
+    overflow: hidden;
+  }
+
+  .profile-title h2 {
+    margin: 0;
+    font-size: var(--fs-lg);
+    line-height: 1.2;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .username {
+    color: hsl(var(--txt) / 0.7);
+    font-size: var(--fs-sm);
+  }
+
+  .profile-stats {
+    display: grid;
+    gap: var(--space-sm);
+    margin-bottom: var(--space-md);
+  }
+
+  .stat-item {
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+    padding: var(--space-xs);
+    background-color: hsl(var(--bkg) / 0.5);
+    border-radius: var(--radius-sm);
+  }
+
+  .stat-icon {
+    display: grid;
+    place-items: center;
+    color: hsl(var(--accent));
+  }
+
+  .stat-content {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .stat-label {
+    font-size: var(--fs-sm);
+    color: hsl(var(--txt) / 0.7);
+  }
+
+  .stat-value {
+    font-weight: bold;
+  }
+
+  .profile-bio {
+    margin-bottom: var(--space-md);
+    padding: var(--space-sm);
+    background-color: hsl(var(--bkg) / 0.5);
+    border-radius: var(--radius-sm);
+  }
+
+  .profile-bio h3 {
+    font-size: var(--fs-md);
+    margin-bottom: var(--space-xs);
+    color: hsl(var(--accent));
+  }
+
+  .profile-email {
+    padding: var(--space-sm);
+    background-color: hsl(var(--bkg) / 0.5);
+    border-radius: var(--radius-sm);
+  }
+
+  .email-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: var(--space-xs);
+  }
+
+  .email-header h3 {
+    font-size: var(--fs-md);
+    color: hsl(var(--accent));
+  }
+
+  .email-status {
+    font-size: var(--fs-sm);
+    padding: 2px 8px;
+    border-radius: var(--radius-full);
+  }
+
+  .email-status.verified {
+    background-color: hsl(142, 76%, 95%);
+    color: hsl(142, 76%, 36%);
+  }
+
+  .email-status.unverified {
+    background-color: hsl(0, 76%, 95%);
+    color: hsl(0, 76%, 36%);
+  }
+
+  .email-value {
+    font-size: var(--fs-sm);
+    word-break: break-all;
+    margin-bottom: var(--space-xs);
+  }
+
+  /* Edit Profile Form Styles */
+  .edit-profile h2 {
+    margin-bottom: var(--space-md);
+  }
+
+  .form-group {
+    margin-bottom: var(--space-md);
+  }
+
+  .form-group label {
+    display: block;
+    font-weight: bold;
+    margin-bottom: var(--space-xs);
+  }
+
+  .form-group input,
+  .form-group textarea {
+    width: 100%;
+    padding: var(--space-sm);
+    border: 1px solid hsl(var(--txt) / 0.2);
+    border-radius: var(--radius-sm);
+    background-color: hsl(var(--bkg));
+    color: hsl(var(--txt));
+    font-size: var(--fs-md);
+  }
+
+  .form-group small {
+    display: block;
+    margin-top: var(--space-2xs);
+    color: hsl(var(--txt) / 0.7);
+  }
+
+  .form-actions {
+    margin-top: var(--space-md);
+  }
+
+  .form-message {
+    margin-top: var(--space-sm);
+    padding: var(--space-sm);
+    border-radius: var(--radius-sm);
+    font-size: var(--fs-sm);
+  }
+
+  .form-message.text-green-600 {
+    background-color: hsl(142, 76%, 95%);
+    color: hsl(142, 76%, 36%);
+  }
+
+  .form-message.text-red-600 {
+    background-color: hsl(0, 76%, 95%);
+    color: hsl(0, 76%, 36%);
+  }
+
+  .hidden {
+    display: none;
+  }
+
+  /* Account Actions Styles */
+  .account-actions {
+    margin-top: var(--space-lg);
+  }
+
+  .account-actions h2 {
+    margin-bottom: var(--space-md);
+  }
+
+  .actions-container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-sm);
+  }
+
+  .actions-container .link {
+    flex: 1;
+    min-width: 150px;
+    justify-content: center;
+  }
+
+  @media (max-width: 480px) {
+    .actions-container .link {
+      flex: 1 0 100%;
+    }
+  }
+</style>
+
+<script>
+  const form = document.getElementById('profileUpdateForm');
+  const messageArea = document.getElementById('messageArea');
+  const currentDisplayNameElement = document.getElementById('currentDisplayName');
+  const currentBioElement = document.getElementById('currentBio');
+  const resendBtn = document.getElementById('resendVerificationBtn');
+  const changePasswordBtn = document.getElementById('changePasswordBtn');
+
+  // Function to display messages in the main status area at the top
+  function showStatusMessage(text, type = 'info') {
+    let statusDiv = document.querySelector('div[role="alert"]');
+    
+    if (!statusDiv) {
+      statusDiv = document.createElement('div');
+      statusDiv.setAttribute('role', 'alert');
+      const header = document.querySelector('header');
+      if (header && header.nextElementSibling) {
+        header.parentNode.insertBefore(statusDiv, header.nextElementSibling);
+      } else {
+        document.querySelector('.container').insertBefore(statusDiv, document.querySelector('.profile-container'));
+      }
+    }
+    
+    statusDiv.textContent = text;
+    statusDiv.className = "alert";
+    
+    if (type === 'success') {
+      statusDiv.classList.add('alert-success');
+    } else if (type === 'error') {
+      statusDiv.classList.add('alert-error');
+    } else {
+      statusDiv.classList.add('alert-info');
+    }
+    
+    // Scroll to the message
+    statusDiv.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }
+
+  // Function to display form-specific messages
+  function showFormMessage(element, text, type = 'info') {
+    if (!element) return;
+    
+    element.textContent = text;
+    element.classList.remove('hidden', 'text-green-600', 'text-red-600');
+    
+    if (type === 'success') {
+      element.classList.add('text-green-600');
+    } else if (type === 'error') {
+      element.classList.add('text-red-600');
+    }
+  }
+
+  // Resend verification email
+  if (resendBtn) {
+    resendBtn.addEventListener('click', async () => {
+      const originalText = resendBtn.innerHTML;
+      resendBtn.disabled = true;
+      resendBtn.innerHTML = `
+        <svg class="animate-spin -ml-1 mr-2 h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+          <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+          <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+        </svg>
+        Sending...
+      `;
+
+      try {
+        const response = await fetch('/api/auth/resend-verification-email', {
+          method: 'POST',
+        });
+        const result = await response.json();
+
+        if (response.ok) {
+          showStatusMessage(result.message || 'Verification email sent! Please check your inbox.', 'success');
+        } else {
+          showStatusMessage(`Error: ${result.message || 'Failed to resend email.'}`, 'error');
+        }
+      } catch (err) {
+        console.error('Resend verification error:', err);
+        showStatusMessage('An unexpected error occurred. Please try again.', 'error');
+      } finally {
+        resendBtn.disabled = false;
+        resendBtn.innerHTML = originalText;
+      }
+    });
+  }
+
+  // Update profile form
+  if (form) {
+    form.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      
+      const submitButton = form.querySelector('button[type="submit"]');
+      const originalButtonContent = submitButton.innerHTML;
+      
+      submitButton.disabled = true;
+      submitButton.innerHTML = `
+        <svg class="animate-spin -ml-1 mr-2 h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+          <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+          <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+        </svg>
+        Saving...
+      `;
+      
+      messageArea.classList.add('hidden');
+
+      const formData = new FormData(form);
+      const displayName = formData.get('displayName');
+      const bio = formData.get('bio');
+
+      try {
+        const response = await fetch('/api/auth/profile', {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ displayName, bio }),
+        });
+
+        const result = await response.json();
+
+        if (response.ok) {
+          messageArea.classList.remove('hidden');
+          showFormMessage(messageArea, result.message || 'Profile updated successfully!', 'success');
+          
+          // Update displayed values
+          if (result.user && result.user.profile) {
+            currentDisplayNameElement.textContent = result.user.profile.displayName || result.user.username;
+            currentBioElement.textContent = result.user.profile.bio || 'No bio set yet. Tell us about yourself!';
+          } else if (result.user) {
+            currentDisplayNameElement.textContent = result.user.username;
+          }
+        } else {
+          messageArea.classList.remove('hidden');
+          showFormMessage(messageArea, `Error: ${result.message || 'Failed to update profile.'}`, 'error');
+        }
+      } catch (error) {
+        console.error('Update profile error:', error);
+        messageArea.classList.remove('hidden');
+        showFormMessage(messageArea, 'An unexpected error occurred. Please try again.', 'error');
+      } finally {
+        submitButton.disabled = false;
+        submitButton.innerHTML = originalButtonContent;
+      }
+    });
+  }
+
+  // Change Password Button (placeholder for now)
+  if (changePasswordBtn) {
+    changePasswordBtn.addEventListener('click', () => {
+      // This is a placeholder - you would implement the password change functionality
+      showStatusMessage('Password change functionality coming soon!', 'info');
+    });
+  }
+</script>

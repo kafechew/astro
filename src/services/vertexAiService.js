@@ -63,6 +63,12 @@ async function getVertexAiResponse(promptText) {
   try {
     const req = {
       contents: [{ role: 'user', parts: [{ text: promptText }] }],
+      generationConfig: {
+        temperature: 0.1, // Force more deterministic output
+        // maxOutputTokens: 2048, // Example, ensure this is present and reasonable if needed
+        // topP: 0.95,
+        // topK: 40,
+      },
     };
     const streamingResp = await generativeModel.generateContentStream(req);
     // For non-streaming, you can use generateContent and await result.response

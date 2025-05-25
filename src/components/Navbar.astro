@@ -1,51 +1,472 @@
 ---
+const user = Astro.locals.user;
 ---
 
-<nav>
-  <div class="nav-content">
-    <h1 class="site-title"><a href="/" style="color: inherit; text-decoration: none;">HermitONL</a></h1>
-    <div class="user-selector-wrapper">
-      
+<nav class="navbar">
+  <div class="navbar-container">
+    <div class="navbar-brand">
+      <a href="/" class="logo">
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M12 2a8 8 0 0 1 8 8v12a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V10a8 8 0 0 1 8-8z"></path>
+          <path d="M9 19h6"></path>
+          <path d="M9 15h6"></path>
+          <circle cx="12" cy="7" r="1"></circle>
+        </svg>
+        <span>HermitAI</span>
+      </a>
     </div>
+    
+    <div class="navbar-menu">
+      {user ? (
+        <div class="navbar-start">
+          <a href="/ai" class="navbar-item">AI Chat</a>
+          <a href="/rag" class="navbar-item">Knowledge Base</a>
+        </div>
+      ) : (
+        <div class="navbar-start">
+          <a href="/about" class="navbar-item">About</a>
+          <a href="/pricing" class="navbar-item">Pricing</a>
+        </div>
+      )}
+      
+      <div class="navbar-end">
+        <button id="theme-toggle" class="theme-toggle" aria-label="Toggle theme">
+          <svg class="sun-icon" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="5"></circle>
+            <line x1="12" y1="1" x2="12" y2="3"></line>
+            <line x1="12" y1="21" x2="12" y2="23"></line>
+            <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+            <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+            <line x1="1" y1="12" x2="3" y2="12"></line>
+            <line x1="21" y1="12" x2="23" y2="12"></line>
+            <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+            <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+          </svg>
+          <svg class="moon-icon" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+          </svg>
+        </button>
+        
+        {user ? (
+          <div class="user-menu">
+            {typeof user.credits === 'number' && (
+              <div class="credits-badge">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <circle cx="12" cy="12" r="10"></circle>
+                  <path d="M16 8h-6a2 2 0 1 0 0 4h4a2 2 0 1 1 0 4H8"></path>
+                  <path d="M12 18V6"></path>
+                </svg>
+                <span id="navbar-credit-display">{user.credits}</span>
+              </div>
+            )}
+            
+            <div class="dropdown">
+              <button class="dropdown-trigger">
+                <div class="avatar">
+                  {user.username.charAt(0).toUpperCase()}
+                </div>
+              </button>
+              <div class="dropdown-menu">
+                <div class="dropdown-header">
+                  <span class="username">{user.username}</span>
+                  <span class="email">{user.email}</span>
+                </div>
+                <div class="dropdown-divider"></div>
+                <a href="/profile" class="dropdown-item">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                    <circle cx="12" cy="7" r="4"></circle>
+                  </svg>
+                  Profile
+                </a>
+                <a href="/settings" class="dropdown-item">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="12" cy="12" r="3"></circle>
+                    <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+                  </svg>
+                  Settings
+                </a>
+                <div class="dropdown-divider"></div>
+                <a href="/api/auth/logout" class="dropdown-item">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+                    <polyline points="16 17 21 12 16 7"></polyline>
+                    <line x1="21" y1="12" x2="9" y2="12"></line>
+                  </svg>
+                  Logout
+                </a>
+              </div>
+            </div>
+          </div>
+        ) : (
+          <div class="auth-buttons">
+            <a href="/login" class="link secondary">Login</a>
+            <a href="/register" class="link primary filled">Sign Up</a>
+          </div>
+        )}
+      </div>
+    </div>
+    
+    <button class="mobile-menu-button" aria-label="Menu">
+      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <line x1="3" y1="12" x2="21" y2="12"></line>
+        <line x1="3" y1="6" x2="21" y2="6"></line>
+        <line x1="3" y1="18" x2="21" y2="18"></line>
+      </svg>
+    </button>
   </div>
 </nav>
 
+<script>
+  // Theme toggle functionality
+  const themeToggle = document.getElementById('theme-toggle');
+  
+  if (themeToggle) {
+    themeToggle.addEventListener('click', () => {
+      const currentTheme = document.documentElement.getAttribute('data-theme') || 'light';
+      const newTheme = currentTheme === 'light' ? 'dark' : 'light';
+      
+      // Dispatch event for the main layout to handle
+      document.dispatchEvent(new CustomEvent('themeToggle', { 
+        detail: { theme: newTheme } 
+      }));
+    });
+  }
+  
+  // Mobile menu toggle
+  const mobileMenuButton = document.querySelector('.mobile-menu-button');
+  const navbarMenu = document.querySelector('.navbar-menu');
+  
+  if (mobileMenuButton && navbarMenu) {
+    mobileMenuButton.addEventListener('click', () => {
+      navbarMenu.classList.toggle('is-active');
+      mobileMenuButton.classList.toggle('is-active');
+    });
+  }
+  
+  // Dropdown functionality
+  const dropdownTrigger = document.querySelector('.dropdown-trigger');
+  const dropdown = document.querySelector('.dropdown');
+  
+  if (dropdownTrigger && dropdown) {
+    dropdownTrigger.addEventListener('click', (e) => {
+      e.stopPropagation();
+      dropdown.classList.toggle('is-active');
+    });
+    
+    // Close dropdown when clicking outside
+    document.addEventListener('click', (e) => {
+      if (dropdown.classList.contains('is-active') && !dropdown.contains(e.target)) {
+        dropdown.classList.remove('is-active');
+      }
+    });
+  }
+</script>
+
 <style>
-  nav {
-    background-color: #1a1a1a; /* Dark background */
-    color: #ffffff; /* Light text */
-    padding: 0.5rem 0; /* Remove horizontal padding here */
+  .navbar {
+    background-color: hsl(var(--bkg));
+    border-bottom: 1px solid hsl(var(--txt) / 0.1);
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    box-shadow: var(--shadow-sm);
   }
-  .nav-content {
+
+  .navbar-container {
     display: flex;
-    justify-content: space-between; /* Space between title and selector */
+    justify-content: space-between;
     align-items: center;
-    padding: 0 1rem; /* Add horizontal padding here */
-    /* Ensure it spans the width */
+    padding: var(--space-xs) var(--space-md);
+    max-width: 1500px;
+    margin: 0 auto;
     width: 100%;
-    box-sizing: border-box; /* Include padding in width calculation */
   }
-  .site-title {
-    margin: 0;
-    font-size: 1.5rem;
-  }
-  .nav-links {
-    list-style: none;
-    padding: 0;
-    margin: 0;
+
+  .navbar-brand {
     display: flex;
-    gap: 1rem; /* Spacing between links */
+    align-items: center;
   }
-  .nav-links li a {
-    color: #ffffff;
+
+  .logo {
+    display: flex;
+    align-items: center;
+    gap: var(--space-xs);
+    color: hsl(var(--accent));
+    font-weight: bold;
+    font-size: var(--fs-lg);
     text-decoration: none;
-    font-size: 1rem;
+    transition: opacity var(--transition-ease-fast);
   }
-  .nav-links li a:hover {
-    text-decoration: underline;
+
+  .logo:hover {
+    opacity: 0.9;
   }
-  /* Wrapper to contain the selector, allowing easier alignment */
-  .user-selector-wrapper {
-     /* Styles will be inherited or overridden by UserSelector's own styles if needed */
+
+  .navbar-menu {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-grow: 1;
+    margin-left: var(--space-md);
+  }
+
+  .navbar-start, .navbar-end {
+    display: flex;
+    align-items: center;
+    gap: var(--space-md);
+  }
+
+  .navbar-item {
+    color: hsl(var(--txt));
+    text-decoration: none;
+    font-size: var(--fs-md);
+    padding: var(--space-xs) var(--space-sm);
+    border-radius: var(--radius-sm);
+    transition: background-color var(--transition-ease-fast);
+  }
+
+  .navbar-item:hover {
+    background-color: hsl(var(--txt) / 0.05);
+  }
+
+  .navbar-item[aria-current="page"] {
+    color: hsl(var(--accent));
+    font-weight: bold;
+  }
+
+  .theme-toggle {
+    background: none;
+    border: none;
+    color: hsl(var(--txt));
+    cursor: pointer;
+    padding: var(--space-xs);
+    border-radius: var(--radius-full);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background-color var(--transition-ease-fast);
+  }
+
+  .theme-toggle:hover {
+    background-color: hsl(var(--txt) / 0.05);
+  }
+
+  /* Show/hide icons based on theme */
+  html[data-theme="dark"] .sun-icon {
+    display: block;
+  }
+
+  html[data-theme="dark"] .moon-icon {
+    display: none;
+  }
+
+  html[data-theme="light"] .sun-icon {
+    display: none;
+  }
+
+  html[data-theme="light"] .moon-icon {
+    display: block;
+  }
+
+  .user-menu {
+    display: flex;
+    align-items: center;
+    gap: var(--space-md);
+  }
+
+  .credits-badge {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2xs);
+    background-color: hsl(var(--accent) / 0.1);
+    color: hsl(var(--accent));
+    padding: var(--space-2xs) var(--space-xs);
+    border-radius: var(--radius-full);
+    font-weight: bold;
+    font-size: var(--fs-sm);
+  }
+
+  .dropdown {
+    position: relative;
+  }
+
+  .dropdown-trigger {
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 0;
+    display: flex;
+    align-items: center;
+  }
+
+  .avatar {
+    width: 36px;
+    height: 36px;
+    border-radius: var(--radius-full);
+    background-color: hsl(var(--accent));
+    color: hsl(var(--bkg));
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    font-size: var(--fs-md);
+  }
+
+  .dropdown-menu {
+    position: absolute;
+    top: calc(100% + var(--space-xs));
+    right: 0;
+    background-color: hsl(var(--bkg));
+    border: 1px solid hsl(var(--txt) / 0.1);
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-md);
+    min-width: 220px;
+    opacity: 0;
+    visibility: hidden;
+    transform: translateY(-10px);
+    transition: all var(--transition-ease-fast);
+    z-index: 10;
+  }
+
+  .dropdown.is-active .dropdown-menu {
+    opacity: 1;
+    visibility: visible;
+    transform: translateY(0);
+  }
+
+  .dropdown-header {
+    padding: var(--space-sm);
+    border-bottom: 1px solid hsl(var(--txt) / 0.1);
+  }
+
+  .username {
+    display: block;
+    font-weight: bold;
+    color: hsl(var(--txt));
+  }
+
+  .email {
+    display: block;
+    font-size: var(--fs-sm);
+    color: hsl(var(--txt) / 0.7);
+    margin-top: var(--space-2xs);
+  }
+
+  .dropdown-divider {
+    height: 1px;
+    background-color: hsl(var(--txt) / 0.1);
+    margin: 0;
+  }
+
+  .dropdown-item {
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+    padding: var(--space-sm);
+    color: hsl(var(--txt));
+    text-decoration: none;
+    transition: background-color var(--transition-ease-fast);
+  }
+
+  .dropdown-item:hover {
+    background-color: hsl(var(--txt) / 0.05);
+  }
+
+  .dropdown-item:last-child {
+    border-radius: 0 0 var(--radius-md) var(--radius-md);
+  }
+
+  .dropdown-item svg {
+    color: hsl(var(--txt) / 0.7);
+  }
+
+  .auth-buttons {
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+  }
+
+  .mobile-menu-button {
+    display: none;
+    background: none;
+    border: none;
+    color: hsl(var(--txt));
+    cursor: pointer;
+    padding: var(--space-xs);
+    border-radius: var(--radius-sm);
+  }
+
+  /* Mobile styles */
+  @media (max-width: 768px) {
+    .navbar-menu {
+      position: fixed;
+      top: 60px; /* Adjust based on your navbar height */
+      left: 0;
+      right: 0;
+      background-color: hsl(var(--bkg));
+      flex-direction: column;
+      align-items: flex-start;
+      padding: var(--space-md);
+      box-shadow: var(--shadow-md);
+      transform: translateY(-100%);
+      opacity: 0;
+      visibility: hidden;
+      transition: all var(--transition-ease-fast);
+      z-index: 99;
+      margin-left: 0;
+    }
+
+    .navbar-menu.is-active {
+      transform: translateY(0);
+      opacity: 1;
+      visibility: visible;
+    }
+
+    .navbar-start, .navbar-end {
+      flex-direction: column;
+      align-items: flex-start;
+      width: 100%;
+      gap: var(--space-sm);
+    }
+
+    .navbar-item {
+      width: 100%;
+      padding: var(--space-sm);
+    }
+
+    .user-menu {
+      flex-direction: column;
+      align-items: flex-start;
+      width: 100%;
+      gap: var(--space-sm);
+    }
+
+    .dropdown {
+      width: 100%;
+    }
+
+    .dropdown-menu {
+      position: static;
+      width: 100%;
+      box-shadow: none;
+      border: none;
+      background-color: hsl(var(--txt) / 0.05);
+      margin-top: var(--space-xs);
+    }
+
+    .auth-buttons {
+      width: 100%;
+      flex-direction: column;
+    }
+
+    .auth-buttons .link {
+      width: 100%;
+      text-align: center;
+    }
+
+    .mobile-menu-button {
+      display: flex;
+    }
   }
 </style>

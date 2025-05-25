@@ -2,8 +2,680 @@
 import MainLayout from '../layouts/MainLayout.astro';
 ---
 
-<MainLayout title="About">
-  <h1>About / Contact</h1>
-  <p>LinkedIn: <a href="https://www.linkedin.com/company/hermitonl" target="_blank" rel="noopener noreferrer">https://www.linkedin.com/company/hermitonl</a></p>
-  <p>Email: kai@hermit.onl</p>
+<MainLayout title="About HermitAI | Your AI Assistant" description="Learn about HermitAI and how we're building the future of AI assistants with RAG technology and personalized experiences.">
+  <div class="about-container">
+    <section class="hero-section">
+      <div class="container">
+        <h1>About <span>HermitAI</span></h1>
+        <p class="lead">Building the future of personalized AI assistants</p>
+      </div>
+    </section>
+    
+    <section class="mission-section">
+      <div class="container">
+        <div class="mission-content">
+          <div class="mission-text">
+            <h2>Our Mission</h2>
+            <p>At HermitAI, we're on a mission to make artificial intelligence more personal, more helpful, and more accessible. We believe that AI should adapt to you, not the other way around.</p>
+            <p>Our platform combines cutting-edge language models with Retrieval-Augmented Generation (RAG) technology to create AI assistants that understand your specific needs and knowledge base.</p>
+          </div>
+          <div class="mission-image">
+            <img src="/images/mission.svg" alt="HermitAI Mission Illustration" width="400" height="300" />
+          </div>
+        </div>
+      </div>
+    </section>
+    
+    <section class="features-section">
+      <div class="container">
+        <h2>What Makes Us Different</h2>
+        <div class="features-grid">
+          <div class="feature-card">
+            <div class="feature-icon">
+              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M12 2a8 8 0 0 1 8 8v12a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V10a8 8 0 0 1 8-8z"></path>
+                <path d="M9 19h6"></path>
+                <path d="M9 15h6"></path>
+                <circle cx="12" cy="7" r="1"></circle>
+              </svg>
+            </div>
+            <h3>Personal Knowledge Base</h3>
+            <p>Upload your documents, websites, and notes to create a personalized knowledge base that your AI can reference.</p>
+          </div>
+          
+          <div class="feature-card">
+            <div class="feature-icon">
+              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path>
+              </svg>
+            </div>
+            <h3>Contextual Understanding</h3>
+            <p>Our AI remembers your conversations and builds context over time, creating more meaningful and relevant interactions.</p>
+          </div>
+          
+          <div class="feature-card">
+            <div class="feature-icon">
+              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M22 12h-4l-3 9L9 3l-3 9H2"></path>
+              </svg>
+            </div>
+            <h3>Advanced RAG Technology</h3>
+            <p>Our Retrieval-Augmented Generation system ensures accurate, up-to-date responses based on your specific information.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+    
+    <section class="team-section">
+      <div class="container">
+        <h2>Meet Our Team</h2>
+        <div class="team-grid">
+          <div class="team-member">
+            <div class="member-avatar">
+              <img src="/images/avatar-placeholder.png" alt="Team Member" width="120" height="120" />
+            </div>
+            <h3>Kai</h3>
+            <p class="member-role">Founder & CEO</p>
+            <p class="member-bio">Leading the vision and development of HermitAI to create more personalized AI experiences.</p>
+            <div class="member-social">
+              <a href="https://www.linkedin.com/company/hermitonl" target="_blank" rel="noopener noreferrer" aria-label="LinkedIn">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-2-2 2 2 0 0 0-2 2v7h-4v-7a6 6 0 0 1 6-6z"></path>
+                  <rect x="2" y="9" width="4" height="12"></rect>
+                  <circle cx="4" cy="4" r="2"></circle>
+                </svg>
+              </a>
+            </div>
+          </div>
+          
+          <!-- Add more team members as needed -->
+        </div>
+      </div>
+    </section>
+    
+    <section class="contact-section">
+      <div class="container">
+        <div class="contact-content">
+          <div class="contact-info">
+            <h2>Get in Touch</h2>
+            <p>We'd love to hear from you! Whether you have questions about our product, need support, or are interested in partnerships, our team is here to help.</p>
+            
+            <div class="contact-methods">
+              <div class="contact-method">
+                <div class="contact-icon">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path>
+                    <polyline points="22,6 12,13 2,6"></polyline>
+                  </svg>
+                </div>
+                <div class="contact-details">
+                  <h3>Email Us</h3>
+                  <p><a href="mailto:kai@hermit.onl">kai@hermit.onl</a></p>
+                </div>
+              </div>
+              
+              <div class="contact-method">
+                <div class="contact-icon">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-2-2 2 2 0 0 0-2 2v7h-4v-7a6 6 0 0 1 6-6z"></path>
+                    <rect x="2" y="9" width="4" height="12"></rect>
+                    <circle cx="4" cy="4" r="2"></circle>
+                  </svg>
+                </div>
+                <div class="contact-details">
+                  <h3>Connect on LinkedIn</h3>
+                  <p><a href="https://www.linkedin.com/company/hermitonl" target="_blank" rel="noopener noreferrer">linkedin.com/company/hermitonl</a></p>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <div class="contact-form-container">
+            <form class="contact-form" id="contact-form">
+              <h3>Send us a message</h3>
+              
+              <div class="form-group">
+                <label for="name">Name</label>
+                <input type="text" id="name" name="name" required />
+              </div>
+              
+              <div class="form-group">
+                <label for="email">Email</label>
+                <input type="email" id="email" name="email" required />
+              </div>
+              
+              <div class="form-group">
+                <label for="subject">Subject</label>
+                <input type="text" id="subject" name="subject" required />
+              </div>
+              
+              <div class="form-group">
+                <label for="message">Message</label>
+                <textarea id="message" name="message" rows="4" required></textarea>
+              </div>
+              
+              <button type="submit" class="submit-button">
+                <span>Send Message</span>
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <line x1="22" y1="2" x2="11" y2="13"></line>
+                  <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+                </svg>
+              </button>
+              
+              <div id="form-message" class="form-message"></div>
+            </form>
+          </div>
+        </div>
+      </div>
+    </section>
+  </div>
 </MainLayout>
+
+<style>
+  /* Hero Section */
+  .hero-section {
+    background-color: hsl(var(--muted));
+    padding: var(--space-xl) 0;
+    text-align: center;
+  }
+  
+  .hero-section h1 {
+    font-size: var(--fs-4xl);
+    margin-bottom: var(--space-sm);
+    color: hsl(var(--txt));
+  }
+  
+  .hero-section h1 span {
+    color: hsl(var(--accent));
+  }
+  
+  .lead {
+    font-size: var(--fs-xl);
+    color: hsl(var(--txt) / 0.8);
+    max-width: 600px;
+    margin: 0 auto;
+  }
+  
+  /* Container */
+  .container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 var(--space-md);
+  }
+  
+  /* Mission Section */
+  .mission-section {
+    padding: var(--space-2xl) 0;
+  }
+  
+  .mission-content {
+    display: flex;
+    align-items: center;
+    gap: var(--space-xl);
+  }
+  
+  .mission-text {
+    flex: 1;
+  }
+  
+  .mission-text h2 {
+    font-size: var(--fs-2xl);
+    margin-bottom: var(--space-md);
+    color: hsl(var(--txt));
+  }
+  
+  .mission-text p {
+    font-size: var(--fs-lg);
+    color: hsl(var(--txt) / 0.8);
+    margin-bottom: var(--space-md);
+    line-height: 1.6;
+  }
+  
+  .mission-image {
+    flex: 1;
+    display: flex;
+    justify-content: center;
+  }
+  
+  .mission-image img {
+    max-width: 100%;
+    height: auto;
+  }
+  
+  /* Features Section */
+  .features-section {
+    padding: var(--space-2xl) 0;
+    background-color: hsl(var(--bkg) / 0.5);
+  }
+  
+  .features-section h2 {
+    font-size: var(--fs-2xl);
+    text-align: center;
+    margin-bottom: var(--space-xl);
+    color: hsl(var(--txt));
+  }
+  
+  .features-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: var(--space-lg);
+  }
+  
+  .feature-card {
+    background-color: hsl(var(--bkg));
+    border-radius: var(--radius-lg);
+    padding: var(--space-lg);
+    box-shadow: var(--shadow-md);
+    transition: transform var(--transition-normal), box-shadow var(--transition-normal);
+  }
+  
+  .feature-card:hover {
+    transform: translateY(-5px);
+    box-shadow: var(--shadow-lg);
+  }
+  
+  .feature-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 60px;
+    height: 60px;
+    border-radius: var(--radius-full);
+    background-color: hsl(var(--accent) / 0.1);
+    color: hsl(var(--accent));
+    margin-bottom: var(--space-md);
+  }
+  
+  .feature-card h3 {
+    font-size: var(--fs-lg);
+    margin-bottom: var(--space-sm);
+    color: hsl(var(--txt));
+  }
+  
+  .feature-card p {
+    color: hsl(var(--txt) / 0.8);
+    line-height: 1.6;
+  }
+  
+  /* Team Section */
+  .team-section {
+    padding: var(--space-2xl) 0;
+  }
+  
+  .team-section h2 {
+    font-size: var(--fs-2xl);
+    text-align: center;
+    margin-bottom: var(--space-xl);
+    color: hsl(var(--txt));
+  }
+  
+  .team-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+    gap: var(--space-lg);
+    justify-items: center;
+  }
+  
+  .team-member {
+    text-align: center;
+    max-width: 300px;
+  }
+  
+  .member-avatar {
+    width: 120px;
+    height: 120px;
+    border-radius: var(--radius-full);
+    overflow: hidden;
+    margin: 0 auto var(--space-md);
+    box-shadow: var(--shadow-md);
+  }
+  
+  .member-avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+  
+  .team-member h3 {
+    font-size: var(--fs-lg);
+    margin-bottom: var(--space-xs);
+    color: hsl(var(--txt));
+  }
+  
+  .member-role {
+    color: hsl(var(--accent));
+    font-weight: 500;
+    margin-bottom: var(--space-sm);
+  }
+  
+  .member-bio {
+    color: hsl(var(--txt) / 0.8);
+    font-size: var(--fs-sm);
+    margin-bottom: var(--space-sm);
+    line-height: 1.5;
+  }
+  
+  .member-social {
+    display: flex;
+    justify-content: center;
+    gap: var(--space-sm);
+  }
+  
+  .member-social a {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    border-radius: var(--radius-full);
+    background-color: hsl(var(--bkg));
+    color: hsl(var(--txt) / 0.8);
+    transition: all var(--transition-ease-fast);
+    box-shadow: var(--shadow-sm);
+  }
+  
+  .member-social a:hover {
+    background-color: hsl(var(--accent));
+    color: white;
+    transform: translateY(-2px);
+  }
+  
+  /* Contact Section */
+  .contact-section {
+    padding: var(--space-2xl) 0;
+    background-color: hsl(var(--muted));
+  }
+  
+  .contact-content {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--space-xl);
+    align-items: start;
+  }
+  
+  .contact-info h2 {
+    font-size: var(--fs-2xl);
+    margin-bottom: var(--space-md);
+    color: hsl(var(--txt));
+  }
+  
+  .contact-info p {
+    color: hsl(var(--txt) / 0.8);
+    margin-bottom: var(--space-lg);
+    font-size: var(--fs-md);
+    line-height: 1.6;
+  }
+  
+  .contact-methods {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-md);
+  }
+  
+  .contact-method {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--space-md);
+  }
+  
+  .contact-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 48px;
+    height: 48px;
+    border-radius: var(--radius-full);
+    background-color: hsl(var(--accent) / 0.1);
+    color: hsl(var(--accent));
+    flex-shrink: 0;
+  }
+  
+  .contact-details h3 {
+    font-size: var(--fs-md);
+    margin-bottom: var(--space-xs);
+    color: hsl(var(--txt));
+  }
+  
+  .contact-details a {
+    color: hsl(var(--accent));
+    text-decoration: none;
+    transition: color var(--transition-ease-fast);
+    word-break: break-all;
+  }
+  
+  .contact-details a:hover {
+    text-decoration: underline;
+  }
+  
+  .contact-form-container {
+    background-color: hsl(var(--bkg));
+    border-radius: var(--radius-lg);
+    padding: var(--space-lg);
+    box-shadow: var(--shadow-md);
+  }
+  
+  .contact-form h3 {
+    font-size: var(--fs-xl);
+    margin-bottom: var(--space-lg);
+    color: hsl(var(--txt));
+  }
+  
+  .form-group {
+    margin-bottom: var(--space-md);
+  }
+  
+  .form-group label {
+    display: block;
+    margin-bottom: var(--space-xs);
+    font-weight: 500;
+    color: hsl(var(--txt));
+  }
+  
+  .form-group input,
+  .form-group textarea {
+    width: 100%;
+    padding: var(--space-sm);
+    border: 1px solid hsl(var(--txt) / 0.2);
+    border-radius: var(--radius-md);
+    background-color: hsl(var(--bkg));
+    color: hsl(var(--txt));
+    font-size: var(--fs-md);
+    transition: border-color var(--transition-ease-fast);
+  }
+  
+  .form-group input:focus,
+  .form-group textarea:focus {
+    outline: none;
+    border-color: hsl(var(--accent));
+    box-shadow: 0 0 0 2px hsl(var(--accent) / 0.2);
+  }
+  
+  .submit-button {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-sm);
+    width: 100%;
+    padding: var(--space-sm) var(--space-md);
+    background-color: hsl(var(--accent));
+    color: white;
+    border: none;
+    border-radius: var(--radius-md);
+    font-size: var(--fs-md);
+    font-weight: 500;
+    cursor: pointer;
+    transition: background-color var(--transition-ease-fast);
+  }
+  
+  .submit-button:hover {
+    background-color: hsl(var(--accent) / 0.9);
+  }
+  
+  .form-message {
+    margin-top: var(--space-md);
+    padding: var(--space-sm);
+    border-radius: var(--radius-md);
+    font-size: var(--fs-sm);
+    display: none;
+  }
+  
+  .form-message.success {
+    display: block;
+    background-color: hsl(142, 76%, 95%);
+    color: hsl(142, 76%, 36%);
+  }
+  
+  .form-message.error {
+    display: block;
+    background-color: hsl(0, 76%, 95%);
+    color: hsl(0, 76%, 36%);
+  }
+  
+  /* Responsive Styles */
+  @media (max-width: 992px) {
+    .mission-content {
+      flex-direction: column;
+    }
+    
+    .mission-image {
+      order: -1;
+      margin-bottom: var(--space-lg);
+    }
+    
+    .contact-content {
+      grid-template-columns: 1fr;
+    }
+    
+    .contact-info {
+      margin-bottom: var(--space-lg);
+    }
+  }
+  
+  @media (max-width: 768px) {
+    .hero-section h1 {
+      font-size: var(--fs-3xl);
+    }
+    
+    .lead {
+      font-size: var(--fs-lg);
+    }
+    
+    .mission-text h2,
+    .features-section h2,
+    .team-section h2,
+    .contact-info h2 {
+      font-size: var(--fs-xl);
+    }
+    
+    .mission-text p {
+      font-size: var(--fs-md);
+    }
+    
+    .features-grid {
+      grid-template-columns: 1fr;
+    }
+  }
+  
+  @media (max-width: 480px) {
+    .hero-section {
+      padding: var(--space-lg) 0;
+    }
+    
+    .hero-section h1 {
+      font-size: var(--fs-2xl);
+    }
+    
+    .lead {
+      font-size: var(--fs-md);
+    }
+    
+    .contact-method {
+      flex-direction: column;
+      align-items: flex-start;
+    }
+  }
+</style>
+
+<script>
+  // Contact form handling
+  const contactForm = document.getElementById('contact-form');
+  const formMessage = document.getElementById('form-message');
+  
+  if (contactForm) {
+    contactForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      
+      if (formMessage) {
+        formMessage.className = 'form-message';
+        formMessage.textContent = 'Sending message...';
+        formMessage.style.display = 'block';
+      }
+      
+      // Get form data
+      const formData = new FormData(contactForm);
+      const formDataObj = Object.fromEntries(formData.entries());
+      
+      try {
+        // This is a placeholder for your actual form submission endpoint
+        // Replace with your actual API endpoint
+        // const response = await fetch('/api/contact', {
+        //   method: 'POST',
+        //   headers: {
+        //     'Content-Type': 'application/json',
+        //   },
+        //   body: JSON.stringify(formDataObj),
+        // });
+        
+        // Simulate a successful response for now
+        // const result = await response.json();
+        
+        // Simulate success
+        setTimeout(() => {
+          if (formMessage) {
+            formMessage.className = 'form-message success';
+            formMessage.textContent = 'Message sent successfully! We\'ll get back to you soon.';
+          }
+          contactForm.reset();
+        }, 1500);
+        
+      } catch (error) {
+        console.error('Error submitting form:', error);
+        if (formMessage) {
+          formMessage.className = 'form-message error';
+          formMessage.textContent = 'There was an error sending your message. Please try again.';
+        }
+      }
+    });
+  }
+  
+  // Add animation on scroll (optional)
+  const animateOnScroll = () => {
+    const elements = document.querySelectorAll('.feature-card, .team-member, .mission-content, .contact-content');
+    
+    elements.forEach(element => {
+      const elementPosition = element.getBoundingClientRect().top;
+      const windowHeight = window.innerHeight;
+      
+      if (elementPosition < windowHeight * 0.9) {
+        element.style.opacity = '1';
+        element.style.transform = 'translateY(0)';
+      }
+    });
+  };
+  
+  // Initialize animations
+  document.addEventListener('DOMContentLoaded', () => {
+    const elements = document.querySelectorAll('.feature-card, .team-member, .mission-content, .contact-content');
+    elements.forEach(element => {
+      element.style.opacity = '0';
+      element.style.transform = 'translateY(20px)';
+      element.style.transition = 'opacity 0.6s ease-out, transform 0.6s ease-out';
+    });
+    
+    // Trigger initial animation
+    setTimeout(animateOnScroll, 100);
+    
+    // Add scroll listener
+    window.addEventListener('scroll', animateOnScroll);
+  });
+</script>

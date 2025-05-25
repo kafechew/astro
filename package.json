@@ -14,8 +14,8 @@
     "@astrojs/node": "^8.2.6",
     "@astrojs/react": "^3.5.0",
     "@astrojs/vercel": "^7.6.0",
+    "@google-cloud/aiplatform": "^4.2.0",
     "@google-cloud/vertexai": "^1.10.0",
-    "dotenv": "^16.5.0",
     "@google/generative-ai": "^0.24.1",
     "@nanostores/react": "^0.7.2",
     "@supabase/supabase-js": "^2.43.4",
@@ -23,15 +23,21 @@
     "@types/react": "^18.3.3",
     "@types/react-dom": "^18.3.0",
     "astro": "^4.10.1",
+    "bcryptjs": "^2.4.3",
+    "dotenv": "^16.5.0",
+    "jsonwebtoken": "^9.0.2",
     "jwt-decode": "^4.0.0",
     "marked": "^15.0.11",
+    "mongodb": "^6.7.0",
     "nanostores": "^0.10.3",
+    "nodemailer": "^6.9.13",
+    "pdf-parse": "^1.1.1",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
-    "typescript": "^5.4.5"
+    "typescript": "^5.4.5",
+    "uuid": "^11.1.0"
   },
   "engines": {
     "node": "18.x"
-  },
-  "devDependencies": {}
+  }
 }

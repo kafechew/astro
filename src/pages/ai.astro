@@ -562,7 +562,7 @@ const conversations = [
     
     // Close the menu when clicking outside
     const closeMenu = (e: MouseEvent | TouchEvent) => {
-      if (!menu.contains(e.target) && e.target !== buttonElement) {
+      if (!menu.contains(e.target as Node) && e.target !== buttonElement) {
         document.body.removeChild(menu);
         document.removeEventListener('click', closeMenu);
       }

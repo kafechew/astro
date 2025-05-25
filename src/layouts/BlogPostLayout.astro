@@ -6,35 +6,46 @@ import ShareButtons from "../components/ShareButtons.astro";
 import RelatedPosts from "../components/RelatedPosts.astro";
 import AuthorBio from "../components/AuthorBio.astro";
 import TableOfContents from "../components/TableOfContents.astro";
-import blogsDataUntyped from "../utils/blogs";
 
+// At the top of BlogPostLayout.astro or in a shared types file
 interface BlogItem {
-  title: string;
-  description: string;
-  "created by": string;
   frontmatter: {
-    category: string;
-    // Other properties like date, image could be added if present in blogsData items' frontmatter
+    title: string;
+    description: string;
+    "created by"?: string;
+    img?: string;
+    category?: string;
+    date?: string; // Assuming date is in frontmatter
+    // any other frontmatter fields
   };
+  url: string; // Provided by Astro.glob
+  // Add 'path' if RelatedPosts absolutely needs it and it's different from 'url'
+  // path?: string;
 }
+
+const blogsDataUntyped = await Astro.glob('../pages/blog/*.md'); // Or your actual glob pattern
 const blogsData = blogsDataUntyped as BlogItem[];
 
 // Get post data
 const { frontmatter, headings } = Astro.props; // This is Astro's frontmatter for the current page
-const { index, date, category, image, minutesRead } = frontmatter; // 'category' used in filter's RHS is from here
-
-// These are from the specific blogsData[index] element for the current page
-const currentPostData = blogsData[index]; // currentPostData is now BlogItem
-const title = currentPostData.title;
-const description = currentPostData.description;
-const author = currentPostData["created by"];
+const { title, description, date, category, image, minutesRead } = frontmatter;
+const author = frontmatter["created by"] || "Anonymous"; // Use "created by" and provide a fallback
 
 // Get related posts (posts with the same category, excluding current post)
 // 'post' in the filter is an element from 'blogsData' (now typed as BlogItem[])
 // 'category' on the right side of comparison is from Astro.props.frontmatter of the current page
 const relatedPosts = blogsData
-  .filter((post, i) => i !== index && post.frontmatter.category === category)
-  .slice(0, 3); // Limit to 3 related posts
+  .filter((post) => post.frontmatter.category === category && post.url !== Astro.url.pathname)
+  .slice(0, 3)
+  .map(post => ({ // Transform to match what RelatedPosts expects
+    title: post.frontmatter.title,
+    description: post.frontmatter.description,
+    path: post.url, // Use post.url as 'path'
+    img: post.frontmatter.img,
+    category: post.frontmatter.category,
+    "created by": post.frontmatter["created by"]
+    // Add other fields RelatedPosts might need from frontmatter
+  }));
 
 // Format the date
 const formattedDate = new Date(date).toLocaleDateString('en-US', {

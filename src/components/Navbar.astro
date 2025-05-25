@@ -13,7 +13,8 @@ const user = Astro.locals.user;
             {typeof user.credits === 'number' && (
               <li>Credits: <span id="navbar-credit-display">{user.credits}</span></li>
             )}
-            <li><a href="/profile">Profile</a></li>
+            <li><a href="/profile">Me</a></li>
+            <li><a href="/ai">AI</a></li>
             <li><a href="/rag">RAG</a></li>
             <li><a href="/api/auth/logout">Logout</a></li>
           </>

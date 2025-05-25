@@ -15,7 +15,7 @@ if (SMTP_HOST && SMTP_PORT && SMTP_USER && SMTP_PASSWORD && SMTP_FROM_EMAIL) {
     },
   });
 
-  transporter.verify((error, success) => {
+  transporter.verify((error, _success) => {
     if (error) {
       console.error('Email transporter configuration error:', error);
     } else {

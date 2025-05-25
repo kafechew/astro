@@ -133,7 +133,7 @@
       messageDiv.className = 'form-message';
       
       // Disable submit button and show loading state
-      const submitButton = form.querySelector('button[type="submit"]');
+      const submitButton = form.querySelector('button[type="submit"]') as HTMLButtonElement | null;
       if (submitButton) {
         const originalText = submitButton.innerHTML;
         submitButton.disabled = true;
@@ -144,54 +144,52 @@
           </svg>
           Signing in...
         `;
-      }
 
-      const emailInput = document.getElementById('email') as HTMLInputElement;
-      const passwordInput = document.getElementById('password') as HTMLInputElement;
-      const rememberInput = document.getElementById('remember') as HTMLInputElement;
-      
-      if (!emailInput || !passwordInput) return;
-      
-      const identifier = emailInput.value.trim();
-      const password = passwordInput.value;
-      const remember = rememberInput ? rememberInput.checked : false;
+        const emailInput = document.getElementById('email') as HTMLInputElement;
+        const passwordInput = document.getElementById('password') as HTMLInputElement;
+        const rememberInput = document.getElementById('remember') as HTMLInputElement;
 
-      try {
-        const response = await fetch('/api/auth/login', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ identifier, password, remember }),
-        });
-
-        const data = await response.json();
-
-        if (response.ok) {
-          messageDiv.textContent = data.message || 'Login successful!';
-          messageDiv.classList.add('success');
-          
-          // Redirect after a short delay
-          setTimeout(() => {
-            window.location.href = data.redirectUrl || '/ai';
-          }, 500);
-        } else {
-          messageDiv.textContent = data.message || 'Login failed. Please check your credentials.';
-          messageDiv.classList.add('error');
-          
-          // Re-enable submit button
-          if (submitButton) {
-            submitButton.disabled = false;
-            submitButton.innerHTML = originalText;
+        try {
+          if (!emailInput || !passwordInput) {
+            // Or handle this as an error to be shown to the user
+            throw new Error("Email or password input fields not found in the DOM.");
           }
-        }
-      } catch (error) {
-        console.error('Login error:', error);
-        messageDiv.textContent = 'An error occurred during login. Please try again.';
-        messageDiv.classList.add('error');
-        
-        // Re-enable submit button
-        if (submitButton) {
+          
+          const identifier = emailInput.value.trim();
+          const password = passwordInput.value;
+          const remember = rememberInput ? rememberInput.checked : false;
+
+          const response = await fetch('/api/auth/login', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ identifier, password, remember }),
+          });
+
+          const data = await response.json();
+
+          if (response.ok) {
+            messageDiv.textContent = data.message || 'Login successful!';
+            messageDiv.classList.add('success');
+            
+            // Redirect after a short delay
+            setTimeout(() => {
+              window.location.href = data.redirectUrl || '/ai';
+            }, 500);
+          } else {
+            messageDiv.textContent = data.message || 'Login failed. Please check your credentials.';
+            messageDiv.classList.add('error');
+          }
+        } catch (error) {
+          console.error('Login error:', error);
+          let errorMessage = 'An error occurred during login. Please try again.';
+          if (error instanceof Error) {
+            errorMessage = error.message;
+          }
+          messageDiv.textContent = errorMessage;
+          messageDiv.classList.add('error');
+        } finally {
           submitButton.disabled = false;
           submitButton.innerHTML = originalText;
         }

@@ -67,7 +67,7 @@ function initializeVertexAIClient() {
  * @param {string} text The text to embed.
  * @returns {Promise<number[]|null>} The embedding vector or null if an error occurs.
  */
-export async function getEmbeddingForQuery(text, taskType) {
+export async function getEmbeddingForQuery(text, _taskType) {
   if (!predictionServiceClient) {
     try {
       initializeVertexAIClient();

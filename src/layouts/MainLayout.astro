@@ -32,7 +32,7 @@ const {
         return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
       };
 
-      const setTheme = (theme) => {
+      const setTheme = (theme: string) => {
         document.documentElement.setAttribute('data-theme', theme);
         localStorage.setItem('theme', theme);
       };
@@ -41,9 +41,12 @@ const {
       setTheme(getThemePreference());
 
       // Listen for theme toggle events from navbar
-      document.addEventListener('themeToggle', (e) => {
-        const newTheme = e.detail.theme;
-        setTheme(newTheme);
+      document.addEventListener('themeToggle', (e: Event) => {
+        const event = e as CustomEvent<{ theme: string }>;
+        if (event.detail && typeof event.detail.theme === 'string') {
+          const newTheme = event.detail.theme;
+          setTheme(newTheme);
+        }
       });
     </script>
   </body>

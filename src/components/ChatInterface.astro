@@ -48,15 +48,15 @@
   });
   
   // DOM Elements
-  const messageDisplayArea = document.getElementById('message-display-area');
-  const chatInput = document.getElementById('chat-input');
-  const sendButton = document.getElementById('send-button');
-  const clearChatButton = document.getElementById('clear-chat');
-  const chatCreditDisplay = document.getElementById('chat-credit-display');
+  const messageDisplayArea = document.getElementById('message-display-area') as HTMLElement | null;
+  const chatInput = document.getElementById('chat-input') as HTMLInputElement | null;
+  const sendButton = document.getElementById('send-button') as HTMLButtonElement | null;
+  const clearChatButton = document.getElementById('clear-chat') as HTMLButtonElement | null;
+  const chatCreditDisplay = document.getElementById('chat-credit-display') as HTMLElement | null;
   
   // Auto-resize textarea as user types
   if (chatInput) {
-    chatInput.addEventListener('input', function() {
+    chatInput.addEventListener('input', function(this: HTMLInputElement) {
       this.style.height = 'auto';
       const newHeight = Math.min(this.scrollHeight, 150); // Max height of 150px
       this.style.height = newHeight + 'px';
@@ -190,7 +190,7 @@
           chatCreditDisplay.textContent = newCredits.toString();
           
           // Also update navbar credits if present
-          const navbarCreditDisplay = document.getElementById('navbar-credit-display');
+          const navbarCreditDisplay = document.getElementById('navbar-credit-display') as HTMLElement | null;
           if (navbarCreditDisplay) {
             navbarCreditDisplay.textContent = newCredits.toString();
           }
@@ -205,7 +205,7 @@
         
         // It's possible for a 200 OK to still contain an error object from business logic
         if (data.error) {
-          let displayMessage = data.error; // Default to the error message from API
+          let displayMessage: string = data.error; // Default to the error message from API
           if (data.error === "email_not_verified") {
             displayMessage = "Please verify your email to use the AI chat. You can resend the verification email from your profile page.";
           } else if (data.error === "insufficient_credits") {
@@ -221,13 +221,20 @@
           aiMessageDiv.className = 'message ai-message';
 
           // Process the text with proper ordering to avoid conflicts
-          let formattedText = data.reply;
+          let formattedText: string = data.reply;
 
           // First, identify and temporarily mark code blocks to protect them
-          const codeBlocks = [];
-          formattedText = formattedText.replace(/```([\s\S]*?)```/g, function(_match, code) {
+          const codeBlocks: { lang: string, code: string }[] = [];
+          formattedText = formattedText.replace(/```([\s\S]*?)```/g, function(_match: string, code: string) {
+            const langMatch = code.match(/^(\S+)\n/); // Check for language identifier on the first line
+            let lang = '';
+            let actualCode = code;
+            if (langMatch) {
+              lang = langMatch[1];
+              actualCode = code.substring(langMatch[0].length);
+            }
             const placeholder = `__CODE_BLOCK_${codeBlocks.length}__`;
-            codeBlocks.push(code);
+            codeBlocks.push({ lang, code: actualCode });
             return placeholder;
           });
 
@@ -239,10 +246,10 @@
           if (hasNumberedList) {
             // Find sequences of lines that start with numbers
             const numberedListRegex = /(?:^\d+[.)] .+$(?:\n|$))+/gm;
-            formattedText = formattedText.replace(numberedListRegex, function(match) {
+            formattedText = formattedText.replace(numberedListRegex, function(match: string) {
               // Process each list item
-              const listItems = match.split('\n').filter(line => line.trim() !== '');
-              const processedItems = listItems.map(item => {
+              const listItems: string[] = match.split('\n').filter((line: string) => line.trim() !== '');
+              const processedItems = listItems.map((item: string) => {
                 // Extract the number and text
                 const itemMatch = item.match(/^(\d+)[.)] (.+)$/);
                 if (itemMatch) {
@@ -258,10 +265,10 @@
           }
 
           // Process unordered lists - capture entire list sections
-          formattedText = formattedText.replace(/(?:^[*-] .+$(?:\n|$))+/gm, function(match) {
+          formattedText = formattedText.replace(/(?:^[*-] .+$(?:\n|$))+/gm, function(match: string) {
             // Process each list item
-            const listItems = match.split('\n').filter(line => line.trim() !== '');
-            const processedItems = listItems.map(item => {
+            const listItems: string[] = match.split('\n').filter((line: string) => line.trim() !== '');
+            const processedItems = listItems.map((item: string) => {
               // Extract the bullet and text
               const itemMatch = item.match(/^[*-] (.+)$/);
               if (itemMatch) {
@@ -299,11 +306,14 @@
           formattedText = formattedText.replace(/^# (.*?)$/gm, '<h1 style="font-size: 1.5em; font-weight: bold; margin: 1em 0 0.5em 0;">$1</h1>');
 
           // Now restore code blocks with proper HTML
-          codeBlocks.forEach((code, index) => {
+          codeBlocks.forEach((block: { lang: string, code: string }, index: number) => {
             const placeholder = `__CODE_BLOCK_${index}__`;
+            // Simple escaping for HTML content within pre tags
+            const escapedCode = block.code.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+            const langClass = block.lang ? `language-${block.lang}` : '';
             formattedText = formattedText.replace(
-              placeholder, 
-              `<pre style="background-color: #282c34; color: #abb2bf; padding: 1em; border-radius: 5px; overflow-x: auto; margin: 1em 0; font-family: monospace; white-space: pre;">${code.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</pre>`
+              placeholder,
+              `<pre style="background-color: #282c34; color: #abb2bf; padding: 1em; border-radius: 5px; overflow-x: auto; margin: 1em 0; font-family: monospace; white-space: pre;"><code class="${langClass}">${escapedCode}</code></pre>`
             );
           });
           
@@ -349,7 +359,7 @@
         }
       } else {
         const errorData = await response.json().catch(() => ({ error: `Error: Could not get response from AI. Status: ${response.status}` }));
-        let displayMessage = errorData?.error || `Error: Could not get response from AI. Status: ${response.status}`;
+        let displayMessage: string = errorData?.error || `Error: Could not get response from AI. Status: ${response.status}`;
 
         if (response.status === 403 && errorData?.error === "email_not_verified") {
           displayMessage = "Please verify your email to use the AI chat. You can resend the verification email from your profile page.";
@@ -364,7 +374,9 @@
       }
     } catch (error) {
       // Remove typing indicator
-      typingIndicator.remove();
+      if (typingIndicator && typingIndicator.parentNode) {
+        typingIndicator.remove();
+      }
       
       const errorMessageDiv = document.createElement('div');
       errorMessageDiv.className = 'message ai-message error';
@@ -372,7 +384,9 @@
       aiMessageContainer.appendChild(errorMessageDiv);
       console.error('Fetch error:', error);
     } finally {
-      messageDisplayArea.scrollTop = messageDisplayArea.scrollHeight;
+      if (messageDisplayArea) {
+        messageDisplayArea.scrollTop = messageDisplayArea.scrollHeight;
+      }
       
       // Re-enable input area
       if (chatInput) {
@@ -387,7 +401,7 @@
   }
   
   if (chatInput) {
-    chatInput.addEventListener('keypress', function(event) {
+    chatInput.addEventListener('keypress', function(event: KeyboardEvent) {
       if (event.key === 'Enter' && !event.shiftKey) {
         event.preventDefault(); // Prevent default to avoid newline
         sendMessage();
@@ -499,207 +513,264 @@
   }
   
   .user-avatar {
-    color: hsl(var(--txt));
+    color: hsl(var(--primary));
   }
   
-  /* Message bubbles */
+  /* Message bubble styles */
   .message {
     padding: var(--space-sm) var(--space-md);
-    border-radius: var(--radius-md);
-    overflow-wrap: break-word;
-    line-height: 1.5;
+    border-radius: var(--radius-lg);
+    max-width: 100%;
+    word-wrap: break-word;
     position: relative;
-    max-width: calc(100% - 40px);
-  }
-  
-  .user-message {
-    background-color: hsl(var(--accent));
-    color: white;
-    border-radius: 15px 15px 0 15px;
-    box-shadow: var(--shadow-sm);
   }
   
   .ai-message {
     background-color: hsl(var(--bkg));
     color: hsl(var(--txt));
-    border-radius: 15px 15px 15px 0;
-    box-shadow: var(--shadow-sm);
+    border: 1px solid hsl(var(--txt) / 0.1);
   }
   
-  .ai-message.error {
-    color: hsl(0, 76%, 50%);
-    background-color: hsl(0, 76%, 95%);
-    border-left: 3px solid hsl(0, 76%, 50%);
-    font-style: italic;
+  .user-message {
+    background-color: hsl(var(--accent));
+    color: hsl(var(--accent-contrast));
+    border: 1px solid hsl(var(--accent) / 0.5);
   }
   
-  .ai-message.typing {
-    padding: var(--space-xs) var(--space-md);
+  .message.error {
+    background-color: hsl(var(--destructive));
+    color: hsl(var(--destructive-contrast));
+    border-color: hsl(var(--destructive) / 0.5);
   }
   
-  /* Timestamp */
   .message-timestamp {
-    font-size: var(--fs-sm);
+    font-size: var(--fs-xs);
     color: hsl(var(--txt) / 0.6);
-    margin-top: var(--space-xs);
+    margin-top: var(--space-xxs);
     text-align: right;
-    position: absolute;
-    bottom: 2px;
-    right: 8px;
-    opacity: 0.8;
   }
   
   .user-message .message-timestamp {
-    color: rgba(255, 255, 255, 0.8);
+    color: hsl(var(--accent-contrast) / 0.7);
   }
   
   /* Typing indicator */
   .typing-indicator {
     display: flex;
     align-items: center;
-    gap: 4px;
+    padding: var(--space-sm) var(--space-md);
   }
   
   .typing-indicator span {
-    display: inline-block;
-    width: 8px;
     height: 8px;
+    width: 8px;
+    margin: 0 2px;
     background-color: hsl(var(--txt) / 0.5);
     border-radius: 50%;
-    animation: typing-animation 1.4s infinite ease-in-out;
+    display: inline-block;
+    animation: typing 1.4s infinite ease-in-out both;
   }
   
-  .typing-indicator span:nth-child(1) {
-    animation-delay: 0s;
+  .typing-indicator span:nth-child(1) { animation-delay: -0.32s; }
+  .typing-indicator span:nth-child(2) { animation-delay: -0.16s; }
+  .typing-indicator span:nth-child(3) { animation-delay: 0s; }
+  
+  @keyframes typing {
+    0%, 80%, 100% { transform: scale(0); }
+    40% { transform: scale(1.0); }
   }
   
-  .typing-indicator span:nth-child(2) {
-    animation-delay: 0.2s;
-  }
-  
-  .typing-indicator span:nth-child(3) {
-    animation-delay: 0.4s;
-  }
-  
-  @keyframes typing-animation {
-    0%, 60%, 100% {
-      transform: translateY(0);
-      opacity: 0.5;
-    }
-    30% {
-      transform: translateY(-4px);
-      opacity: 1;
-    }
-  }
-  
+  /* Input area styles */
   .input-area {
     display: flex;
+    align-items: flex-end; /* Align items to bottom for better textarea resize experience */
     padding: var(--space-sm);
-    background-color: hsl(var(--bkg));
     border-top: 1px solid hsl(var(--txt) / 0.1);
+    background-color: hsl(var(--bkg));
   }
   
   #chat-input {
     flex-grow: 1;
-    padding: var(--space-sm) var(--space-md);
-    border: 1px solid hsl(var(--txt) / 0.2);
-    border-right: none;
-    border-radius: var(--radius-md) 0 0 var(--radius-md);
-    background-color: hsl(var(--bkg));
-    color: hsl(var(--txt));
-    font-size: var(--fs-md);
-    resize: none;
-    min-height: 44px;
-    max-height: 150px;
-    overflow-y: auto;
-    transition: border-color var(--transition-ease-fast);
-    outline: none;
+    padding: var(--space-sm);
+    border: 1px solid hsl(var(--input));
+    border-radius: var(--radius-md);
+    resize: none; /* Disable manual resize */
+    font-size: var(--fs-base);
+    line-height: 1.4;
+    background-color: hsl(var(--input-bkg));
+    color: hsl(var(--input-txt));
+    max-height: 150px; /* Max height for auto-resize */
+    overflow-y: auto; /* Add scroll if content exceeds max-height */
   }
   
   #chat-input:focus {
+    outline: none;
     border-color: hsl(var(--accent));
+    box-shadow: 0 0 0 2px hsl(var(--accent) / 0.2);
   }
   
   .send-button {
+    background-color: hsl(var(--accent));
+    color: hsl(var(--accent-contrast));
+    border: none;
+    padding: var(--space-sm);
+    border-radius: var(--radius-md);
+    margin-left: var(--space-sm);
+    cursor: pointer;
     display: flex;
     align-items: center;
     justify-content: center;
-    padding: var(--space-xs) var(--space-sm);
-    background-color: hsl(var(--accent));
-    color: white;
-    border: none;
-    border-radius: 0 var(--radius-md) var(--radius-md) 0;
-    cursor: pointer;
-    transition: background-color var(--transition-ease-fast);
-    width: auto;
-    height: auto;
-    min-width: 44px;
+    transition: background-color 0.2s ease;
   }
   
   .send-button:hover {
-    background-color: hsl(var(--accent) / 0.8);
-  }
-  
-  .send-button:active {
     background-color: hsl(var(--accent) / 0.9);
   }
   
+  .send-button:disabled {
+    background-color: hsl(var(--muted));
+    cursor: not-allowed;
+  }
+  
+  .send-button svg {
+    width: 20px;
+    height: 20px;
+  }
+  
+  /* Chat footer styles */
   .chat-footer {
     padding: var(--space-xs) var(--space-md);
     background-color: hsl(var(--bkg));
     border-top: 1px solid hsl(var(--txt) / 0.1);
+    font-size: var(--fs-sm);
+    color: hsl(var(--txt) / 0.7);
     display: flex;
     justify-content: space-between;
     align-items: center;
-    font-size: var(--fs-sm);
-    color: hsl(var(--txt) / 0.7);
   }
   
-  .credits-info {
-    display: flex;
-    align-items: center;
-    gap: var(--space-2xs);
+  .credits-info span {
+    font-weight: 500;
   }
   
   #chat-credit-display {
-    font-weight: bold;
     color: hsl(var(--accent));
   }
   
-  /* Responsive adjustments */
-  @media (max-width: 768px) {
-    .message-container {
-      max-width: 90%;
-    }
-    
-    .chat-footer {
-      flex-direction: column;
-      align-items: flex-start;
-      gap: var(--space-xs);
-    }
+  /* Markdown specific styling */
+  .message p {
+    margin: 0.75em 0;
+    line-height: 1.6;
+  }
+  .message p:first-child {
+    margin-top: 0;
+  }
+  .message p:last-child {
+    margin-bottom: 0;
   }
   
-  @media (max-width: 480px) {
+  .message a {
+    color: #4dabf7; /* A distinct link color */
+    text-decoration: underline;
+    word-break: break-all; /* Ensure long URLs don't break layout */
+  }
+  
+  .message a:hover {
+    text-decoration: none;
+  }
+  
+  .message strong, .message span[style*="font-weight: bold"] {
+    font-weight: bold;
+  }
+  
+  .message em, .message span[style*="font-style: italic"] {
+    font-style: italic;
+  }
+  
+  .message code:not(pre code) { /* Inline code */
+    font-family: monospace;
+    background-color: #333740; /* Darker background for inline code */
+    color: #d0d0d0; /* Light text for inline code */
+    padding: 0.2em 0.4em;
+    border-radius: 3px;
+    font-size: 0.9em;
+  }
+  
+  .message pre { /* Code blocks */
+    background-color: #282c34; /* Standard dark theme for code blocks */
+    color: #abb2bf; /* Common light text color for code blocks */
+    padding: 1em;
+    border-radius: 5px;
+    overflow-x: auto;
+    margin: 1em 0;
+    font-family: monospace;
+    white-space: pre; /* Preserve whitespace and newlines */
+  }
+  
+  .message pre code { /* Code inside pre, for syntax highlighting if added */
+    padding: 0;
+    background: none;
+    color: inherit;
+    font-size: inherit;
+    border-radius: 0;
+  }
+  
+  .message ul, .message ol {
+    margin: 0.75em 0;
+    padding-left: 2em; /* Indentation for lists */
+    list-style-position: outside; /* Bullets/numbers outside the text flow */
+  }
+  
+  .message ul {
+    list-style-type: disc;
+  }
+  
+  .message ol {
+    list-style-type: decimal;
+  }
+  
+  .message li {
+    margin-bottom: 0.5em; /* Spacing between list items */
+  }
+  
+  .message hr {
+    border: 0;
+    border-top: 1px solid #555; /* A subtle horizontal rule */
+    margin: 1em 0;
+  }
+  
+  .message h1, .message h2, .message h3 {
+    font-weight: bold;
+    margin: 1em 0 0.5em 0;
+    line-height: 1.3;
+  }
+  
+  .message h1 { font-size: 1.5em; }
+  .message h2 { font-size: 1.3em; }
+  .message h3 { font-size: 1.1em; }
+  
+  /* Responsive adjustments */
+  @media (max-width: 600px) {
+    .chat-container {
+      max-height: none; /* Allow full height on small screens */
+      border-radius: 0;
+    }
+  
     .message-container {
       max-width: 95%;
     }
-    
+  
     .chat-header h2 {
       font-size: var(--fs-md);
     }
-    
+  
     #chat-input {
       font-size: var(--fs-sm);
     }
-    
-    .ai-avatar, .user-avatar {
-      width: 24px;
-      height: 24px;
-    }
-    
-    .ai-avatar svg, .user-avatar svg {
-      width: 20px;
-      height: 20px;
+  
+    .send-button svg {
+      width: 18px;
+      height: 18px;
     }
   }
 </style>

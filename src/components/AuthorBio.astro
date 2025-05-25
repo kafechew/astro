@@ -31,14 +31,25 @@ const authorData = {
       linkedin: "janesmith"
     }
   }
-};
+} as const; // Use 'as const' for stricter type
+type AuthorName = keyof typeof authorData;
 
-const { 
-  author,
-  bio = authorData[author]?.bio || "Contributing writer at HermitAI.",
-  avatar = authorData[author]?.avatar || "/images/avatar-placeholder.png",
-  social = authorData[author]?.social || {}
-} = Astro.props;
+const { author: authorNameString } = Astro.props;
+
+// Validate or cast authorNameString to AuthorName
+const authorKey = authorNameString as AuthorName;
+// A safer approach would be to check if authorNameString is a valid key:
+// const authorKey = Object.keys(authorData).includes(authorNameString) ? authorNameString as AuthorName : null;
+// if (!authorKey) { /* handle invalid author */ }
+
+let bio = authorKey ? authorData[authorKey]?.bio : "Contributing writer at HermitAI.";
+let avatar = authorKey ? authorData[authorKey]?.avatar : "/images/avatar-placeholder.png";
+let social = authorKey ? authorData[authorKey]?.social : {};
+
+// Destructure props again to get the original author prop for display if needed,
+// or use authorKey if it's guaranteed to be valid.
+// For simplicity, we'll assume authorNameString is what we want to display as the name.
+const { author } = Astro.props;
 ---
 
 <div class="author-bio">

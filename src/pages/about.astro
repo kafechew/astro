@@ -598,8 +598,8 @@ import MainLayout from '../layouts/MainLayout.astro';
 
 <script>
   // Contact form handling
-  const contactForm = document.getElementById('contact-form');
-  const formMessage = document.getElementById('form-message');
+  const contactForm = document.getElementById('contact-form') as HTMLFormElement | null;
+  const formMessage = document.getElementById('form-message') as HTMLElement | null;
   
   if (contactForm) {
     contactForm.addEventListener('submit', async (e) => {
@@ -608,7 +608,7 @@ import MainLayout from '../layouts/MainLayout.astro';
       if (formMessage) {
         formMessage.className = 'form-message';
         formMessage.textContent = 'Sending message...';
-        formMessage.style.display = 'block';
+        (formMessage as HTMLElement).style.display = 'block';
       }
       
       // Get form data
@@ -657,8 +657,8 @@ import MainLayout from '../layouts/MainLayout.astro';
       const windowHeight = window.innerHeight;
       
       if (elementPosition < windowHeight * 0.9) {
-        element.style.opacity = '1';
-        element.style.transform = 'translateY(0)';
+        (element as HTMLElement).style.opacity = '1';
+        (element as HTMLElement).style.transform = 'translateY(0)';
       }
     });
   };
@@ -667,9 +667,9 @@ import MainLayout from '../layouts/MainLayout.astro';
   document.addEventListener('DOMContentLoaded', () => {
     const elements = document.querySelectorAll('.feature-card, .team-member, .mission-content, .contact-content');
     elements.forEach(element => {
-      element.style.opacity = '0';
-      element.style.transform = 'translateY(20px)';
-      element.style.transition = 'opacity 0.6s ease-out, transform 0.6s ease-out';
+      (element as HTMLElement).style.opacity = '0';
+      (element as HTMLElement).style.transform = 'translateY(20px)';
+      (element as HTMLElement).style.transition = 'opacity 0.6s ease-out, transform 0.6s ease-out';
     });
     
     // Trigger initial animation

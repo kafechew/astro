@@ -16,7 +16,7 @@ const author = blogsData[index]["created by"];
 
 // Get related posts (posts with the same category, excluding current post)
 const relatedPosts = blogsData
-  .filter((post, i) => i !== index && post.category === category)
+  .filter((post: { category: string; [key: string]: any }, i) => i !== index && post.category === category)
   .slice(0, 3); // Limit to 3 related posts
 
 // Format the date
@@ -394,21 +394,24 @@ const readingTime = minutesRead || Math.ceil(headings.length / 2) || 5; // Fallb
       link.addEventListener('click', (e) => {
         e.preventDefault();
         
-        const targetId = link.getAttribute('href').substring(1);
-        const targetElement = document.getElementById(targetId);
-        
-        if (targetElement) {
-          window.scrollTo({
-            top: targetElement.offsetTop - 100, // Offset for fixed header
-            behavior: 'smooth'
-          });
+        const href = link.getAttribute('href');
+        if (href) {
+          const targetId = href.substring(1);
+          const targetElement = document.getElementById(targetId);
           
-          // Update URL without scrolling
-          history.pushState(null, null, `#${targetId}`);
-          
-          // Add active class to the clicked link
-          tocLinks.forEach(l => l.classList.remove('active'));
-          link.classList.add('active');
+          if (targetElement) {
+            window.scrollTo({
+              top: targetElement.offsetTop - 100, // Offset for fixed header
+              behavior: 'smooth'
+            });
+            
+            // Update URL without scrolling
+            history.pushState(null, '', `#${targetId}`);
+            
+            // Add active class to the clicked link
+            tocLinks.forEach(l => l.classList.remove('active'));
+            link.classList.add('active');
+          }
         }
       });
     });
@@ -451,21 +454,23 @@ const readingTime = minutesRead || Math.ceil(headings.length / 2) || 5; // Fallb
     if (newsletterForm) {
       newsletterForm.addEventListener('submit', (e) => {
         e.preventDefault();
-        const emailInput = newsletterForm.querySelector('input[type="email"]');
-        const email = emailInput.value;
-        
-        // Here you would typically send this to your newsletter service
-        // For now, we'll just show a success message
-        
-        newsletterForm.innerHTML = `
-          <div class="newsletter-success">
-            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
-              <polyline points="22 4 12 14.01 9 11.01"></polyline>
-            </svg>
-            <p>Thanks for subscribing! We'll be in touch soon.</p>
-          </div>
-        `;
+        const emailInput = newsletterForm.querySelector('input[type="email"]') as HTMLInputElement | null;
+        if (emailInput) {
+          // const email = emailInput.value; // Unused variable
+          
+          // Here you would typically send this to your newsletter service
+          // For now, we'll just show a success message
+          
+          newsletterForm.innerHTML = `
+            <div class="newsletter-success">
+              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+                <polyline points="22 4 12 14.01 9 11.01"></polyline>
+              </svg>
+              <p>Thanks for subscribing! We'll be in touch soon.</p>
+            </div>
+          `;
+        }
       });
     }
   });

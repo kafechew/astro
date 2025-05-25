@@ -1,7 +1,7 @@
 import { connectToDatabase } from '../../../lib/mongodb';
 import { ObjectId } from 'mongodb';
 
-export async function GET({ locals, redirect }) {
+export async function GET({ locals, _redirect }) {
   const jwtUser = locals.user;
 
   if (!jwtUser || !jwtUser.userId) {

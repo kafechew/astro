@@ -156,7 +156,7 @@ const user = Astro.locals.user;
     
     // Close dropdown when clicking outside
     document.addEventListener('click', (e) => {
-      if (dropdown.classList.contains('is-active') && !dropdown.contains(e.target)) {
+      if (dropdown.classList.contains('is-active') && !dropdown.contains(e.target as Node)) {
         dropdown.classList.remove('is-active');
       }
     });

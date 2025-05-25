@@ -6,7 +6,7 @@ if (!Astro.locals.user) {
   return Astro.redirect('/login');
 }
 
-const { user } = Astro.locals;
+// const { user } = Astro.locals; // user object is implicitly used by the auth check Astro.locals.user
 ---
 <MainLayout title="Knowledge Base Management" description="Add content to your AI's knowledge base">
   <div class="container">
@@ -344,7 +344,7 @@ const { user } = Astro.locals;
   });
 
   // Helper to display messages for RAG forms
-  function showRagMessage(element, message, type = 'info') {
+  function showRagMessage(element: HTMLElement | null, message: string, type: string = 'info') {
     if (!element) return;
     element.textContent = message;
     element.classList.remove('hidden', 'text-green-600', 'text-red-600', 'text-blue-700');
@@ -359,13 +359,13 @@ const { user } = Astro.locals;
   }
 
   // URL Ingestion Form Handler
-  const urlIngestionForm = document.getElementById('urlIngestionForm');
-  const urlIngestionMessage = document.getElementById('urlIngestionMessage');
+  const urlIngestionForm = document.getElementById('urlIngestionForm') as HTMLFormElement | null;
+  const urlIngestionMessage = document.getElementById('urlIngestionMessage') as HTMLElement | null;
 
   if (urlIngestionForm) {
     urlIngestionForm.addEventListener('submit', async (event) => {
       event.preventDefault();
-      const knowledgeUrlInput = document.getElementById('knowledgeUrl');
+      const knowledgeUrlInput = document.getElementById('knowledgeUrl') as HTMLInputElement | null;
       const knowledgeUrl = knowledgeUrlInput ? knowledgeUrlInput.value : '';
 
       if (!knowledgeUrl) {
@@ -373,13 +373,16 @@ const { user } = Astro.locals;
         return;
       }
       
-      urlIngestionMessage.classList.remove('hidden');
-      showRagMessage(urlIngestionMessage, 'Importing content from URL...', 'info');
+      if (urlIngestionMessage) {
+        urlIngestionMessage.classList.remove('hidden');
+        showRagMessage(urlIngestionMessage, 'Importing content from URL...', 'info');
+      }
       
-      const submitButton = urlIngestionForm.querySelector('button[type="submit"]');
+      const submitButton = urlIngestionForm.querySelector('button[type="submit"]') as HTMLButtonElement | null;
+      let originalContent: string | undefined;
       if(submitButton) {
         submitButton.disabled = true;
-        const originalContent = submitButton.innerHTML;
+        originalContent = submitButton.innerHTML;
         submitButton.innerHTML = '<svg class="animate-spin -ml-1 mr-2 h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> Importing...';
       }
 
@@ -393,7 +396,7 @@ const { user } = Astro.locals;
         
         if (response.ok) {
           showRagMessage(urlIngestionMessage, result.message || 'Content successfully imported!', 'success');
-          urlIngestionForm.reset();
+          if (urlIngestionForm) urlIngestionForm.reset();
         } else {
           showRagMessage(urlIngestionMessage, `Error: ${result.message || 'Failed to import content.'}`, 'error');
         }
@@ -402,22 +405,24 @@ const { user } = Astro.locals;
         showRagMessage(urlIngestionMessage, 'An unexpected error occurred. Please try again.', 'error');
       } finally {
         if(submitButton) {
-          submitButton.disabled = false;
-          submitButton.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM6.293 6.707a1 1 0 010-1.414l3-3a1 1 0 011.414 0l3 3a1 1 0 01-1.414 1.414L11 5.414V13a1 1 0 11-2 0V5.414L7.707 6.707a1 1 0 01-1.414 0z" clip-rule="evenodd" /></svg> Import Content';
+          if (submitButton && originalContent) {
+            submitButton.disabled = false;
+            submitButton.innerHTML = originalContent;
+          }
         }
       }
     });
   }
 
   // Text Ingestion Form Handler
-  const textIngestionForm = document.getElementById('textIngestionForm');
-  const textIngestionMessage = document.getElementById('textIngestionMessage');
+  const textIngestionForm = document.getElementById('textIngestionForm') as HTMLFormElement | null;
+  const textIngestionMessage = document.getElementById('textIngestionMessage') as HTMLElement | null;
 
   if (textIngestionForm) {
     textIngestionForm.addEventListener('submit', async (event) => {
       event.preventDefault();
-      const knowledgeTitleInput = document.getElementById('knowledgeTitle');
-      const knowledgeTextInput = document.getElementById('knowledgeText');
+      const knowledgeTitleInput = document.getElementById('knowledgeTitle') as HTMLInputElement | null;
+      const knowledgeTextInput = document.getElementById('knowledgeText') as HTMLTextAreaElement | null;
       const knowledgeTitle = knowledgeTitleInput ? knowledgeTitleInput.value : '';
       const knowledgeText = knowledgeTextInput ? knowledgeTextInput.value : '';
 
@@ -426,13 +431,16 @@ const { user } = Astro.locals;
         return;
       }
       
-      textIngestionMessage.classList.remove('hidden');
-      showRagMessage(textIngestionMessage, 'Adding content to knowledge base...', 'info');
+      if (textIngestionMessage) {
+        textIngestionMessage.classList.remove('hidden');
+        showRagMessage(textIngestionMessage, 'Adding content to knowledge base...', 'info');
+      }
       
-      const submitButton = textIngestionForm.querySelector('button[type="submit"]');
+      const submitButton = textIngestionForm.querySelector('button[type="submit"]') as HTMLButtonElement | null;
+      let originalContent: string | undefined;
       if(submitButton) {
         submitButton.disabled = true;
-        const originalContent = submitButton.innerHTML;
+        originalContent = submitButton.innerHTML;
         submitButton.innerHTML = '<svg class="animate-spin -ml-1 mr-2 h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> Processing...';
       }
 
@@ -446,7 +454,7 @@ const { user } = Astro.locals;
         
         if (response.ok) {
           showRagMessage(textIngestionMessage, result.message || 'Content successfully added to knowledge base!', 'success');
-          textIngestionForm.reset();
+          if (textIngestionForm) textIngestionForm.reset();
         } else {
           showRagMessage(textIngestionMessage, `Error: ${result.message || 'Failed to add content.'}`, 'error');
         }
@@ -455,8 +463,10 @@ const { user } = Astro.locals;
         showRagMessage(textIngestionMessage, 'An unexpected error occurred. Please try again.', 'error');
       } finally {
         if(submitButton) {
-          submitButton.disabled = false;
-          submitButton.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-11a1 1 0 10-2 0v2H7a1 1 0 100 2h2v2a1 1 0 102 0v-2h2a1 1 0 100-2h-2V7z" clip-rule="evenodd" /></svg> Add to Knowledge Base';
+          if (submitButton && originalContent) {
+            submitButton.disabled = false;
+            submitButton.innerHTML = originalContent;
+          }
         }
       }
     });

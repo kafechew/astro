@@ -3,8 +3,8 @@ import jwt from 'jsonwebtoken'; // Added for JWT regeneration
 import { serialize } from 'cookie'; // Added for setting cookie
 import { connectToDatabase } from '../../../lib/mongodb.js';
 import { ObjectId } from 'mongodb';
-import { PredictionServiceClient } from '@google-cloud/aiplatform'; // Keep if used by RAG or other non-ReAct parts
-import { GoogleAuth } from 'google-auth-library'; // Keep if used by RAG or other non-ReAct parts
+// import { PredictionServiceClient } from '@google-cloud/aiplatform'; // Keep if used by RAG or other non-ReAct parts
+// import { GoogleAuth } from 'google-auth-library'; // Keep if used by RAG or other non-ReAct parts
 import { fetchRagContext } from '../../../services/ragService.js';
 import { performPreChecksAndDeductCredits } from '../../../services/chatPreChecksService.js';
 import { executeInProcessReActLoop } from '../../../services/reactProcessorService.js'; // Import the new service
@@ -134,7 +134,7 @@ export async function POST(context) {
     if (NODE_AGENT_SERVICE_URL && false) { // Temporarily disabling this path for the refactor
       // This block would need to be updated if the external agent service is to be used
       // with the new RAG-aware logic. It would need to receive originalUserQuery and ragContextForReAct.
-      console.log("Attempting to use Node.js Agent Service via URL:", NODE_AGENT_SERVICE_URL);
+      // console.log("Attempting to use Node.js Agent Service via URL:", NODE_AGENT_SERVICE_URL); // ts(7027) - Unreachable code detected.
       // ... (existing agent service call logic, would need modification)
       // For example, the body might become:
       // body: JSON.stringify({ originalUserQuery: originalUserQuery, ragContext: ragContextForReAct, /* other_params */ }),

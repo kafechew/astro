@@ -144,7 +144,7 @@
   const passwordInput = document.getElementById('password') as HTMLInputElement;
   const confirmPasswordInput = document.getElementById('confirmPassword') as HTMLInputElement;
   const togglePasswordButton = document.querySelector('.toggle-password');
-  const strengthMeter = document.querySelector('.strength-meter');
+  // const strengthMeter = document.querySelector('.strength-meter'); // Unused variable
   const strengthSegments = document.querySelectorAll('.strength-segment');
   const strengthValue = document.getElementById('strength-value');
   
@@ -184,7 +184,7 @@
   }
   
   // Check password strength
-  function checkPasswordStrength(password) {
+  function checkPasswordStrength(password: string) {
     let score = 0;
     let level = 'Weak';
     
@@ -322,7 +322,7 @@
       }
       
       // Disable submit button and show loading state
-      const submitButton = form.querySelector('button[type="submit"]');
+      const submitButton = form.querySelector('button[type="submit"]') as HTMLButtonElement | null;
       if (submitButton) {
         const originalText = submitButton.innerHTML;
         submitButton.disabled = true;
@@ -333,44 +333,39 @@
           </svg>
           Creating account...
         `;
-      }
-      
-      try {
-        const response = await fetch('/api/auth/register', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ username, email, password }),
-        });
-
-        const data = await response.json();
-
-        if (response.ok) {
-          messageDiv.textContent = data.message || 'Registration successful! Please check your email to verify your account.';
-          messageDiv.classList.add('success');
-          
-          // Redirect after a short delay
-          setTimeout(() => {
-            window.location.href = data.redirectUrl || '/profile';
-          }, 1500);
-        } else {
-          messageDiv.textContent = data.message || 'Registration failed. Please try again.';
-          messageDiv.classList.add('error');
-          
-          // Re-enable submit button
-          if (submitButton) {
-            submitButton.disabled = false;
-            submitButton.innerHTML = originalText;
-          }
-        }
-      } catch (error) {
-        console.error('Registration error:', error);
-        messageDiv.textContent = 'An error occurred during registration. Please try again.';
-        messageDiv.classList.add('error');
         
-        // Re-enable submit button
-        if (submitButton) {
+        try {
+          const response = await fetch('/api/auth/register', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ username, email, password }),
+          });
+
+          const data = await response.json();
+
+          if (response.ok) {
+            messageDiv.textContent = data.message || 'Registration successful! Please check your email to verify your account.';
+            messageDiv.classList.add('success');
+            
+            // Redirect after a short delay
+            setTimeout(() => {
+              window.location.href = data.redirectUrl || '/profile';
+            }, 1500);
+          } else {
+            messageDiv.textContent = data.message || 'Registration failed. Please try again.';
+            messageDiv.classList.add('error');
+          }
+        } catch (error) {
+          console.error('Registration error:', error);
+          let errorMessage = 'An error occurred during registration. Please try again.';
+          if (error instanceof Error) {
+            errorMessage = error.message;
+          }
+          messageDiv.textContent = errorMessage;
+          messageDiv.classList.add('error');
+        } finally {
           submitButton.disabled = false;
           submitButton.innerHTML = originalText;
         }

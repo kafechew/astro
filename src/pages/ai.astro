@@ -1,51 +1,620 @@
 ---
 import MainLayout from '../layouts/MainLayout.astro';
 import ChatInterface from '../components/ChatInterface.astro';
-const pageTitle = "hermitAI";
+
+const pageTitle = "AI Assistant | HermitAI";
+const conversations = [
+  { id: 1, title: "Project Planning", date: "Today" },
+  { id: 2, title: "Research on Machine Learning", date: "Yesterday" },
+  { id: 3, title: "Website Development Ideas", date: "May 15" },
+  { id: 4, title: "Marketing Strategy", date: "May 10" },
+];
 ---
 
 <MainLayout title={pageTitle}>
-  <div id="ai-page-container">
-    <div id="chat-panel">
-      <ChatInterface />
+    <div class="ai-page-container">
+      <aside id="sidebar-panel" class="sidebar-panel">
+        <div class="sidebar-header">
+          <h2>Chats</h2>
+          <div class="sidebar-actions">
+            <button id="new-chat-button" class="new-chat-button" title="New chat">
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <line x1="12" y1="5" x2="12" y2="19"></line>
+                <line x1="5" y1="12" x2="19" y2="12"></line>
+              </svg>
+            </button>
+            <button id="clear-history-button" class="clear-history-button" title="Clear all conversations">
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M3 6h18"></path>
+                <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path>
+                <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path>
+              </svg>
+            </button>
+          </div>
+        </div>
+        
+        <div class="conversation-search">
+          <input type="text" placeholder="Search conversations..." />
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="11" cy="11" r="8"></circle>
+            <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+          </svg>
+        </div>
+        
+        <div class="conversation-list">
+          {conversations.map((conversation) => (
+            <div class="conversation-item" data-id={conversation.id}>
+              <div class="conversation-icon">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+                </svg>
+              </div>
+              <div class="conversation-details">
+                <div class="conversation-title">{conversation.title}</div>
+                <div class="conversation-date">{conversation.date}</div>
+              </div>
+              <button class="conversation-menu" aria-label="Conversation options">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <circle cx="12" cy="12" r="1"></circle>
+                  <circle cx="12" cy="5" r="1"></circle>
+                  <circle cx="12" cy="19" r="1"></circle>
+                </svg>
+              </button>
+            </div>
+          ))}
+        </div>
+        
+        <div class="sidebar-footer">
+          <div class="credits-info">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="10"></circle>
+              <path d="M16 8h-6a2 2 0 1 0 0 4h4a2 2 0 1 1 0 4H8"></path>
+              <path d="M12 18V6"></path>
+            </svg>
+            <span>Credits: <strong id="sidebar-credit-display">{Astro.locals.user?.credits ?? 0}</strong></span>
+          </div>
+          <a href="/rag" class="knowledge-base-link">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path>
+              <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path>
+            </svg>
+            Knowledge Base
+          </a>
+        </div>
+      </aside>
+      
+      <main id="chat-panel" class="chat-panel">
+        <button id="toggle-sidebar-button" class="toggle-sidebar-button" aria-label="Toggle sidebar">
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="3" y1="12" x2="21" y2="12"></line>
+            <line x1="3" y1="6" x2="21" y2="6"></line>
+            <line x1="3" y1="18" x2="21" y2="18"></line>
+          </svg>
+        </button>
+        <ChatInterface />
+      </main>
     </div>
-    <div id="sidebar-panel">
-      Sidebar will go here.
-    </div>
-  </div>
 </MainLayout>
 
 <style>
-  #ai-page-container {
-    display: grid;
-    grid-template-columns: 5fr 1fr; /* Adjust ratio as needed */
-    gap: 20px; /* Adjust gap as needed */
-    padding: 20px; /* Adjust padding as needed */
-    height: calc(100vh - 120px); /* Example height, adjust based on your nav/footer */
+  /* Full-height layout */
+  .ai-page-container {
+    display: flex;
+    height: calc(100vh - var(--header-height));
+    overflow: hidden;
+    position: relative;
   }
-  #chat-panel {
-    border: 1px solid #ccc;
-    /* padding: 10px; Remove padding if ChatInterface handles its own */
-    overflow-y: hidden; /* Let ChatInterface handle its internal scroll */
-    display: flex; /* To make the child fill the height */
-    flex-direction: column; /* Stack children vertically */
+  
+  /* Sidebar Panel */
+  .sidebar-panel {
+    width: 300px;
+    background-color: hsl(var(--muted));
+    border-right: 1px solid hsl(var(--txt) / 0.1);
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    transition: transform var(--transition-ease-fast);
   }
-  #sidebar-panel {
-    /* Basic styling for sidebar panel */
-    border: 1px solid #ccc;
-    padding: 10px;
+  
+  .sidebar-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: var(--space-sm) var(--space-md);
+    border-bottom: 1px solid hsl(var(--txt) / 0.1);
   }
-
+  
+  .sidebar-header h2 {
+    font-size: var(--fs-md);
+    margin: 0;
+    color: hsl(var(--txt));
+  }
+  
+  .sidebar-actions {
+    display: flex;
+    gap: var(--space-xs);
+  }
+  
+  .new-chat-button, .clear-history-button {
+    background: none;
+    border: none;
+    color: hsl(var(--txt) / 0.6);
+    cursor: pointer;
+    padding: var(--space-xs);
+    border-radius: var(--radius-sm);
+    transition: color var(--transition-ease-fast), background-color var(--transition-ease-fast);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  
+  .new-chat-button {
+    color: hsl(var(--accent));
+  }
+  
+  .new-chat-button:hover, .clear-history-button:hover {
+    background-color: hsl(var(--txt) / 0.1);
+    color: hsl(var(--txt));
+  }
+  
+  .conversation-search {
+    position: relative;
+    padding: var(--space-sm) var(--space-md);
+  }
+  
+  .conversation-search input {
+    width: 100%;
+    padding: var(--space-xs) var(--space-sm);
+    padding-left: var(--space-lg);
+    border: 1px solid hsl(var(--txt) / 0.2);
+    border-radius: var(--radius-md);
+    background-color: hsl(var(--bkg));
+    color: hsl(var(--txt));
+    font-size: var(--fs-sm);
+  }
+  
+  .conversation-search svg {
+    position: absolute;
+    left: calc(var(--space-md) + var(--space-xs));
+    top: 50%;
+    transform: translateY(-50%);
+    color: hsl(var(--txt) / 0.5);
+  }
+  
+  .conversation-list {
+    flex: 1;
+    overflow-y: auto;
+    padding: var(--space-xs) 0;
+  }
+  
+  .conversation-item {
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+    padding: var(--space-sm) var(--space-md);
+    cursor: pointer;
+    transition: background-color var(--transition-ease-fast);
+    border-left: 3px solid transparent;
+  }
+  
+  .conversation-item:hover {
+    background-color: hsl(var(--bkg) / 0.5);
+  }
+  
+  .conversation-item.active {
+    background-color: hsl(var(--bkg));
+    border-left-color: hsl(var(--accent));
+  }
+  
+  .conversation-icon {
+    color: hsl(var(--txt) / 0.6);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  
+  .conversation-details {
+    flex: 1;
+    min-width: 0; /* Allows text truncation */
+  }
+  
+  .conversation-title {
+    font-weight: 500;
+    color: hsl(var(--txt));
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  
+  .conversation-date {
+    font-size: var(--fs-sm);
+    color: hsl(var(--txt) / 0.6);
+  }
+  
+  .conversation-menu {
+    background: none;
+    border: none;
+    color: hsl(var(--txt) / 0.5);
+    cursor: pointer;
+    padding: var(--space-2xs);
+    border-radius: var(--radius-sm);
+    opacity: 0;
+    transition: opacity var(--transition-ease-fast), background-color var(--transition-ease-fast);
+  }
+  
+  .conversation-item:hover .conversation-menu {
+    opacity: 1;
+  }
+  
+  .conversation-menu:hover {
+    background-color: hsl(var(--txt) / 0.1);
+    color: hsl(var(--txt));
+  }
+  
+  .sidebar-footer {
+    padding: var(--space-sm) var(--space-md);
+    border-top: 1px solid hsl(var(--txt) / 0.1);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-sm);
+  }
+  
+  .credits-info {
+    display: flex;
+    align-items: center;
+    gap: var(--space-xs);
+    color: hsl(var(--txt) / 0.8);
+    font-size: var(--fs-sm);
+  }
+  
+  .knowledge-base-link {
+    display: flex;
+    align-items: center;
+    gap: var(--space-xs);
+    padding: var(--space-xs) var(--space-sm);
+    background-color: hsl(var(--bkg));
+    color: hsl(var(--txt));
+    border: 1px solid hsl(var(--txt) / 0.2);
+    border-radius: var(--radius-md);
+    font-size: var(--fs-sm);
+    text-decoration: none;
+    transition: background-color var(--transition-ease-fast);
+    justify-content: center;
+  }
+  
+  .knowledge-base-link:hover {
+    background-color: hsl(var(--txt) / 0.05);
+    text-decoration: none;
+  }
+  
+  /* Chat Panel */
+  .chat-panel {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    overflow: hidden;
+    position: relative;
+  }
+  
+  .toggle-sidebar-button {
+    position: absolute;
+    top: var(--space-sm);
+    left: var(--space-sm);
+    z-index: 5;
+    background: hsl(var(--bkg) / 0.8);
+    border: 1px solid hsl(var(--txt) / 0.1);
+    color: hsl(var(--txt));
+    cursor: pointer;
+    padding: var(--space-xs);
+    border-radius: var(--radius-sm);
+    display: none;
+    backdrop-filter: blur(4px);
+  }
+  
+  .toggle-sidebar-button:hover {
+    background-color: hsl(var(--txt) / 0.1);
+  }
+  
+  /* Dropdown menu styles */
+  .conversation-dropdown-menu {
+    min-width: 150px;
+    background-color: hsl(var(--bkg));
+    border: 1px solid hsl(var(--txt) / 0.1);
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-md);
+    overflow: hidden;
+  }
+  
+  .dropdown-item {
+    padding: var(--space-sm) var(--space-md);
+    cursor: pointer;
+    transition: background-color var(--transition-ease-fast);
+    color: hsl(var(--txt));
+  }
+  
+  .dropdown-item:hover {
+    background-color: hsl(var(--txt) / 0.1);
+  }
+  
+  /* Ensure the ChatInterface component takes full height */
+  :global(.chat-interface) {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    height: 100%;
+    overflow: hidden;
+  }
+  
+  :global(.chat-messages) {
+    flex: 1;
+    overflow-y: auto;
+    padding: var(--space-md);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-md);
+    min-height: 400px; /* Increased minimum height to push footer below fold */
+  }
+  
+  :global(.chat-input-container) {
+    padding: var(--space-md);
+    border-top: 1px solid hsl(var(--txt) / 0.1);
+    background-color: hsl(var(--bkg));
+  }
+  
+  /* Responsive styles */
   @media (max-width: 768px) {
-    #ai-page-container {
-      grid-template-columns: 1fr;
-      gap: 10px;
-      padding: 10px;
-      height: auto;
+    .toggle-sidebar-button {
+      display: flex;
     }
-
-    #sidebar-panel {
-      min-height: 200px;
+    
+    .sidebar-panel {
+      position: absolute;
+      top: 0;
+      bottom: 0;
+      left: 0;
+      z-index: 10;
+      transform: translateX(-100%);
+      box-shadow: var(--shadow-lg);
+    }
+    
+    .sidebar-panel.active {
+      transform: translateX(0);
+    }
+    
+    :global(.chat-messages) {
+      padding-top: calc(var(--space-md) + 40px); /* Add space for the toggle button */
     }
   }
 </style>
+
+<script>
+  // Toggle sidebar on mobile
+  const toggleSidebarButton = document.getElementById('toggle-sidebar-button');
+  const sidebarPanel = document.getElementById('sidebar-panel');
+  
+  if (toggleSidebarButton && sidebarPanel) {
+    toggleSidebarButton.addEventListener('click', () => {
+      sidebarPanel.classList.toggle('active');
+    });
+    
+    // Close sidebar when clicking outside on mobile
+    document.addEventListener('click', (e) => {
+      if (window.innerWidth <= 768 && 
+          sidebarPanel.classList.contains('active') && 
+          !sidebarPanel.contains(e.target) && 
+          e.target !== toggleSidebarButton) {
+        sidebarPanel.classList.remove('active');
+      }
+    });
+  }
+  
+  // New chat button functionality
+  const newChatButton = document.getElementById('new-chat-button');
+  if (newChatButton) {
+    newChatButton.addEventListener('click', () => {
+      // Clear the chat interface and start a new conversation
+      const newChatEvent = new CustomEvent('newChat');
+      document.dispatchEvent(newChatEvent);
+      
+      // Add a new conversation to the sidebar
+      addNewConversation('New Conversation', 'Today');
+    });
+  }
+  
+  // Function to add a new conversation to the sidebar
+  function addNewConversation(title, date) {
+    const conversationList = document.querySelector('.conversation-list');
+    if (!conversationList) return;
+    
+    // Generate a unique ID for the new conversation
+    const newId = Date.now();
+    
+    // Create the new conversation element
+    const newConversation = document.createElement('div');
+    newConversation.className = 'conversation-item active';
+    newConversation.dataset.id = newId;
+    
+    newConversation.innerHTML = `
+      <div class="conversation-icon">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+        </svg>
+      </div>
+      <div class="conversation-details">
+        <div class="conversation-title">${title}</div>
+        <div class="conversation-date">${date}</div>
+      </div>
+      <button class="conversation-menu" aria-label="Conversation options">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="1"></circle>
+          <circle cx="12" cy="5" r="1"></circle>
+          <circle cx="12" cy="19" r="1"></circle>
+        </svg>
+      </button>
+    `;
+    
+    // Remove active class from all other conversations
+    const activeConversations = conversationList.querySelectorAll('.conversation-item.active');
+    activeConversations.forEach(item => item.classList.remove('active'));
+    
+    // Add the new conversation to the top of the list
+    conversationList.insertBefore(newConversation, conversationList.firstChild);
+    
+    // Add click event to the new conversation
+    newConversation.addEventListener('click', () => selectConversation(newId));
+    
+    // Add click event to the menu button
+    const menuButton = newConversation.querySelector('.conversation-menu');
+    if (menuButton) {
+      menuButton.addEventListener('click', (e) => {
+        e.stopPropagation();
+        showConversationMenu(newId, menuButton);
+      });
+    }
+  }
+  
+  // Function to select a conversation
+  function selectConversation(id) {
+    const conversations = document.querySelectorAll('.conversation-item');
+    conversations.forEach(item => {
+      if (item.dataset.id == id) {
+        item.classList.add('active');
+        
+        // Here you would load the selected conversation
+        const loadConversationEvent = new CustomEvent('loadConversation', {
+          detail: { conversationId: id }
+        });
+        document.dispatchEvent(loadConversationEvent);
+      } else {
+        item.classList.remove('active');
+      }
+    });
+    
+    // Close sidebar on mobile after selection
+    if (window.innerWidth <= 768) {
+      const sidebarPanel = document.getElementById('sidebar-panel');
+      if (sidebarPanel) {
+        sidebarPanel.classList.remove('active');
+      }
+    }
+  }
+  
+  // Function to show conversation menu
+  function showConversationMenu(id, buttonElement) {
+    // Remove any existing dropdown menus
+    const existingMenus = document.querySelectorAll('.conversation-dropdown-menu');
+    existingMenus.forEach(menu => menu.remove());
+    
+    // Create a dropdown menu
+    const menu = document.createElement('div');
+    menu.className = 'conversation-dropdown-menu';
+    menu.innerHTML = `
+      <div class="dropdown-item rename-conversation">Rename</div>
+      <div class="dropdown-item delete-conversation">Delete</div>
+    `;
+    
+    // Position the menu
+    const rect = buttonElement.getBoundingClientRect();
+    menu.style.position = 'absolute';
+    menu.style.top = `${rect.bottom + 5}px`;
+    menu.style.right = `${window.innerWidth - rect.right}px`;
+    menu.style.zIndex = '100';
+    
+    // Add event listeners to menu items
+    menu.querySelector('.rename-conversation').addEventListener('click', () => {
+      const conversationItem = document.querySelector(`.conversation-item[data-id="${id}"]`);
+      const titleElement = conversationItem?.querySelector('.conversation-title');
+      if (titleElement) {
+        const currentTitle = titleElement.textContent;
+        const newTitle = prompt('Enter new conversation name:', currentTitle);
+        if (newTitle && newTitle.trim() !== '') {
+          titleElement.textContent = newTitle;
+        }
+      }
+      document.body.removeChild(menu);
+    });
+    
+    menu.querySelector('.delete-conversation').addEventListener('click', () => {
+      if (confirm('Are you sure you want to delete this conversation?')) {
+        const conversationItem = document.querySelector(`.conversation-item[data-id="${id}"]`);
+        if (conversationItem) {
+          conversationItem.remove();
+          
+          // If this was the active conversation, start a new one
+          if (conversationItem.classList.contains('active')) {
+            const newChatEvent = new CustomEvent('newChat');
+            document.dispatchEvent(newChatEvent);
+          }
+        }
+      }
+      document.body.removeChild(menu);
+    });
+    
+    // Add the menu to the document
+    document.body.appendChild(menu);
+    
+    // Close the menu when clicking outside
+    const closeMenu = (e) => {
+      if (!menu.contains(e.target) && e.target !== buttonElement) {
+        document.body.removeChild(menu);
+        document.removeEventListener('click', closeMenu);
+      }
+    };
+    
+    // Use setTimeout to avoid the menu being closed immediately
+    setTimeout(() => {
+      document.addEventListener('click', closeMenu);
+    }, 0);
+  }
+  
+  // Initialize conversation click events
+  document.addEventListener('DOMContentLoaded', () => {
+    const conversations = document.querySelectorAll('.conversation-item');
+    conversations.forEach(item => {
+      const id = item.dataset.id;
+      item.addEventListener('click', () => selectConversation(id));
+      
+      const menuButton = item.querySelector('.conversation-menu');
+      if (menuButton) {
+        menuButton.addEventListener('click', (e) => {
+          e.stopPropagation();
+          showConversationMenu(id, menuButton);
+        });
+      }
+    });
+    
+    // Clear history button functionality
+    const clearHistoryButton = document.getElementById('clear-history-button');
+    if (clearHistoryButton) {
+      clearHistoryButton.addEventListener('click', () => {
+        if (confirm('Are you sure you want to clear all conversations? This cannot be undone.')) {
+          const conversationList = document.querySelector('.conversation-list');
+          if (conversationList) {
+            conversationList.innerHTML = '';
+            
+            // Start a new conversation
+            const newChatEvent = new CustomEvent('newChat');
+            document.dispatchEvent(newChatEvent);
+            
+            // Add a new empty conversation
+            addNewConversation('New Conversation', 'Today');
+          }
+        }
+      });
+    }
+    
+    // Make the first conversation active by default
+    if (conversations.length > 0) {
+      conversations[0].classList.add('active');
+    }
+  });
+  
+  // Update credits display when it changes
+  document.addEventListener('creditsUpdated', (e) => {
+    const sidebarCreditDisplay = document.getElementById('sidebar-credit-display');
+    if (sidebarCreditDisplay && e.detail && typeof e.detail.credits === 'number') {
+      sidebarCreditDisplay.textContent = e.detail.credits;
+    }
+  });
+</script>

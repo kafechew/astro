@@ -1,0 +1,118 @@
+---
+// Props for the component
+export interface Props {
+  posts: Array<{
+    title: string;
+    description: string;
+    path: string;
+    img?: string;
+    category?: string;
+    "created by"?: string;
+  }>;
+}
+
+const { posts = [] } = Astro.props;
+
+// Default image if none is provided
+const defaultImage = "/images/placeholder-blog.jpg";
+---
+
+<div class="related-posts">
+  {posts.length > 0 ? (
+    <ul class="related-posts-list">
+      {posts.map((post) => (
+        <li class="related-post-item">
+          <a href={post.path} class="related-post-link">
+            <div class="related-post-image">
+              <img 
+                src={post.img || defaultImage} 
+                alt={post.title} 
+                width="80" 
+                height="60"
+                loading="lazy"
+              />
+            </div>
+            <div class="related-post-content">
+              <h4 class="related-post-title">{post.title}</h4>
+              {post.category && (
+                <span class="related-post-category">{post.category}</span>
+              )}
+            </div>
+          </a>
+        </li>
+      ))}
+    </ul>
+  ) : (
+    <p class="no-related-posts">No related articles found.</p>
+  )}
+</div>
+
+<style>
+  .related-posts-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-sm);
+  }
+  
+  .related-post-item {
+    margin: 0;
+  }
+  
+  .related-post-link {
+    display: flex;
+    gap: var(--space-sm);
+    text-decoration: none;
+    color: hsl(var(--txt));
+    transition: transform var(--transition-ease-fast);
+  }
+  
+  .related-post-link:hover {
+    transform: translateX(3px);
+    text-decoration: none;
+  }
+  
+  .related-post-image {
+    flex-shrink: 0;
+    width: 80px;
+    height: 60px;
+    border-radius: var(--radius-sm);
+    overflow: hidden;
+  }
+  
+  .related-post-image img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+  
+  .related-post-content {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+  }
+  
+  .related-post-title {
+    font-size: var(--fs-sm);
+    font-weight: 500;
+    margin: 0;
+    color: hsl(var(--txt));
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+  
+  .related-post-category {
+    font-size: var(--fs-sm);
+    color: hsl(var(--accent));
+  }
+  
+  .no-related-posts {
+    color: hsl(var(--txt) / 0.7);
+    font-size: var(--fs-sm);
+    font-style: italic;
+  }
+</style>

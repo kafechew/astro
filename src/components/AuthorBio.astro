@@ -1,0 +1,187 @@
+---
+// Props for the component
+export interface Props {
+  author: string;
+  bio?: string;
+  avatar?: string;
+  social?: {
+    twitter?: string;
+    linkedin?: string;
+    github?: string;
+    website?: string;
+  };
+}
+
+// Author data - in a real app, this would come from a database or CMS
+const authorData = {
+  "John Doe": {
+    bio: "John is a senior AI researcher with over 10 years of experience in machine learning and natural language processing.",
+    avatar: "/images/authors/john-doe.jpg",
+    social: {
+      twitter: "johndoe",
+      linkedin: "johndoe",
+      github: "johndoe"
+    }
+  },
+  "Jane Smith": {
+    bio: "Jane is a tech writer and AI enthusiast who specializes in making complex topics accessible to everyone.",
+    avatar: "/images/authors/jane-smith.jpg",
+    social: {
+      twitter: "janesmith",
+      linkedin: "janesmith"
+    }
+  }
+};
+
+const { 
+  author,
+  bio = authorData[author]?.bio || "Contributing writer at HermitAI.",
+  avatar = authorData[author]?.avatar || "/images/avatar-placeholder.png",
+  social = authorData[author]?.social || {}
+} = Astro.props;
+---
+
+<div class="author-bio">
+  <div class="author-avatar">
+    <img src={avatar} alt={`Photo of ${author}`} width="80" height="80" />
+  </div>
+  <div class="author-info">
+    <h3 class="author-name">About {author}</h3>
+    <p class="author-description">{bio}</p>
+    
+    {Object.keys(social).length > 0 && (
+      <div class="author-social">
+        {social.twitter && (
+          <a href={`https://twitter.com/${social.twitter}`} target="_blank" rel="noopener noreferrer" class="social-link twitter" aria-label={`${author}'s Twitter`}>
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M22 4s-.7 2.1-2 3.4c1.6 10-9.4 17.3-18 11.6 2.2.1 4.4-.6 6-2C3 15.5.5 9.6 3 5c2.2 2.6 5.6 4.1 9 4-.9-4.2 4-6.6 7-3.8 1.1 0 3-1.2 3-1.2z"></path>
+            </svg>
+          </a>
+        )}
+        
+        {social.linkedin && (
+          <a href={`https://linkedin.com/in/${social.linkedin}`} target="_blank" rel="noopener noreferrer" class="social-link linkedin" aria-label={`${author}'s LinkedIn`}>
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-2-2 2 2 0 0 0-2 2v7h-4v-7a6 6 0 0 1 6-6z"></path>
+              <rect x="2" y="9" width="4" height="12"></rect>
+              <circle cx="4" cy="4" r="2"></circle>
+            </svg>
+          </a>
+        )}
+        
+        {social.github && (
+          <a href={`https://github.com/${social.github}`} target="_blank" rel="noopener noreferrer" class="social-link github" aria-label={`${author}'s GitHub`}>
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"></path>
+            </svg>
+          </a>
+        )}
+        
+        {social.website && (
+          <a href={social.website} target="_blank" rel="noopener noreferrer" class="social-link website" aria-label={`${author}'s Website`}>
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="10"></circle>
+              <line x1="2" y1="12" x2="22" y2="12"></line>
+              <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path>
+            </svg>
+          </a>
+        )}
+      </div>
+    )}
+  </div>
+</div>
+
+<style>
+  .author-bio {
+    display: flex;
+    gap: var(--space-md);
+    padding: var(--space-md);
+    background-color: hsl(var(--bkg) / 0.5);
+    border-radius: var(--radius-md);
+    border: 1px solid hsl(var(--txt) / 0.1);
+  }
+  
+  .author-avatar {
+    flex-shrink: 0;
+  }
+  
+  .author-avatar img {
+    width: 80px;
+    height: 80px;
+    border-radius: var(--radius-full);
+    object-fit: cover;
+  }
+  
+  .author-info {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-xs);
+  }
+  
+  .author-name {
+    font-size: var(--fs-lg);
+    margin: 0;
+    color: hsl(var(--txt));
+  }
+  
+  .author-description {
+    font-size: var(--fs-sm);
+    color: hsl(var(--txt) / 0.8);
+    margin: 0;
+    line-height: 1.6;
+  }
+  
+  .author-social {
+    display: flex;
+    gap: var(--space-sm);
+    margin-top: var(--space-xs);
+  }
+  
+  .social-link {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    border-radius: var(--radius-full);
+    background-color: hsl(var(--txt) / 0.1);
+    color: hsl(var(--txt));
+    transition: all var(--transition-ease-fast);
+  }
+  
+  .social-link:hover {
+    transform: translateY(-2px);
+  }
+  
+  .social-link.twitter:hover {
+    background-color: #1DA1F2;
+    color: white;
+  }
+  
+  .social-link.linkedin:hover {
+    background-color: #0077B5;
+    color: white;
+  }
+  
+  .social-link.github:hover {
+    background-color: #333;
+    color: white;
+  }
+  
+  .social-link.website:hover {
+    background-color: hsl(var(--accent));
+    color: white;
+  }
+  
+  @media (max-width: 480px) {
+    .author-bio {
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+    }
+    
+    .author-social {
+      justify-content: center;
+    }
+  }
+</style>

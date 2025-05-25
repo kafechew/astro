@@ -1,80 +1,464 @@
 ---
-import MainLayout from '../layouts/MainLayout.astro'; // Use MainLayout which includes global styles
-import BlogList from '../components/BlogList';
-// import QnaForm from '../components/QnaForm.astro';
+import MainLayout from '../layouts/MainLayout.astro';
 ---
 
-<MainLayout title="HermitONL - Minimal Path to Freedom"> {/* Use MainLayout */}
-	{/* Removed container, main-content will now be the grid container */}
-	<main id="main-content">
+<MainLayout title="HermitAI | Your Personal AI Twin">
+  <!-- Hero Section -->
+  <section class="hero-section">
+    <div class="container">
+      <div class="hero-content">
+        <h1>Your <span class="accent">Autonomous</span> AI Twin</h1>
+        <p class="hero-subtitle">Research, scrape, answer questions, and automate your digital life—all while you focus on what matters.</p>
+        <div class="hero-actions">
+          <a href="/ai" class="btn-primary">Try AI Chat</a>
+          <a href="/register" class="btn-secondary">Create Account</a>
+        </div>
+      </div>
+      <div class="hero-image">
+        <div class="terminal">
+          <div class="terminal-header">
+            <div class="terminal-buttons">
+              <span class="terminal-button red"></span>
+              <span class="terminal-button yellow"></span>
+              <span class="terminal-button green"></span>
+            </div>
+            <div class="terminal-title">hermit@ai:~</div>
+          </div>
+          <div class="terminal-body">
+            <div class="terminal-line">
+              <span class="terminal-prompt">user@hermit:~$</span> 
+              <span class="terminal-command">research quantum computing</span>
+            </div>
+            <div class="terminal-response">
+              <span class="terminal-ai">🤖 HermitAI:</span> Researching quantum computing...
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
 
-		{/* Main content area (QnA) */}
-		<div class="main-content-area">
-			<section class="qna-section">
-				{/* <QnaForm /> */}{/* Add the QnA form component */}
-			</section>
-		</div>
+  <!-- Features Section -->
+  <section class="features-section">
+    <div class="container">
+      <h2 class="section-title">ChatGPT on Steroids</h2>
+      <p class="section-subtitle">HermitAI is your autonomous digital sidekick for a hermit's high-functioning life.</p>
+      
+      <div class="features-grid">
+        <div class="feature-card">
+          <div class="feature-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="11" cy="11" r="8"></circle>
+              <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+            </svg>
+          </div>
+          <h3>Autonomous Research</h3>
+          <p>Send HermitAI on research missions while you focus on other tasks.</p>
+        </div>
+        
+        <div class="feature-card">
+          <div class="feature-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+              <polyline points="14 2 14 8 20 8"></polyline>
+            </svg>
+          </div>
+          <h3>Web Scraping</h3>
+          <p>Extract structured data from websites with BrightData APIs.</p>
+        </div>
+        
+        <div class="feature-card">
+          <div class="feature-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+            </svg>
+          </div>
+          <h3>Advanced Q&A</h3>
+          <p>Get comprehensive answers backed by real-time data.</p>
+        </div>
+        
+        <div class="feature-card">
+          <div class="feature-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path>
+              <polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline>
+              <line x1="12" y1="22.08" x2="12" y2="12"></line>
+            </svg>
+          </div>
+          <h3>Retrieval-Augmented Generation</h3>
+          <p>Access your private knowledge base with MongoDB vector search for personalized, context-aware responses.</p>
+        </div>
+      </div>
+    </div>
+  </section>
 
-		{/* Sidebar area (Blog List) */}
-		<div class="sidebar-area">
-			<BlogList client:load />
-		</div>
-
-	</main>
-</MainLayout> {/* Use MainLayout */}
+  <!-- CTA Section -->
+  <section class="cta-section">
+    <div class="container">
+      <div class="cta-content">
+        <h2>Ready to boost your productivity?</h2>
+        <p>Join the growing community using HermitAI to automate research tasks.</p>
+        <div class="cta-buttons">
+          <a href="/register" class="btn-primary">Get Started Free</a>
+          <a href="/pricing" class="btn-secondary">View Pricing</a>
+        </div>
+      </div>
+    </div>
+  </section>
+</MainLayout>
 
 <style>
-	#main-content {
-		display: grid;
-		grid-template-columns: 1fr; /* Blog posts are now the main focus */
-		grid-template-rows: 1fr; /* Sidebar now takes full width */
-		grid-template-areas:
-			"sidebar"; /* QnA form removed, blog posts main focus */
-		gap: var(--space-lg);
-		margin-top: var(--space-lg); /* Add margin to top since user selector area is gone */
-		width: 100%;
-		max-width: 1600px; /* Optional: Limit max width */
-		margin-inline: auto; /* Center the grid container */
-		padding: 0; /* Remove all padding */
-		align-items: start; /* Align items to the top */
-	}
+  /* Container */
+  .container {
+    width: 100%;
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 var(--space-md);
+  }
 
-	/* .user-selector-area styles removed */
+  /* Section Styles */
+  .section-title {
+    font-size: var(--fs-2xl);
+    color: hsl(var(--txt));
+    text-align: center;
+    margin-bottom: var(--space-md);
+  }
 
-	.main-content-area {
-		grid-area: main;
-	}
+  .section-subtitle {
+    font-size: var(--fs-lg);
+    color: hsl(var(--txt) / 0.7);
+    text-align: center;
+    margin-bottom: var(--space-xl);
+    max-width: 700px;
+    margin-left: auto;
+    margin-right: auto;
+  }
 
-	.sidebar-area {
-		grid-area: sidebar;
-		font-size: var(--fs-sm); /* Reduce font size for sidebar content */
-		/* Optional: Add background or border for visual separation */
-		/* background-color: hsl(var(--muted)); */
-		/* padding: var(--space-md); */
-		/* border-radius: var(--radius-md); */
-	}
+  /* Hero Section */
+  .hero-section {
+    padding: var(--space-2xl) 0;
+    background-color: hsl(var(--bkg));
+    position: relative;
+    overflow: hidden;
+  }
 
-	/* Responsive adjustments */
-	@media (max-width: 1200px) { /* Stack columns on smaller screens */
-		#main-content {
-			grid-template-columns: 1fr; /* Single column */
-			grid-template-rows: auto; /* Blog posts are now the main focus */
-			grid-template-areas:
-				"sidebar"; /* QnA form removed, blog posts main focus */
-			gap: var(--space-md); /* Reduce gap */
-			margin-top: var(--space-md); /* Add margin to top */
-		}
+  .hero-section .container {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--space-xl);
+    align-items: center;
+  }
 
-		/* .user-selector-area styles removed */
-	}
+  .hero-content {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-md);
+  }
 
-	/* Remove body centering for this page if needed, although grid centering might suffice */
-	/* body {
-		place-items: initial;
-	} */
+  .hero-content h1 {
+    font-size: var(--fs-4xl);
+    line-height: 1.2;
+    color: hsl(var(--txt));
+  }
 
-	/* Remove separator style if it exists and is no longer needed */
-	.separator {
-		display: none;
-	}
+  .hero-content h1 .accent {
+    color: hsl(var(--accent));
+  }
+
+  .hero-subtitle {
+    font-size: var(--fs-xl);
+    color: hsl(var(--txt) / 0.8);
+    line-height: 1.5;
+  }
+
+  .hero-actions {
+    display: flex;
+    gap: var(--space-md);
+    margin-top: var(--space-md);
+  }
+
+  /* Terminal Animation */
+  .terminal {
+    width: 100%;
+    background-color: #1e1e1e;
+    border-radius: var(--radius-md);
+    overflow: hidden;
+    box-shadow: var(--shadow-lg);
+    font-family: monospace;
+  }
+
+  .terminal-header {
+    background-color: #323232;
+    padding: var(--space-xs) var(--space-sm);
+    display: flex;
+    align-items: center;
+  }
+
+  .terminal-buttons {
+    display: flex;
+    gap: 6px;
+    margin-right: var(--space-sm);
+  }
+
+  .terminal-button {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+  }
+
+  .terminal-button.red {
+    background-color: #ff5f56;
+  }
+
+  .terminal-button.yellow {
+    background-color: #ffbd2e;
+  }
+
+  .terminal-button.green {
+    background-color: #27c93f;
+  }
+
+  .terminal-title {
+    color: #ddd;
+    font-size: var(--fs-sm);
+  }
+
+  .terminal-body {
+    padding: var(--space-md);
+    color: #ddd;
+    font-size: var(--fs-sm);
+    line-height: 1.5;
+  }
+
+  .terminal-line {
+    margin-bottom: var(--space-xs);
+    white-space: nowrap;
+  }
+
+  .terminal-prompt {
+    color: #5af78e;
+    margin-right: var(--space-xs);
+  }
+
+  .terminal-command {
+    color: #fff;
+  }
+
+  .terminal-response {
+    margin-bottom: var(--space-xs);
+    color: #ddd;
+  }
+
+  .terminal-ai {
+    color: #57c7ff;
+    margin-right: var(--space-xs);
+  }
+
+  /* Button Styles */
+  .btn-primary, .btn-secondary {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-sm);
+    padding: var(--space-sm) var(--space-lg);
+    border-radius: var(--radius-md);
+    font-weight: 600;
+    font-size: var(--fs-md);
+    transition: all var(--transition-ease-fast);
+    text-decoration: none;
+  }
+
+  .btn-primary {
+    background-color: hsl(var(--accent));
+    color: white;
+    border: none;
+  }
+
+  .btn-primary:hover {
+    background-color: hsl(var(--accent) / 0.9);
+    transform: translateY(-2px);
+    text-decoration: none;
+  }
+
+  .btn-secondary {
+    background-color: hsl(var(--txt) / 0.1);
+    color: hsl(var(--txt));
+    border: none;
+  }
+
+  .btn-secondary:hover {
+    background-color: hsl(var(--txt) / 0.15);
+    transform: translateY(-2px);
+    text-decoration: none;
+  }
+
+  /* Features Section */
+  .features-section {
+    padding: var(--space-2xl) 0;
+    background-color: hsl(var(--muted));
+  }
+
+  .features-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+    gap: var(--space-lg);
+    margin-top: var(--space-xl);
+  }
+
+  .feature-card {
+    background-color: hsl(var(--bkg));
+    border-radius: var(--radius-lg);
+    padding: var(--space-lg);
+    box-shadow: var(--shadow-md);
+    transition: transform var(--transition-normal), box-shadow var(--transition-normal);
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--space-sm);
+  }
+
+  .feature-card:hover {
+    transform: translateY(-5px);
+    box-shadow: var(--shadow-lg);
+  }
+
+  .feature-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 60px;
+    height: 60px;
+    border-radius: var(--radius-full);
+    background-color: hsl(var(--accent) / 0.1);
+    color: hsl(var(--accent));
+    margin-bottom: var(--space-sm);
+  }
+
+  .feature-card h3 {
+    font-size: var(--fs-lg);
+    color: hsl(var(--txt));
+    margin-bottom: var(--space-xs);
+  }
+
+  .feature-card p {
+    color: hsl(var(--txt) / 0.8);
+    line-height: 1.6;
+  }
+
+  /* CTA Section */
+  .cta-section {
+    background-color: hsl(var(--accent));
+    color: white;
+    padding: var(--space-2xl) 0;
+    text-align: center;
+    margin-top: var(--space-2xl);
+  }
+
+  .cta-content {
+    max-width: 800px;
+    margin: 0 auto;
+  }
+
+  .cta-content h2 {
+    font-size: var(--fs-2xl);
+    margin-bottom: var(--space-md);
+    color: white;
+  }
+
+  .cta-content p {
+    font-size: var(--fs-lg);
+    margin-bottom: var(--space-lg);
+    color: white;
+    opacity: 0.9;
+  }
+
+  .cta-buttons {
+    display: flex;
+    gap: var(--space-md);
+    justify-content: center;
+  }
+
+  .cta-section .btn-primary {
+    background-color: white;
+    color: hsl(var(--accent));
+  }
+
+  .cta-section .btn-primary:hover {
+    background-color: white;
+    opacity: 0.9;
+  }
+
+  .cta-section .btn-secondary {
+    background-color: transparent;
+    color: white;
+    border: 1px solid white;
+  }
+
+  .cta-section .btn-secondary:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+  }
+
+  /* Responsive Styles */
+  @media (max-width: 992px) {
+    .hero-section .container {
+      grid-template-columns: 1fr;
+    }
+
+    .hero-content {
+      order: 0;
+      text-align: center;
+    }
+
+    .hero-image {
+      order: 1;
+      margin-top: var(--space-lg);
+    }
+
+    .hero-actions {
+      justify-content: center;
+    }
+
+    .features-grid {
+      grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    }
+  }
+
+  @media (max-width: 768px) {
+    .hero-content h1 {
+      font-size: var(--fs-3xl);
+    }
+
+    .hero-subtitle,
+    .cta-content p {
+      font-size: var(--fs-md);
+    }
+
+    .section-title {
+      font-size: var(--fs-xl);
+    }
+
+    .hero-actions,
+    .cta-buttons {
+      flex-direction: column;
+      gap: var(--space-sm);
+    }
+  }
+
+  @media (max-width: 480px) {
+    .hero-content h1 {
+      font-size: var(--fs-2xl);
+    }
+
+    .section-title {
+      font-size: var(--fs-lg);
+    }
+
+    .features-grid {
+      grid-template-columns: 1fr;
+    }
+
+    .feature-card {
+      padding: var(--space-md);
+    }
+  }
 </style>

@@ -1,0 +1,389 @@
+---
+import MainLayout from '../layouts/MainLayout.astro';
+import BlogList from '../components/BlogList';
+---
+
+<MainLayout title="HermitAI Blog | Latest AI Insights">
+  <div class="blog-container">
+    <!-- Blog Header -->
+    <header class="blog-header">
+      <div class="container">
+        <h1>HermitAI Blog</h1>
+        <p class="blog-subtitle">Insights, tutorials, and updates on AI research and autonomous agents</p>
+      </div>
+    </header>
+    
+    <!-- Featured Post Section -->
+    <section class="featured-post-section">
+      <div class="container">
+        <div class="featured-post">
+          <div class="featured-post-image">
+            <img src="/images/blog/featured-post.jpg" alt="Featured blog post" />
+            <div class="featured-badge">Featured</div>
+          </div>
+          <div class="featured-post-content">
+            <div class="post-meta">
+              <span class="post-category">Research</span>
+              <span class="post-date">May 15, 2023</span>
+            </div>
+            <h2>How Autonomous AI Agents Are Transforming Research</h2>
+            <p>Discover how AI agents like HermitAI are revolutionizing the way researchers gather and analyze information, saving countless hours and uncovering insights that might otherwise be missed.</p>
+            <a href="/blog/autonomous-ai-research" class="read-more">
+              Read Article
+              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <line x1="5" y1="12" x2="19" y2="12"></line>
+                <polyline points="12 5 19 12 12 19"></polyline>
+              </svg>
+            </a>
+          </div>
+        </div>
+      </div>
+    </section>
+    
+    <!-- Blog Categories -->
+    <section class="blog-categories-section">
+      <div class="container">
+        <div class="categories-list">
+          <a href="/blog" class="category-item active">All</a>
+          <a href="/blog/category/tutorials" class="category-item">Tutorials</a>
+          <a href="/blog/category/research" class="category-item">Research</a>
+          <a href="/blog/category/updates" class="category-item">Updates</a>
+          <a href="/blog/category/case-studies" class="category-item">Case Studies</a>
+        </div>
+      </div>
+    </section>
+    
+    <!-- Blog Posts Grid -->
+    <section class="blog-posts-section">
+      <div class="container">
+        <h2 class="section-title">Latest Articles</h2>
+        <BlogList client:load />
+      </div>
+    </section>
+    
+    <!-- Newsletter Section -->
+    <section class="newsletter-section">
+      <div class="container">
+        <div class="newsletter-container">
+          <div class="newsletter-content">
+            <h2>Stay Updated</h2>
+            <p>Subscribe to our newsletter to receive the latest updates, tutorials, and insights about HermitAI and autonomous agents.</p>
+          </div>
+          <form class="newsletter-form">
+            <input type="email" placeholder="Your email address" required />
+            <button type="submit" class="btn-primary">Subscribe</button>
+          </form>
+        </div>
+      </div>
+    </section>
+  </div>
+</MainLayout>
+
+<style>
+  /* Container */
+  .container {
+    width: 100%;
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 var(--space-md);
+  }
+
+  /* Blog Container */
+  .blog-container {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2xl);
+  }
+
+  /* Blog Header */
+  .blog-header {
+    padding: var(--space-2xl) 0;
+    background-color: hsl(var(--muted));
+    text-align: center;
+  }
+
+  .blog-header h1 {
+    font-size: var(--fs-3xl);
+    color: hsl(var(--txt));
+    margin-bottom: var(--space-sm);
+  }
+
+  .blog-subtitle {
+    font-size: var(--fs-lg);
+    color: hsl(var(--txt) / 0.7);
+    max-width: 700px;
+    margin: 0 auto;
+  }
+
+  /* Featured Post */
+  .featured-post-section {
+    padding: var(--space-xl) 0;
+  }
+
+  .featured-post {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--space-xl);
+    align-items: center;
+    background-color: hsl(var(--bkg));
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+    box-shadow: var(--shadow-md);
+  }
+
+  .featured-post-image {
+    position: relative;
+    height: 100%;
+  }
+
+  .featured-post-image img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  .featured-badge {
+    position: absolute;
+    top: var(--space-md);
+    left: var(--space-md);
+    background-color: hsl(var(--accent));
+    color: white;
+    padding: var(--space-xs) var(--space-sm);
+    border-radius: var(--radius-full);
+    font-size: var(--fs-sm);
+    font-weight: 600;
+  }
+
+  .featured-post-content {
+    padding: var(--space-xl);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-md);
+  }
+
+  .post-meta {
+    display: flex;
+    gap: var(--space-md);
+    font-size: var(--fs-sm);
+  }
+
+  .post-category {
+    color: hsl(var(--accent));
+    font-weight: 600;
+  }
+
+  .post-date {
+    color: hsl(var(--txt) / 0.6);
+  }
+
+  .featured-post-content h2 {
+    font-size: var(--fs-2xl);
+    color: hsl(var(--txt));
+    line-height: 1.3;
+  }
+
+  .featured-post-content p {
+    color: hsl(var(--txt) / 0.8);
+    line-height: 1.6;
+    font-size: var(--fs-md);
+  }
+
+  .read-more {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-xs);
+    color: hsl(var(--accent));
+    font-weight: 600;
+    text-decoration: none;
+    transition: gap var(--transition-ease-fast);
+  }
+
+  .read-more:hover {
+    gap: var(--space-sm);
+    text-decoration: none;
+  }
+
+  /* Blog Categories */
+  .blog-categories-section {
+    padding: var(--space-md) 0;
+  }
+
+  .categories-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-sm);
+    justify-content: center;
+  }
+
+  .category-item {
+    padding: var(--space-xs) var(--space-md);
+    border-radius: var(--radius-full);
+    background-color: hsl(var(--bkg));
+    color: hsl(var(--txt));
+    text-decoration: none;
+    transition: all var(--transition-ease-fast);
+    font-size: var(--fs-sm);
+    border: 1px solid hsl(var(--txt) / 0.1);
+  }
+
+  .category-item:hover {
+    background-color: hsl(var(--txt) / 0.05);
+    text-decoration: none;
+  }
+
+  .category-item.active {
+    background-color: hsl(var(--accent));
+    color: white;
+    border-color: hsl(var(--accent));
+  }
+
+  /* Blog Posts Section */
+  .blog-posts-section {
+    padding: var(--space-xl) 0;
+  }
+
+  .section-title {
+    font-size: var(--fs-2xl);
+    color: hsl(var(--txt));
+    text-align: center;
+    margin-bottom: var(--space-xl);
+  }
+
+  /* Newsletter Section */
+  .newsletter-section {
+    padding: var(--space-2xl) 0;
+    background-color: hsl(var(--muted));
+  }
+
+  .newsletter-container {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--space-xl);
+    align-items: center;
+    max-width: 900px;
+    margin: 0 auto;
+  }
+
+  .newsletter-content h2 {
+    font-size: var(--fs-2xl);
+    color: hsl(var(--txt));
+    margin-bottom: var(--space-md);
+  }
+
+  .newsletter-content p {
+    color: hsl(var(--txt) / 0.8);
+    line-height: 1.6;
+    font-size: var(--fs-md);
+  }
+
+  .newsletter-form {
+    display: flex;
+    gap: var(--space-sm);
+  }
+
+  .newsletter-form input {
+    flex: 1;
+    padding: var(--space-sm) var(--space-md);
+    border: 1px solid hsl(var(--txt) / 0.2);
+    border-radius: var(--radius-md);
+    background-color: hsl(var(--bkg));
+    color: hsl(var(--txt));
+    font-size: var(--fs-md);
+  }
+
+  .newsletter-form input:focus {
+    outline: none;
+    border-color: hsl(var(--accent));
+    box-shadow: 0 0 0 2px hsl(var(--accent) / 0.2);
+  }
+
+  .btn-primary {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: var(--space-sm) var(--space-lg);
+    background-color: hsl(var(--accent));
+    color: white;
+    border: none;
+    border-radius: var(--radius-md);
+    font-size: var(--fs-md);
+    font-weight: 600;
+    cursor: pointer;
+    transition: background-color var(--transition-ease-fast);
+    text-decoration: none;
+  }
+
+  .btn-primary:hover {
+    background-color: hsl(var(--accent) / 0.9);
+    text-decoration: none;
+  }
+
+  /* Responsive Styles */
+  @media (max-width: 992px) {
+    .featured-post {
+      grid-template-columns: 1fr;
+    }
+
+    .featured-post-image {
+      height: 300px;
+    }
+
+    .newsletter-container {
+      grid-template-columns: 1fr;
+      text-align: center;
+      gap: var(--space-lg);
+    }
+  }
+
+  @media (max-width: 768px) {
+    .blog-header h1 {
+      font-size: var(--fs-2xl);
+    }
+
+    .blog-subtitle {
+      font-size: var(--fs-md);
+    }
+
+    .featured-post-content {
+      padding: var(--space-lg);
+    }
+
+    .featured-post-content h2 {
+      font-size: var(--fs-xl);
+    }
+
+    .newsletter-form {
+      flex-direction: column;
+    }
+  }
+
+  @media (max-width: 480px) {
+    .categories-list {
+      flex-direction: column;
+      align-items: stretch;
+    }
+
+    .category-item {
+      text-align: center;
+    }
+  }
+</style>
+
+<script>
+  // Newsletter form submission
+  const newsletterForm = document.querySelector('.newsletter-form');
+  if (newsletterForm) {
+    newsletterForm.addEventListener('submit', (e) => {
+      e.preventDefault();
+      const emailInput = newsletterForm.querySelector('input[type="email"]');
+      if (emailInput) {
+        const email = emailInput.value;
+        
+        // Here you would typically send this to your newsletter service
+        // For now, just show a success message
+        alert(`Thank you for subscribing with ${email}! We'll keep you updated.`);
+        newsletterForm.reset();
+      }
+    });
+  }
+</script>

@@ -26,6 +26,16 @@ interface BlogItem extends MarkdownInstance<Frontmatter> {
   // with strongly-typed frontmatter.
 }
 
+interface RelatedPostDisplayItem {
+  title: string;
+  description: string;
+  path: string; // Explicitly string, not string | undefined
+  img?: string;
+  category?: string;
+  "created by"?: string;
+  date?: string;
+  // Add any other properties that RelatedPosts component expects
+}
 const blogsDataUntyped = await Astro.glob('../pages/blog/*.md'); // Or your actual glob pattern
 const blogsData = blogsDataUntyped as BlogItem[];
 
@@ -37,13 +47,13 @@ const author = frontmatter["created by"] || "Anonymous"; // Use "created by" and
 // Get related posts (posts with the same category, excluding current post)
 // 'post' in the filter is an element from 'blogsData' (now typed as BlogItem[])
 // 'category' on the right side of comparison is from Astro.props.frontmatter of the current page
-const relatedPosts = blogsData
-  .filter((post) => post.frontmatter.category === category && post.url !== Astro.url.pathname)
+const relatedPosts: RelatedPostDisplayItem[] = blogsData
+  .filter((post) => post.url && post.frontmatter.category === category && post.url !== Astro.url.pathname)
   .slice(0, 3)
   .map(post => ({ // Transform to match what RelatedPosts expects
     title: post.frontmatter.title,
     description: post.frontmatter.description,
-    path: post.url, // Use post.url as 'path'
+    path: post.url, // post.url is string, so this assignment is valid
     img: post.frontmatter.img,
     category: post.frontmatter.category,
     "created by": post.frontmatter["created by"],

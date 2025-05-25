@@ -7,20 +7,23 @@ import RelatedPosts from "../components/RelatedPosts.astro";
 import AuthorBio from "../components/AuthorBio.astro";
 import TableOfContents from "../components/TableOfContents.astro";
 
-// At the top of BlogPostLayout.astro or in a shared types file
-interface BlogItem {
-  frontmatter: {
-    title: string;
-    description: string;
-    "created by"?: string;
-    img?: string;
-    category?: string;
-    date?: string; // Assuming date is in frontmatter
-    // any other frontmatter fields
-  };
-  url: string; // Provided by Astro.glob
-  // Add 'path' if RelatedPosts absolutely needs it and it's different from 'url'
-  // path?: string;
+import type { MarkdownInstance } from 'astro';
+
+// Define Frontmatter Interface
+interface Frontmatter {
+  title: string;
+  description: string;
+  "created by"?: string;
+  img?: string;
+  category?: string;
+  date?: string; // Or Date, ensure consistency with your actual frontmatter
+  // Add any other fields present in your blog markdown frontmatter
+}
+
+// Redefine BlogItem Interface using MarkdownInstance
+interface BlogItem extends MarkdownInstance<Frontmatter> {
+  // This interface now correctly represents items from Astro.glob
+  // with strongly-typed frontmatter.
 }
 
 const blogsDataUntyped = await Astro.glob('../pages/blog/*.md'); // Or your actual glob pattern
@@ -43,7 +46,8 @@ const relatedPosts = blogsData
     path: post.url, // Use post.url as 'path'
     img: post.frontmatter.img,
     category: post.frontmatter.category,
-    "created by": post.frontmatter["created by"]
+    "created by": post.frontmatter["created by"],
+    date: post.frontmatter.date
     // Add other fields RelatedPosts might need from frontmatter
   }));
 

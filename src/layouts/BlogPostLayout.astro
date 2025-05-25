@@ -29,7 +29,7 @@ interface BlogItem extends MarkdownInstance<Frontmatter> {
 interface RelatedPostDisplayItem {
   title: string;
   description: string;
-  path: string; // Explicitly string, not string | undefined
+  path?: string; // Changed to optional
   img?: string;
   category?: string;
   "created by"?: string;

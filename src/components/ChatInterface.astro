@@ -1,8 +1,40 @@
-<div id="chat-container">
-  <div id="message-display-area"></div>
-  <div id="input-area">
-    <input type="text" id="chat-input" placeholder="Type your message...">
-    <button id="send-button">Send</button>
+<div class="chat-container">
+  <div class="chat-header">
+    <h2>AI Assistant</h2>
+    <div class="chat-controls">
+      <button id="clear-chat" class="link secondary" title="Clear conversation">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M3 6h18"></path>
+          <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path>
+          <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path>
+        </svg>
+        Clear
+      </button>
+    </div>
+  </div>
+  
+  <div id="message-display-area" class="message-display">
+    <!-- Messages will be added here dynamically -->
+  </div>
+  
+  <div id="input-area" class="input-area">
+    <textarea id="chat-input" placeholder="Type your message..." rows="1"></textarea>
+    <button id="send-button" class="send-button" title="Send message">
+      <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <line x1="22" y1="2" x2="11" y2="13"></line>
+        <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+      </svg>
+    </button>
+  </div>
+  
+  <div class="chat-footer">
+    <div class="credits-info">
+      <span>Credits: </span>
+      <span id="chat-credit-display">${Astro.locals.user?.credits ?? 0}</span>
+    </div>
+    <div class="chat-info">
+      <small>Messages are processed using AI and may not always be accurate.</small>
+    </div>
   </div>
 </div>
 
@@ -15,71 +47,54 @@
     gfm: true
   });
   
-  // Function to apply styles to elements
-  function applyStyles() {
-    const chatInput = document.getElementById('chat-input') as HTMLInputElement | null;
-    const sendButton = document.getElementById('send-button') as HTMLButtonElement | null;
-    const inputArea = document.getElementById('input-area');
-    
-    // Style the input area
-    if (inputArea) {
-      inputArea.style.display = 'flex';
-      inputArea.style.marginTop = '10px';
-    }
-    
-    // Style the chat input
-    if (chatInput) {
-      chatInput.style.flexGrow = '1';
-      chatInput.style.border = '1px solid #ccc';
-      chatInput.style.borderRight = 'none';
-      chatInput.style.borderRadius = '8px 0 0 8px';
-      chatInput.style.padding = '10px';
-      chatInput.style.outline = 'none';
-      chatInput.style.fontSize = '14px';
-    }
-    
-    // Style the send button
-    if (sendButton) {
-      sendButton.style.backgroundColor = '#007bff';
-      sendButton.style.color = 'white';
-      sendButton.style.border = 'none';
-      sendButton.style.padding = '10px 20px';
-      sendButton.style.borderRadius = '0 8px 8px 0';
-      sendButton.style.cursor = 'pointer';
-      sendButton.style.fontWeight = 'bold';
-      sendButton.style.fontSize = '14px';
-      sendButton.style.height = 'auto';
-      sendButton.style.minWidth = '80px';
-      sendButton.style.display = 'flex';
-      sendButton.style.alignItems = 'center';
-      sendButton.style.justifyContent = 'center';
-      
-      // Add hover effect with event listeners
-      sendButton.addEventListener('mouseover', function() {
-        this.style.backgroundColor = '#0056b3';
-      });
-      
-      sendButton.addEventListener('mouseout', function() {
-        this.style.backgroundColor = '#007bff';
-      });
-      
-      sendButton.addEventListener('mousedown', function() {
-        this.style.backgroundColor = '#004085';
-      });
-      
-      sendButton.addEventListener('mouseup', function() {
-        this.style.backgroundColor = '#0056b3';
-      });
-    }
+  // DOM Elements
+  const messageDisplayArea = document.getElementById('message-display-area');
+  const chatInput = document.getElementById('chat-input');
+  const sendButton = document.getElementById('send-button');
+  const clearChatButton = document.getElementById('clear-chat');
+  const chatCreditDisplay = document.getElementById('chat-credit-display');
+  
+  // Auto-resize textarea as user types
+  if (chatInput) {
+    chatInput.addEventListener('input', function() {
+      this.style.height = 'auto';
+      const newHeight = Math.min(this.scrollHeight, 150); // Max height of 150px
+      this.style.height = newHeight + 'px';
+    });
   }
   
-  // Apply styles immediately and also after a short delay to ensure DOM is fully loaded
-  applyStyles();
-  setTimeout(applyStyles, 100);
-  
-  const messageDisplayArea = document.getElementById('message-display-area') as HTMLDivElement | null;
-  const chatInput = document.getElementById('chat-input') as HTMLInputElement | null;
-  const sendButton = document.getElementById('send-button') as HTMLButtonElement | null;
+  // Clear chat history
+  if (clearChatButton) {
+    clearChatButton.addEventListener('click', function() {
+      if (messageDisplayArea) {
+        // Add welcome message
+        messageDisplayArea.innerHTML = '';
+        
+        // Add a welcome message
+        const messageContainer = document.createElement('div');
+        messageContainer.className = 'message-container ai-message-container';
+        
+        const aiAvatar = document.createElement('div');
+        aiAvatar.className = 'ai-avatar';
+        aiAvatar.innerHTML = `
+          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 2a8 8 0 0 1 8 8v12a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V10a8 8 0 0 1 8-8z"></path>
+            <path d="M9 19h6"></path>
+            <path d="M9 15h6"></path>
+            <circle cx="12" cy="7" r="1"></circle>
+          </svg>
+        `;
+        
+        const aiMessageDiv = document.createElement('div');
+        aiMessageDiv.className = 'message ai-message';
+        aiMessageDiv.innerHTML = '<p>Hello! I\'m your AI assistant. How can I help you today?</p>';
+        
+        messageContainer.appendChild(aiAvatar);
+        messageContainer.appendChild(aiMessageDiv);
+        messageDisplayArea.appendChild(messageContainer);
+      }
+    });
+  }
 
   async function sendMessage() {
     if (!chatInput || !messageDisplayArea) {
@@ -92,33 +107,70 @@
       return;
     }
 
-    // Display user's message
+    // Create user message container
+    const userMessageContainer = document.createElement('div');
+    userMessageContainer.className = 'message-container user-message-container';
+    
+    // Create user avatar (optional)
+    const userAvatar = document.createElement('div');
+    userAvatar.className = 'user-avatar';
+    userAvatar.innerHTML = `
+      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+        <circle cx="12" cy="7" r="4"></circle>
+      </svg>
+    `;
+    
+    // Create user message
     const userMessageDiv = document.createElement('div');
+    userMessageDiv.className = 'message user-message';
     userMessageDiv.textContent = userInputText;
-    userMessageDiv.style.backgroundColor = '#005cbf';
-    userMessageDiv.style.color = 'white';
-    userMessageDiv.style.alignSelf = 'flex-end';
-    userMessageDiv.style.marginLeft = 'auto';
-    userMessageDiv.style.marginRight = '10px';
-    userMessageDiv.style.maxWidth = '75%';
-    userMessageDiv.style.marginBottom = '10px';
-    userMessageDiv.style.padding = '10px 15px';
-    userMessageDiv.style.borderRadius = '15px 15px 0 15px';
-    userMessageDiv.style.overflowWrap = 'break-word';
-    messageDisplayArea.appendChild(userMessageDiv);
+    
+    // Add timestamp to user message
+    const userTimestamp = document.createElement('div');
+    userTimestamp.className = 'message-timestamp';
+    userTimestamp.textContent = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    userMessageDiv.appendChild(userTimestamp);
+    
+    userMessageContainer.appendChild(userMessageDiv);
+    userMessageContainer.appendChild(userAvatar);
+    messageDisplayArea.appendChild(userMessageContainer);
+    
+    // Reset input and scroll to bottom
     chatInput.value = '';
+    chatInput.style.height = 'auto'; // Reset height
     messageDisplayArea.scrollTop = messageDisplayArea.scrollHeight;
 
-    // Add "Bot is typing..." indicator
-    const botTypingDiv = document.createElement('div');
-    botTypingDiv.textContent = 'Bot is typing...';
-    botTypingDiv.style.textAlign = 'left';
-    botTypingDiv.style.fontStyle = 'italic';
-    botTypingDiv.style.color = '#777';
-    botTypingDiv.style.marginBottom = '8px';
-    botTypingDiv.style.padding = '8px 12px';
-    botTypingDiv.style.maxWidth = '75%';
-    messageDisplayArea.appendChild(botTypingDiv);
+    // Create AI message container
+    const aiMessageContainer = document.createElement('div');
+    aiMessageContainer.className = 'message-container ai-message-container';
+    
+    // Create AI avatar
+    const aiAvatar = document.createElement('div');
+    aiAvatar.className = 'ai-avatar';
+    aiAvatar.innerHTML = `
+      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M12 2a8 8 0 0 1 8 8v12a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V10a8 8 0 0 1 8-8z"></path>
+        <path d="M9 19h6"></path>
+        <path d="M9 15h6"></path>
+        <circle cx="12" cy="7" r="1"></circle>
+      </svg>
+    `;
+    
+    // Create typing indicator
+    const typingIndicator = document.createElement('div');
+    typingIndicator.className = 'message ai-message typing';
+    typingIndicator.innerHTML = `
+      <div class="typing-indicator">
+        <span></span>
+        <span></span>
+        <span></span>
+      </div>
+    `;
+    
+    aiMessageContainer.appendChild(aiAvatar);
+    aiMessageContainer.appendChild(typingIndicator);
+    messageDisplayArea.appendChild(aiMessageContainer);
     messageDisplayArea.scrollTop = messageDisplayArea.scrollHeight;
 
     try {
@@ -130,23 +182,27 @@
         body: JSON.stringify({ message: userInputText }),
       });
 
-      // Remove typing indicator
-      if (botTypingDiv.parentNode) {
-        botTypingDiv.remove();
-      }
-
-      if (response.ok) {
-        const newCreditsHeader = response.headers.get('X-User-Credits');
-        if (newCreditsHeader) {
-          const creditDisplayElement = document.getElementById('navbar-credit-display');
-          if (creditDisplayElement) {
-            const newCredits = parseInt(newCreditsHeader, 10);
-            if (!isNaN(newCredits)) {
-              creditDisplayElement.textContent = newCredits.toString();
-            }
+      // Update credits if available
+      const newCreditsHeader = response.headers.get('X-User-Credits');
+      if (newCreditsHeader && chatCreditDisplay) {
+        const newCredits = parseInt(newCreditsHeader, 10);
+        if (!isNaN(newCredits)) {
+          chatCreditDisplay.textContent = newCredits.toString();
+          
+          // Also update navbar credits if present
+          const navbarCreditDisplay = document.getElementById('navbar-credit-display');
+          if (navbarCreditDisplay) {
+            navbarCreditDisplay.textContent = newCredits.toString();
           }
         }
+      }
+
+      // Remove typing indicator
+      typingIndicator.remove();
+
+      if (response.ok) {
         const data = await response.json();
+        
         // It's possible for a 200 OK to still contain an error object from business logic
         if (data.error) {
           let displayMessage = data.error; // Default to the error message from API
@@ -155,153 +211,141 @@
           } else if (data.error === "insufficient_credits") {
             displayMessage = "You do not have enough credits to send this message.";
           }
+          
           const errorMessageDiv = document.createElement('div');
+          errorMessageDiv.className = 'message ai-message error';
           errorMessageDiv.textContent = displayMessage;
-          errorMessageDiv.style.textAlign = 'left';
-          errorMessageDiv.style.color = 'red';
-          errorMessageDiv.style.fontStyle = 'italic';
-          errorMessageDiv.style.marginBottom = '8px';
-          errorMessageDiv.style.padding = '8px 12px';
-          errorMessageDiv.style.backgroundColor = '#ffebee';
-          errorMessageDiv.style.border = '1px solid red';
-          errorMessageDiv.style.borderRadius = '12px';
-          errorMessageDiv.style.maxWidth = '75%';
-          errorMessageDiv.style.overflowWrap = 'break-word';
-          messageDisplayArea.appendChild(errorMessageDiv);
-        } else {
+          aiMessageContainer.appendChild(errorMessageDiv);
+        } else if (data.reply) {
           const aiMessageDiv = document.createElement('div');
-          aiMessageDiv.style.backgroundColor = '#3a3f44';
-          aiMessageDiv.style.color = 'white';
-          aiMessageDiv.style.alignSelf = 'flex-start';
-          aiMessageDiv.style.marginRight = 'auto';
-          aiMessageDiv.style.marginLeft = '10px';
-          aiMessageDiv.style.maxWidth = '75%';
-          aiMessageDiv.style.marginBottom = '10px';
-          aiMessageDiv.style.padding = '10px 15px';
-          aiMessageDiv.style.borderRadius = '15px 15px 15px 0';
-          aiMessageDiv.style.overflowWrap = 'break-word';
-          aiMessageDiv.style.lineHeight = '1.5';
+          aiMessageDiv.className = 'message ai-message';
 
-          if (data.reply) {
-            //console.log("Raw AI reply:", data.reply);
-            
-            // Process the text with proper ordering to avoid conflicts
-            let formattedText = data.reply;
+          // Process the text with proper ordering to avoid conflicts
+          let formattedText = data.reply;
 
-            // First, identify and temporarily mark code blocks to protect them
-            const codeBlocks: string[] = [];
-            formattedText = formattedText.replace(/```([\s\S]*?)```/g, function(_match: string, code: string) {
-              const placeholder = `__CODE_BLOCK_${codeBlocks.length}__`;
-              codeBlocks.push(code);
-              return placeholder;
-            });
+          // First, identify and temporarily mark code blocks to protect them
+          const codeBlocks = [];
+          formattedText = formattedText.replace(/```([\s\S]*?)```/g, function(_match, code) {
+            const placeholder = `__CODE_BLOCK_${codeBlocks.length}__`;
+            codeBlocks.push(code);
+            return placeholder;
+          });
 
-            // Improved list handling
-            // First, detect if we have a numbered list in the content
-            const hasNumberedList = /^\d+[.)] /m.test(formattedText);
+          // Improved list handling
+          // First, detect if we have a numbered list in the content
+          const hasNumberedList = /^\d+[.)] /m.test(formattedText);
 
-            // Process numbered lists - capture entire list sections
-            if (hasNumberedList) {
-              // Find sequences of lines that start with numbers
-              const numberedListRegex = /(?:^\d+[.)] .+$(?:\n|$))+/gm;
-              formattedText = formattedText.replace(numberedListRegex, function(match: string) {
-                // Process each list item
-                const listItems = match.split('\n').filter((line: string) => line.trim() !== '');
-                const processedItems = listItems.map((item: string) => {
-                  // Extract the number and text
-                  const itemMatch = item.match(/^(\d+)[.)] (.+)$/);
-                  if (itemMatch) {
-                    const [, number, text] = itemMatch;
-                    return `<li value="${number}" style="margin-bottom: 0.5em;">${text}</li>`;
-                  }
-                  return item;
-                });
-                
-                // Join the items and wrap in an ordered list
-                return `<ol style="margin: 0.75em 0; padding-left: 2em; list-style-position: outside;">${processedItems.join('')}</ol>`;
-              });
-            }
-
-            // Process unordered lists - capture entire list sections
-            formattedText = formattedText.replace(/(?:^[*-] .+$(?:\n|$))+/gm, function(match: string) {
+          // Process numbered lists - capture entire list sections
+          if (hasNumberedList) {
+            // Find sequences of lines that start with numbers
+            const numberedListRegex = /(?:^\d+[.)] .+$(?:\n|$))+/gm;
+            formattedText = formattedText.replace(numberedListRegex, function(match) {
               // Process each list item
-              const listItems = match.split('\n').filter((line: string) => line.trim() !== '');
-              const processedItems = listItems.map((item: string) => {
-                // Extract the bullet and text
-                const itemMatch = item.match(/^[*-] (.+)$/);
+              const listItems = match.split('\n').filter(line => line.trim() !== '');
+              const processedItems = listItems.map(item => {
+                // Extract the number and text
+                const itemMatch = item.match(/^(\d+)[.)] (.+)$/);
                 if (itemMatch) {
-                  const [, text] = itemMatch;
-                  return `<li style="margin-bottom: 0.5em;">${text}</li>`;
+                  const [, number, text] = itemMatch;
+                  return `<li value="${number}" style="margin-bottom: 0.5em;">${text}</li>`;
                 }
                 return item;
               });
               
-              // Join the items and wrap in an unordered list
-              return `<ul style="margin: 0.75em 0; padding-left: 2em; list-style-type: disc; list-style-position: outside;">${processedItems.join('')}</ul>`;
+              // Join the items and wrap in an ordered list
+              return `<ol style="margin: 0.75em 0; padding-left: 2em; list-style-position: outside;">${processedItems.join('')}</ol>`;
             });
-
-            // Process markdown links: [text](url)
-            formattedText = formattedText.replace(/\[([^\]]+)\]\(([^)]+)\)/g, 
-              '<a href="$2" target="_blank" rel="noopener noreferrer" style="color: #4dabf7; text-decoration: underline; word-break: break-all;">$1</a>'
-            );
-
-            // Now process regular markdown elements
-            // Bold: **text**
-            formattedText = formattedText.replace(/\*\*([^*]+)\*\*/g, '<span style="font-weight: bold;">$1</span>');
-
-            // Italic: *text*
-            formattedText = formattedText.replace(/\*([^*]+)\*/g, '<span style="font-style: italic;">$1</span>');
-
-            // Inline code: `code`
-            formattedText = formattedText.replace(/`([^`]+)`/g, '<code style="font-family: monospace; background-color: #333740; color: #d0d0d0; padding: 0.2em 0.4em; border-radius: 3px; font-size: 0.9em;">$1</code>');
-
-            // Horizontal rule: ---
-            formattedText = formattedText.replace(/^---$/gm, '<hr style="border: 0; border-top: 1px solid #555; margin: 1em 0;">');
-
-            // Headers: # Header
-            formattedText = formattedText.replace(/^### (.*?)$/gm, '<h3 style="font-size: 1.1em; font-weight: bold; margin: 1em 0 0.5em 0;">$1</h3>');
-            formattedText = formattedText.replace(/^## (.*?)$/gm, '<h2 style="font-size: 1.3em; font-weight: bold; margin: 1em 0 0.5em 0;">$1</h2>');
-            formattedText = formattedText.replace(/^# (.*?)$/gm, '<h1 style="font-size: 1.5em; font-weight: bold; margin: 1em 0 0.5em 0;">$1</h1>');
-
-            // Now restore code blocks with proper HTML
-            codeBlocks.forEach((code: string, index: number) => {
-              const placeholder = `__CODE_BLOCK_${index}__`;
-              formattedText = formattedText.replace(
-                placeholder, 
-                `<pre style="background-color: #282c34; color: #abb2bf; padding: 1em; border-radius: 5px; overflow-x: auto; margin: 1em 0; font-family: monospace; white-space: pre;">${code.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</pre>`
-              );
-            });
-            
-            // Handle paragraphs - but be careful not to break lists
-            // First, identify paragraphs (text blocks separated by double newlines)
-            formattedText = formattedText.replace(/\n\n(?!<[uo]l|<h|<pre|<hr)/g, '</p><p style="margin: 0.75em 0;">');
-            
-            // Wrap the entire text in a paragraph if it doesn't start with a formatted element
-            if (!formattedText.startsWith('<h') && 
-                !formattedText.startsWith('<pre') && 
-                !formattedText.startsWith('<hr') && 
-                !formattedText.startsWith('<ol') && 
-                !formattedText.startsWith('<ul')) {
-              formattedText = '<p style="margin: 0.75em 0;">' + formattedText;
-            }
-            
-            // Close the last paragraph if needed
-            if (!formattedText.endsWith('</p>') && 
-                !formattedText.endsWith('</h1>') && 
-                !formattedText.endsWith('</h2>') && 
-                !formattedText.endsWith('</h3>') && 
-                !formattedText.endsWith('</pre>') && 
-                !formattedText.endsWith('</ol>') && 
-                !formattedText.endsWith('</ul>')) {
-              formattedText = formattedText + '</p>';
-            }
-            
-            // Set the formatted HTML
-            aiMessageDiv.innerHTML = formattedText;
-          } else {
-            aiMessageDiv.textContent = "Received an empty reply from AI.";
           }
-          messageDisplayArea.appendChild(aiMessageDiv);
+
+          // Process unordered lists - capture entire list sections
+          formattedText = formattedText.replace(/(?:^[*-] .+$(?:\n|$))+/gm, function(match) {
+            // Process each list item
+            const listItems = match.split('\n').filter(line => line.trim() !== '');
+            const processedItems = listItems.map(item => {
+              // Extract the bullet and text
+              const itemMatch = item.match(/^[*-] (.+)$/);
+              if (itemMatch) {
+                const [, text] = itemMatch;
+                return `<li style="margin-bottom: 0.5em;">${text}</li>`;
+              }
+              return item;
+            });
+            
+            // Join the items and wrap in an unordered list
+            return `<ul style="margin: 0.75em 0; padding-left: 2em; list-style-type: disc; list-style-position: outside;">${processedItems.join('')}</ul>`;
+          });
+
+          // Process markdown links: [text](url)
+          formattedText = formattedText.replace(/\[([^\]]+)\]\(([^)]+)\)/g, 
+            '<a href="$2" target="_blank" rel="noopener noreferrer" style="color: #4dabf7; text-decoration: underline; word-break: break-all;">$1</a>'
+          );
+
+          // Now process regular markdown elements
+          // Bold: **text**
+          formattedText = formattedText.replace(/\*\*([^*]+)\*\*/g, '<span style="font-weight: bold;">$1</span>');
+
+          // Italic: *text*
+          formattedText = formattedText.replace(/\*([^*]+)\*/g, '<span style="font-style: italic;">$1</span>');
+
+          // Inline code: `code`
+          formattedText = formattedText.replace(/`([^`]+)`/g, '<code style="font-family: monospace; background-color: #333740; color: #d0d0d0; padding: 0.2em 0.4em; border-radius: 3px; font-size: 0.9em;">$1</code>');
+
+          // Horizontal rule: ---
+          formattedText = formattedText.replace(/^---$/gm, '<hr style="border: 0; border-top: 1px solid #555; margin: 1em 0;">');
+
+          // Headers: # Header
+          formattedText = formattedText.replace(/^### (.*?)$/gm, '<h3 style="font-size: 1.1em; font-weight: bold; margin: 1em 0 0.5em 0;">$1</h3>');
+          formattedText = formattedText.replace(/^## (.*?)$/gm, '<h2 style="font-size: 1.3em; font-weight: bold; margin: 1em 0 0.5em 0;">$1</h2>');
+          formattedText = formattedText.replace(/^# (.*?)$/gm, '<h1 style="font-size: 1.5em; font-weight: bold; margin: 1em 0 0.5em 0;">$1</h1>');
+
+          // Now restore code blocks with proper HTML
+          codeBlocks.forEach((code, index) => {
+            const placeholder = `__CODE_BLOCK_${index}__`;
+            formattedText = formattedText.replace(
+              placeholder, 
+              `<pre style="background-color: #282c34; color: #abb2bf; padding: 1em; border-radius: 5px; overflow-x: auto; margin: 1em 0; font-family: monospace; white-space: pre;">${code.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</pre>`
+            );
+          });
+          
+          // Handle paragraphs - but be careful not to break lists
+          // First, identify paragraphs (text blocks separated by double newlines)
+          formattedText = formattedText.replace(/\n\n(?!<[uo]l|<h|<pre|<hr)/g, '</p><p style="margin: 0.75em 0;">');
+          
+          // Wrap the entire text in a paragraph if it doesn't start with a formatted element
+          if (!formattedText.startsWith('<h') && 
+              !formattedText.startsWith('<pre') && 
+              !formattedText.startsWith('<hr') && 
+              !formattedText.startsWith('<ol') && 
+              !formattedText.startsWith('<ul')) {
+            formattedText = '<p style="margin: 0.75em 0;">' + formattedText;
+          }
+          
+          // Close the last paragraph if needed
+          if (!formattedText.endsWith('</p>') && 
+              !formattedText.endsWith('</h1>') && 
+              !formattedText.endsWith('</h2>') && 
+              !formattedText.endsWith('</h3>') && 
+              !formattedText.endsWith('</pre>') && 
+              !formattedText.endsWith('</ol>') && 
+              !formattedText.endsWith('</ul>')) {
+            formattedText = formattedText + '</p>';
+          }
+          
+          // Set the formatted HTML
+          aiMessageDiv.innerHTML = formattedText;
+          
+          // Add timestamp
+          const timestamp = document.createElement('div');
+          timestamp.className = 'message-timestamp';
+          timestamp.textContent = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+          aiMessageDiv.appendChild(timestamp);
+          
+          aiMessageContainer.appendChild(aiMessageDiv);
+        } else {
+          const aiMessageDiv = document.createElement('div');
+          aiMessageDiv.className = 'message ai-message';
+          aiMessageDiv.textContent = "Received an empty reply from AI.";
+          aiMessageContainer.appendChild(aiMessageDiv);
         }
       } else {
         const errorData = await response.json().catch(() => ({ error: `Error: Could not get response from AI. Status: ${response.status}` }));
@@ -314,72 +358,348 @@
         }
         
         const errorMessageDiv = document.createElement('div');
+        errorMessageDiv.className = 'message ai-message error';
         errorMessageDiv.textContent = displayMessage;
-        errorMessageDiv.style.textAlign = 'left';
-        errorMessageDiv.style.color = 'red';
-        errorMessageDiv.style.fontStyle = 'italic';
-        errorMessageDiv.style.marginBottom = '8px';
-        errorMessageDiv.style.padding = '8px 12px';
-        errorMessageDiv.style.backgroundColor = '#ffebee';
-        errorMessageDiv.style.border = '1px solid red';
-        errorMessageDiv.style.borderRadius = '12px';
-        errorMessageDiv.style.maxWidth = '75%';
-        errorMessageDiv.style.overflowWrap = 'break-word';
-        messageDisplayArea.appendChild(errorMessageDiv);
+        aiMessageContainer.appendChild(errorMessageDiv);
       }
     } catch (error) {
-      if (botTypingDiv && botTypingDiv.parentNode) {
-        botTypingDiv.remove();
-      }
+      // Remove typing indicator
+      typingIndicator.remove();
+      
       const errorMessageDiv = document.createElement('div');
+      errorMessageDiv.className = 'message ai-message error';
       errorMessageDiv.textContent = 'Error: Could not connect to the AI service.';
-      errorMessageDiv.style.textAlign = 'left';
-      errorMessageDiv.style.color = 'red';
-      errorMessageDiv.style.fontStyle = 'italic';
-      errorMessageDiv.style.marginBottom = '8px';
-      errorMessageDiv.style.padding = '8px 12px';
-      errorMessageDiv.style.backgroundColor = '#ffebee';
-      errorMessageDiv.style.border = '1px solid red';
-      errorMessageDiv.style.borderRadius = '12px';
-      errorMessageDiv.style.maxWidth = '75%';
-      errorMessageDiv.style.overflowWrap = 'break-word';
-      messageDisplayArea.appendChild(errorMessageDiv);
+      aiMessageContainer.appendChild(errorMessageDiv);
       console.error('Fetch error:', error);
     } finally {
       messageDisplayArea.scrollTop = messageDisplayArea.scrollHeight;
+      
+      // Re-enable input area
+      if (chatInput) {
+        chatInput.focus();
+      }
     }
   }
 
+  // Event listeners
   if (sendButton) {
     sendButton.addEventListener('click', sendMessage);
   }
+  
   if (chatInput) {
     chatInput.addEventListener('keypress', function(event) {
-      if (event.key === 'Enter') {
+      if (event.key === 'Enter' && !event.shiftKey) {
+        event.preventDefault(); // Prevent default to avoid newline
         sendMessage();
       }
     });
+    
+    // Focus the input on page load
+    chatInput.focus();
+  }
+  
+  // Add welcome message on page load
+  if (messageDisplayArea && messageDisplayArea.children.length === 0) {
+    const messageContainer = document.createElement('div');
+    messageContainer.className = 'message-container ai-message-container';
+    
+    const aiAvatar = document.createElement('div');
+    aiAvatar.className = 'ai-avatar';
+    aiAvatar.innerHTML = `
+      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M12 2a8 8 0 0 1 8 8v12a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V10a8 8 0 0 1 8-8z"></path>
+        <path d="M9 19h6"></path>
+        <path d="M9 15h6"></path>
+        <circle cx="12" cy="7" r="1"></circle>
+      </svg>
+    `;
+    
+    const aiMessageDiv = document.createElement('div');
+    aiMessageDiv.className = 'message ai-message';
+    aiMessageDiv.innerHTML = '<p>Hello! I\'m your AI assistant. How can I help you today?</p>';
+    
+    messageContainer.appendChild(aiAvatar);
+    messageContainer.appendChild(aiMessageDiv);
+    messageDisplayArea.appendChild(messageContainer);
   }
 </script>
 
 <style>
-  /* Base container styles only - minimal CSS here */
-  #chat-container {
+  .chat-container {
     display: flex;
     flex-direction: column;
     height: 100%;
+    max-height: 80vh;
+    background-color: hsl(var(--muted));
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-md);
+    overflow: hidden;
     font-family: sans-serif;
-    padding: 15px;
-    box-sizing: border-box;
   }
   
-  #message-display-area {
+  .chat-header {
     display: flex;
-    flex-direction: column;
+    justify-content: space-between;
+    align-items: center;
+    padding: var(--space-sm) var(--space-md);
+    background-color: hsl(var(--bkg));
+    border-bottom: 1px solid hsl(var(--txt) / 0.1);
+  }
+  
+  .chat-header h2 {
+    margin: 0;
+    font-size: var(--fs-lg);
+    color: hsl(var(--accent));
+  }
+  
+  .chat-controls {
+    display: flex;
+    gap: var(--space-xs);
+  }
+  
+  .message-display {
     flex-grow: 1;
     overflow-y: auto;
-    padding: 10px;
-    margin-bottom: 10px;
-    border: 1px solid #333;
+    padding: var(--space-md);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-md);
+    scroll-behavior: smooth;
+    background-color: hsl(var(--bkg) / 0.5);
+  }
+  
+  /* Message containers with avatars */
+  .message-container {
+    display: flex;
+    gap: var(--space-sm);
+    max-width: 85%;
+  }
+  
+  .ai-message-container {
+    align-self: flex-start;
+  }
+  
+  .user-message-container {
+    align-self: flex-end;
+    flex-direction: row-reverse;
+  }
+  
+  /* Avatar styles */
+  .ai-avatar, .user-avatar {
+    display: flex;
+    align-items: flex-start;
+    padding-top: var(--space-xs);
+    width: 32px;
+    height: 32px;
+    flex-shrink: 0;
+  }
+  
+  .ai-avatar {
+    color: hsl(var(--accent));
+  }
+  
+  .user-avatar {
+    color: hsl(var(--txt));
+  }
+  
+  /* Message bubbles */
+  .message {
+    padding: var(--space-sm) var(--space-md);
+    border-radius: var(--radius-md);
+    overflow-wrap: break-word;
+    line-height: 1.5;
+    position: relative;
+    max-width: calc(100% - 40px);
+  }
+  
+  .user-message {
+    background-color: hsl(var(--accent));
+    color: white;
+    border-radius: 15px 15px 0 15px;
+    box-shadow: var(--shadow-sm);
+  }
+  
+  .ai-message {
+    background-color: hsl(var(--bkg));
+    color: hsl(var(--txt));
+    border-radius: 15px 15px 15px 0;
+    box-shadow: var(--shadow-sm);
+  }
+  
+  .ai-message.error {
+    color: hsl(0, 76%, 50%);
+    background-color: hsl(0, 76%, 95%);
+    border-left: 3px solid hsl(0, 76%, 50%);
+    font-style: italic;
+  }
+  
+  .ai-message.typing {
+    padding: var(--space-xs) var(--space-md);
+  }
+  
+  /* Timestamp */
+  .message-timestamp {
+    font-size: var(--fs-sm);
+    color: hsl(var(--txt) / 0.6);
+    margin-top: var(--space-xs);
+    text-align: right;
+    position: absolute;
+    bottom: 2px;
+    right: 8px;
+    opacity: 0.8;
+  }
+  
+  .user-message .message-timestamp {
+    color: rgba(255, 255, 255, 0.8);
+  }
+  
+  /* Typing indicator */
+  .typing-indicator {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+  
+  .typing-indicator span {
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    background-color: hsl(var(--txt) / 0.5);
+    border-radius: 50%;
+    animation: typing-animation 1.4s infinite ease-in-out;
+  }
+  
+  .typing-indicator span:nth-child(1) {
+    animation-delay: 0s;
+  }
+  
+  .typing-indicator span:nth-child(2) {
+    animation-delay: 0.2s;
+  }
+  
+  .typing-indicator span:nth-child(3) {
+    animation-delay: 0.4s;
+  }
+  
+  @keyframes typing-animation {
+    0%, 60%, 100% {
+      transform: translateY(0);
+      opacity: 0.5;
+    }
+    30% {
+      transform: translateY(-4px);
+      opacity: 1;
+    }
+  }
+  
+  .input-area {
+    display: flex;
+    padding: var(--space-sm);
+    background-color: hsl(var(--bkg));
+    border-top: 1px solid hsl(var(--txt) / 0.1);
+  }
+  
+  #chat-input {
+    flex-grow: 1;
+    padding: var(--space-sm) var(--space-md);
+    border: 1px solid hsl(var(--txt) / 0.2);
+    border-right: none;
+    border-radius: var(--radius-md) 0 0 var(--radius-md);
+    background-color: hsl(var(--bkg));
+    color: hsl(var(--txt));
+    font-size: var(--fs-md);
+    resize: none;
+    min-height: 44px;
+    max-height: 150px;
+    overflow-y: auto;
+    transition: border-color var(--transition-ease-fast);
+    outline: none;
+  }
+  
+  #chat-input:focus {
+    border-color: hsl(var(--accent));
+  }
+  
+  .send-button {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: var(--space-xs) var(--space-sm);
+    background-color: hsl(var(--accent));
+    color: white;
+    border: none;
+    border-radius: 0 var(--radius-md) var(--radius-md) 0;
+    cursor: pointer;
+    transition: background-color var(--transition-ease-fast);
+    width: auto;
+    height: auto;
+    min-width: 44px;
+  }
+  
+  .send-button:hover {
+    background-color: hsl(var(--accent) / 0.8);
+  }
+  
+  .send-button:active {
+    background-color: hsl(var(--accent) / 0.9);
+  }
+  
+  .chat-footer {
+    padding: var(--space-xs) var(--space-md);
+    background-color: hsl(var(--bkg));
+    border-top: 1px solid hsl(var(--txt) / 0.1);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: var(--fs-sm);
+    color: hsl(var(--txt) / 0.7);
+  }
+  
+  .credits-info {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2xs);
+  }
+  
+  #chat-credit-display {
+    font-weight: bold;
+    color: hsl(var(--accent));
+  }
+  
+  /* Responsive adjustments */
+  @media (max-width: 768px) {
+    .message-container {
+      max-width: 90%;
+    }
+    
+    .chat-footer {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: var(--space-xs);
+    }
+  }
+  
+  @media (max-width: 480px) {
+    .message-container {
+      max-width: 95%;
+    }
+    
+    .chat-header h2 {
+      font-size: var(--fs-md);
+    }
+    
+    #chat-input {
+      font-size: var(--fs-sm);
+    }
+    
+    .ai-avatar, .user-avatar {
+      width: 24px;
+      height: 24px;
+    }
+    
+    .ai-avatar svg, .user-avatar svg {
+      width: 20px;
+      height: 20px;
+    }
   }
 </style>

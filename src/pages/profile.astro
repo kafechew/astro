@@ -45,67 +45,445 @@ if (message) {
     statusMessage = decodeURIComponent(error);
   }
 }
+
+// Format dates
+const formatDate = (dateString) => {
+  if (!dateString) return '';
+  const date = new Date(dateString);
+  return date.toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' });
+};
+
+const formatDateTime = (dateString) => {
+  if (!dateString) return '';
+  const date = new Date(dateString);
+  return date.toLocaleDateString(undefined, { 
+    year: 'numeric', 
+    month: 'long', 
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit'
+  });
+};
+
+const joinDate = formatDate(user.createdAt);
+const lastUpdated = formatDateTime(user.updatedAt);
 ---
 
-<MainLayout title="User Profile">
-  <div class="container mx-auto px-4 py-8">
-    <h1 class="text-3xl font-bold mb-6 text-center">Your Profile</h1>
+<MainLayout title="My Account">
+  <div class="container">
+    <header>
+      <h1 class="h2">My <span>Account</span></h1>
+      <p>Manage your profile and account settings</p>
+    </header>
 
     {statusMessage && (
       <div class:list={[
-        "max-w-md mx-auto p-4 mb-4 text-sm rounded-lg",
-        statusMessageType === 'success' ? "bg-green-100 text-green-700" : "",
-        statusMessageType === 'error' ? "bg-red-100 text-red-700" : ""
+        "alert",
+        statusMessageType === 'success' ? "alert-success" : "",
+        statusMessageType === 'error' ? "alert-error" : ""
       ]} role="alert">
         {statusMessage}
       </div>
     )}
 
-    <div class="max-w-md mx-auto bg-white shadow-md rounded-lg p-6">
-      <div class="mb-4">
-        <p><strong>Username:</strong> {user.username}</p>
-        <p><strong>Email:</strong> {user.email}</p>
-        <p>
-          <strong>Email Status:</strong>
-          {user.isEmailVerified ? (
-            <span class="text-green-600 font-semibold">Verified</span>
-          ) : (
-            <>
-              <span class="text-red-600 font-semibold">Not Verified</span>
-              <button id="resendVerificationBtn" class="ml-2 text-sm text-blue-600 hover:underline focus:outline-none">
-                Resend verification email
-              </button>
-            </>
-          )}
-        </p>
-        <p><strong>Display Name:</strong> <span id="currentDisplayName">{initialDisplayName}</span></p>
-        <p><strong>Bio:</strong> <span id="currentBio">{initialBio || 'No bio set.'}</span></p>
-        {user.createdAt && <p><strong>Joined:</strong> {new Date(user.createdAt).toLocaleDateString()}</p>}
-        {user.updatedAt && <p><strong>Last Updated:</strong> {new Date(user.updatedAt).toLocaleString()}</p>}
-        <p><strong>Credits:</strong> {Astro.locals.user?.credits ?? 0}</p>
-      </div>
+    <div class="profile-container">
+      <!-- Profile Overview Card -->
+      <section class="profile-card">
+        <div class="profile-header">
+          <div class="avatar-container">
+            <div class="avatar">
+              {initialDisplayName.charAt(0).toUpperCase()}
+            </div>
+          </div>
+          <div class="profile-title">
+            <h2 id="currentDisplayName">{initialDisplayName}</h2>
+            <p class="username">@{user.username}</p>
+          </div>
+        </div>
 
-      <h2 class="text-2xl font-semibold mb-4">Update Profile</h2>
-      <form id="profileUpdateForm" class="space-y-4">
-        <div>
-          <label for="displayName" class="block text-sm font-medium text-gray-700">Display Name:</label>
-          <input type="text" id="displayName" name="displayName" value={initialDisplayName} class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
+        <div class="profile-stats">
+          <div class="stat-item">
+            <span class="stat-icon">
+              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                <circle cx="12" cy="7" r="4"></circle>
+              </svg>
+            </span>
+            <div class="stat-content">
+              <span class="stat-label">Member Since</span>
+              <span class="stat-value">{joinDate}</span>
+            </div>
+          </div>
+          
+          <div class="stat-item">
+            <span class="stat-icon">
+              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="10"></circle>
+                <polyline points="12 6 12 12 16 14"></polyline>
+              </svg>
+            </span>
+            <div class="stat-content">
+              <span class="stat-label">Last Updated</span>
+              <span class="stat-value">{lastUpdated}</span>
+            </div>
+          </div>
+          
+          <div class="stat-item">
+            <span class="stat-icon">
+              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="8" r="7"></circle>
+                <polyline points="8.21 13.89 7 23 12 20 17 23 15.79 13.88"></polyline>
+              </svg>
+            </span>
+            <div class="stat-content">
+              <span class="stat-label">Credits</span>
+              <span class="stat-value">{Astro.locals.user?.credits ?? 0}</span>
+            </div>
+          </div>
         </div>
-        <div>
-          <label for="bio" class="block text-sm font-medium text-gray-700">Bio:</label>
-          <textarea id="bio" name="bio" rows="3" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">{initialBio}</textarea>
+
+        <div class="profile-bio">
+          <h3>About Me</h3>
+          <p id="currentBio">{initialBio || 'No bio set yet. Tell us about yourself!'}</p>
         </div>
-        <div>
-          <button type="submit" class="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
-            Update Profile
-          </button>
+
+        <div class="profile-email">
+          <div class="email-header">
+            <h3>Email Address</h3>
+            <div class:list={["email-status", user.isEmailVerified ? "verified" : "unverified"]}>
+              {user.isEmailVerified ? 'Verified' : 'Not Verified'}
+            </div>
+          </div>
+          <p class="email-value">{user.email}</p>
+          {!user.isEmailVerified && (
+            <button id="resendVerificationBtn" class="link secondary">
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38"></path>
+              </svg>
+              Resend Verification Email
+            </button>
+          )}
         </div>
-      </form>
-      <div id="messageArea" class="mt-4 text-sm"></div>
+      </section>
+
+      <!-- Edit Profile Form -->
+      <section class="edit-profile">
+        <h2 class="h3">Edit Profile</h2>
+        <form id="profileUpdateForm">
+          <div class="form-group">
+            <label for="displayName">Display Name</label>
+            <input type="text" id="displayName" name="displayName" value={initialDisplayName}>
+            <small>This is how your name will appear to other users</small>
+          </div>
+          
+          <div class="form-group">
+            <label for="bio">Bio</label>
+            <textarea id="bio" name="bio" rows="4">{initialBio}</textarea>
+            <small>Tell others a bit about yourself</small>
+          </div>
+          
+          <div class="form-actions">
+            <button type="submit" class="link primary filled">
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path>
+                <polyline points="17 21 17 13 7 13 7 21"></polyline>
+                <polyline points="7 3 7 8 15 8"></polyline>
+              </svg>
+              Save Changes
+            </button>
+          </div>
+          
+          <div id="messageArea" class="form-message hidden"></div>
+        </form>
+      </section>
     </div>
 
+    <!-- Account Actions -->
+    <section class="account-actions">
+      <h2 class="h3">Account Actions</h2>
+      <div class="actions-container">
+        <a href="/api/auth/logout" class="link bordered">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+            <polyline points="16 17 21 12 16 7"></polyline>
+            <line x1="21" y1="12" x2="9" y2="12"></line>
+          </svg>
+          Sign Out
+        </a>
+        
+        <button id="changePasswordBtn" class="link bordered">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+            <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+          </svg>
+          Change Password
+        </button>
+      </div>
+    </section>
   </div>
 </MainLayout>
+
+<style>
+  .container {
+    max-width: 1000px;
+    margin: 0 auto;
+    padding: var(--space-md);
+  }
+
+  header {
+    margin-bottom: var(--space-lg);
+  }
+
+  .alert {
+    padding: var(--space-sm);
+    border-radius: var(--radius-md);
+    margin-bottom: var(--space-md);
+    font-size: var(--fs-sm);
+  }
+
+  .alert-success {
+    background-color: hsl(142, 76%, 95%);
+    color: hsl(142, 76%, 36%);
+  }
+
+  .alert-error {
+    background-color: hsl(0, 76%, 95%);
+    color: hsl(0, 76%, 36%);
+  }
+
+  .profile-container {
+    display: grid;
+    gap: var(--space-lg);
+    margin-bottom: var(--space-xl);
+  }
+
+  @media (min-width: 768px) {
+    .profile-container {
+      grid-template-columns: 1fr 1fr;
+      align-items: start;
+    }
+  }
+
+  .profile-card, .edit-profile, .account-actions {
+    background-color: hsl(var(--muted));
+    border-radius: var(--radius-md);
+    padding: var(--space-md);
+    box-shadow: var(--shadow-sm);
+  }
+
+  .profile-header {
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+    margin-bottom: var(--space-md);
+  }
+
+  .avatar-container {
+    flex-shrink: 0;
+  }
+
+  .avatar {
+    width: 64px;
+    height: 64px;
+    background-color: hsl(var(--accent));
+    color: hsl(var(--bkg));
+    border-radius: var(--radius-full);
+    display: grid;
+    place-items: center;
+    font-size: var(--fs-xl);
+    font-weight: bold;
+  }
+
+  .profile-title {
+    overflow: hidden;
+  }
+
+  .profile-title h2 {
+    margin: 0;
+    font-size: var(--fs-lg);
+    line-height: 1.2;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .username {
+    color: hsl(var(--txt) / 0.7);
+    font-size: var(--fs-sm);
+  }
+
+  .profile-stats {
+    display: grid;
+    gap: var(--space-sm);
+    margin-bottom: var(--space-md);
+  }
+
+  .stat-item {
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+    padding: var(--space-xs);
+    background-color: hsl(var(--bkg) / 0.5);
+    border-radius: var(--radius-sm);
+  }
+
+  .stat-icon {
+    display: grid;
+    place-items: center;
+    color: hsl(var(--accent));
+  }
+
+  .stat-content {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .stat-label {
+    font-size: var(--fs-sm);
+    color: hsl(var(--txt) / 0.7);
+  }
+
+  .stat-value {
+    font-weight: bold;
+  }
+
+  .profile-bio {
+    margin-bottom: var(--space-md);
+    padding: var(--space-sm);
+    background-color: hsl(var(--bkg) / 0.5);
+    border-radius: var(--radius-sm);
+  }
+
+  .profile-bio h3 {
+    font-size: var(--fs-md);
+    margin-bottom: var(--space-xs);
+    color: hsl(var(--accent));
+  }
+
+  .profile-email {
+    padding: var(--space-sm);
+    background-color: hsl(var(--bkg) / 0.5);
+    border-radius: var(--radius-sm);
+  }
+
+  .email-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: var(--space-xs);
+  }
+
+  .email-header h3 {
+    font-size: var(--fs-md);
+    color: hsl(var(--accent));
+  }
+
+  .email-status {
+    font-size: var(--fs-sm);
+    padding: 2px 8px;
+    border-radius: var(--radius-full);
+  }
+
+  .email-status.verified {
+    background-color: hsl(142, 76%, 95%);
+    color: hsl(142, 76%, 36%);
+  }
+
+  .email-status.unverified {
+    background-color: hsl(0, 76%, 95%);
+    color: hsl(0, 76%, 36%);
+  }
+
+  .email-value {
+    font-size: var(--fs-sm);
+    word-break: break-all;
+    margin-bottom: var(--space-xs);
+  }
+
+  /* Edit Profile Form Styles */
+  .edit-profile h2 {
+    margin-bottom: var(--space-md);
+  }
+
+  .form-group {
+    margin-bottom: var(--space-md);
+  }
+
+  .form-group label {
+    display: block;
+    font-weight: bold;
+    margin-bottom: var(--space-xs);
+  }
+
+  .form-group input,
+  .form-group textarea {
+    width: 100%;
+    padding: var(--space-sm);
+    border: 1px solid hsl(var(--txt) / 0.2);
+    border-radius: var(--radius-sm);
+    background-color: hsl(var(--bkg));
+    color: hsl(var(--txt));
+    font-size: var(--fs-md);
+  }
+
+  .form-group small {
+    display: block;
+    margin-top: var(--space-2xs);
+    color: hsl(var(--txt) / 0.7);
+  }
+
+  .form-actions {
+    margin-top: var(--space-md);
+  }
+
+  .form-message {
+    margin-top: var(--space-sm);
+    padding: var(--space-sm);
+    border-radius: var(--radius-sm);
+    font-size: var(--fs-sm);
+  }
+
+  .form-message.text-green-600 {
+    background-color: hsl(142, 76%, 95%);
+    color: hsl(142, 76%, 36%);
+  }
+
+  .form-message.text-red-600 {
+    background-color: hsl(0, 76%, 95%);
+    color: hsl(0, 76%, 36%);
+  }
+
+  .hidden {
+    display: none;
+  }
+
+  /* Account Actions Styles */
+  .account-actions {
+    margin-top: var(--space-lg);
+  }
+
+  .account-actions h2 {
+    margin-bottom: var(--space-md);
+  }
+
+  .actions-container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-sm);
+  }
+
+  .actions-container .link {
+    flex: 1;
+    min-width: 150px;
+    justify-content: center;
+  }
+
+  @media (max-width: 480px) {
+    .actions-container .link {
+      flex: 1 0 100%;
+    }
+  }
+</style>
 
 <script>
   const form = document.getElementById('profileUpdateForm');
@@ -113,40 +491,64 @@ if (message) {
   const currentDisplayNameElement = document.getElementById('currentDisplayName');
   const currentBioElement = document.getElementById('currentBio');
   const resendBtn = document.getElementById('resendVerificationBtn');
+  const changePasswordBtn = document.getElementById('changePasswordBtn');
 
   // Function to display messages in the main status area at the top
   function showStatusMessage(text, type = 'info') {
-    const statusDiv = document.querySelector('div[role="alert"]'); // Find existing or create new
-    let newStatusDiv = statusDiv;
-    if (!newStatusDiv) {
-        newStatusDiv = document.createElement('div');
-        newStatusDiv.setAttribute('role', 'alert');
-        const mainContentDiv = document.querySelector('.container > .max-w-md.mx-auto.bg-white'); // insert before this
-        if (mainContentDiv) {
-            mainContentDiv.parentNode.insertBefore(newStatusDiv, mainContentDiv);
-        } else {
-            // fallback if structure changes
-            document.querySelector('.container').prepend(newStatusDiv);
-        }
+    let statusDiv = document.querySelector('div[role="alert"]');
+    
+    if (!statusDiv) {
+      statusDiv = document.createElement('div');
+      statusDiv.setAttribute('role', 'alert');
+      const header = document.querySelector('header');
+      if (header && header.nextElementSibling) {
+        header.parentNode.insertBefore(statusDiv, header.nextElementSibling);
+      } else {
+        document.querySelector('.container').insertBefore(statusDiv, document.querySelector('.profile-container'));
+      }
     }
-    newStatusDiv.textContent = text;
-    newStatusDiv.className = "max-w-md mx-auto p-4 mb-4 text-sm rounded-lg"; // Reset classes
+    
+    statusDiv.textContent = text;
+    statusDiv.className = "alert";
+    
     if (type === 'success') {
-      newStatusDiv.classList.add('bg-green-100', 'text-green-700');
+      statusDiv.classList.add('alert-success');
     } else if (type === 'error') {
-      newStatusDiv.classList.add('bg-red-100', 'text-red-700');
-    } else { // info or default
-      newStatusDiv.classList.add('bg-blue-100', 'text-blue-700');
+      statusDiv.classList.add('alert-error');
+    } else {
+      statusDiv.classList.add('alert-info');
+    }
+    
+    // Scroll to the message
+    statusDiv.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }
+
+  // Function to display form-specific messages
+  function showFormMessage(element, text, type = 'info') {
+    if (!element) return;
+    
+    element.textContent = text;
+    element.classList.remove('hidden', 'text-green-600', 'text-red-600');
+    
+    if (type === 'success') {
+      element.classList.add('text-green-600');
+    } else if (type === 'error') {
+      element.classList.add('text-red-600');
     }
   }
 
-
+  // Resend verification email
   if (resendBtn) {
     resendBtn.addEventListener('click', async () => {
+      const originalText = resendBtn.innerHTML;
       resendBtn.disabled = true;
-      resendBtn.textContent = 'Sending...';
-      messageArea.textContent = ''; // Clear profile update messages
-      messageArea.className = 'mt-4 text-sm';
+      resendBtn.innerHTML = `
+        <svg class="animate-spin -ml-1 mr-2 h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+          <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+          <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+        </svg>
+        Sending...
+      `;
 
       try {
         const response = await fetch('/api/auth/resend-verification-email', {
@@ -155,7 +557,7 @@ if (message) {
         const result = await response.json();
 
         if (response.ok) {
-          showStatusMessage(result.message || 'Verification email sent!', 'success');
+          showStatusMessage(result.message || 'Verification email sent! Please check your inbox.', 'success');
         } else {
           showStatusMessage(`Error: ${result.message || 'Failed to resend email.'}`, 'error');
         }
@@ -164,53 +566,76 @@ if (message) {
         showStatusMessage('An unexpected error occurred. Please try again.', 'error');
       } finally {
         resendBtn.disabled = false;
-        resendBtn.textContent = 'Resend verification email';
+        resendBtn.innerHTML = originalText;
       }
     });
   }
 
-  form.addEventListener('submit', async (event) => {
-    event.preventDefault();
-    messageArea.textContent = '';
-    messageArea.className = 'mt-4 text-sm'; // Reset classes
+  // Update profile form
+  if (form) {
+    form.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      
+      const submitButton = form.querySelector('button[type="submit"]');
+      const originalButtonContent = submitButton.innerHTML;
+      
+      submitButton.disabled = true;
+      submitButton.innerHTML = `
+        <svg class="animate-spin -ml-1 mr-2 h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+          <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+          <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+        </svg>
+        Saving...
+      `;
+      
+      messageArea.classList.add('hidden');
 
-    const formData = new FormData(form);
-    const displayName = formData.get('displayName');
-    const bio = formData.get('bio');
+      const formData = new FormData(form);
+      const displayName = formData.get('displayName');
+      const bio = formData.get('bio');
 
-    try {
-      const response = await fetch('/api/auth/profile', {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ displayName, bio }),
-      });
+      try {
+        const response = await fetch('/api/auth/profile', {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ displayName, bio }),
+        });
 
-      const result = await response.json();
+        const result = await response.json();
 
-      if (response.ok) {
-        messageArea.textContent = result.message || 'Profile updated successfully!';
-        messageArea.classList.add('text-green-600');
-        // Update displayed values
-        if (result.user && result.user.profile) {
-          currentDisplayNameElement.textContent = result.user.profile.displayName || result.user.username;
-          currentBioElement.textContent = result.user.profile.bio || 'No bio set.';
-          // Optionally update form input values if needed, though a page refresh might be simpler for full sync
-          document.getElementById('displayName').value = result.user.profile.displayName || result.user.username;
-          document.getElementById('bio').value = result.user.profile.bio || '';
-        } else if (result.user) {
-            currentDisplayNameElement.textContent = result.user.username; // Fallback if profile object is missing after update
+        if (response.ok) {
+          messageArea.classList.remove('hidden');
+          showFormMessage(messageArea, result.message || 'Profile updated successfully!', 'success');
+          
+          // Update displayed values
+          if (result.user && result.user.profile) {
+            currentDisplayNameElement.textContent = result.user.profile.displayName || result.user.username;
+            currentBioElement.textContent = result.user.profile.bio || 'No bio set yet. Tell us about yourself!';
+          } else if (result.user) {
+            currentDisplayNameElement.textContent = result.user.username;
+          }
+        } else {
+          messageArea.classList.remove('hidden');
+          showFormMessage(messageArea, `Error: ${result.message || 'Failed to update profile.'}`, 'error');
         }
-      } else {
-        messageArea.textContent = `Error: ${result.message || 'Failed to update profile.'}`;
-        messageArea.classList.add('text-red-600');
+      } catch (error) {
+        console.error('Update profile error:', error);
+        messageArea.classList.remove('hidden');
+        showFormMessage(messageArea, 'An unexpected error occurred. Please try again.', 'error');
+      } finally {
+        submitButton.disabled = false;
+        submitButton.innerHTML = originalButtonContent;
       }
-    } catch (error) {
-      console.error('Update profile error:', error);
-      messageArea.textContent = 'An unexpected error occurred. Please try again.';
-      messageArea.classList.add('text-red-600');
-    }
-  });
+    });
+  }
 
+  // Change Password Button (placeholder for now)
+  if (changePasswordBtn) {
+    changePasswordBtn.addEventListener('click', () => {
+      // This is a placeholder - you would implement the password change functionality
+      showStatusMessage('Password change functionality coming soon!', 'info');
+    });
+  }
 </script>

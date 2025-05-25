@@ -180,37 +180,41 @@ const availableTools = [
     }
 ];
 
-export async function executeInProcessReActLoop(originalUserQuery, queryForLLMSynthesis, context, forceToolName = null) {
+export async function executeInProcessReActLoop(originalUserQuery, ragContext, context) {
     const { db, user, userIdToUpdate, JWT_SECRET, COST_PER_QUERY } = context;
     const usersCollection = db.collection('users');
     let toolDecision;
 
-    if (forceToolName) {
-        toolDecision = { tool_name: forceToolName, arguments: {} }; // Assuming no args needed if tool is 'none'
-        console.log(`REACT_PROCESSOR: Tool decision forced to: ${forceToolName}`);
-    } else {
-        const toolDescriptions = availableTools.map(t => {
-            return `${t.name}: ${t.description} Arguments: ${JSON.stringify(t.arguments)}`;
-        }).join('\\n');
+    // forceToolName parameter is removed, so this block is no longer needed in the same way.
+    // If there's a scenario to force 'none', it would be handled by the RAG logic in chat.js
+    // or potentially by a more sophisticated pre-decision logic here if needed in the future.
 
-        let firstPassPrompt = "You are a helpful AI assistant with access to the following tools:\n";
-        firstPassPrompt += toolDescriptions;
-        
-        firstPassPrompt += "\n\nIMPORTANT INSTRUCTIONS FOR TOOL USE:";
-        firstPassPrompt += "\n- Use your general knowledge for basic concepts, definitions, and explanations if you are confident in your answer.";
-        firstPassPrompt += "\n- Prefer tools like 'search_engine' primarily for information that is time-sensitive (e.g., current prices, news), requires real-time data, or is highly specific and unlikely to be in your general training data.";
-        firstPassPrompt += "\n- If the user's query can be adequately answered with your existing knowledge, choose 'none' for the tool.";
+    const toolDescriptions = availableTools.map(t => {
+        return `${t.name}: ${t.description} Arguments: ${JSON.stringify(t.arguments)}`;
+    }).join('\\n');
 
-        firstPassPrompt += "\n\nUser query: \"" + originalUserQuery + "\"";
-        firstPassPrompt += "\n\nBased on the user query, the available tools, and the instructions above, do you need to use a tool?";
-        firstPassPrompt += "\nIf yes, respond ONLY with a JSON object specifying the \"tool_name\" and an \"arguments\" object for that tool. Example: {\"tool_name\": \"search_engine\", \"arguments\": {\"query\": \"some search query\"}}";
-        firstPassPrompt += "\nIf no tool is needed, respond ONLY with the JSON object: {\"tool_name\": \"none\"}.";
-        console.log("REACT_PROCESSOR: First pass prompt for tool decision:", firstPassPrompt);
-        
-        const geminiRawResponse = await getVertexAiResponse(firstPassPrompt, context); // Pass context if needed by getVertexAiResponse
+    let firstPassPrompt = "You are a helpful AI assistant with access to the following tools:\n";
+    firstPassPrompt += toolDescriptions;
+    
+    firstPassPrompt += "\n\nIMPORTANT INSTRUCTIONS FOR TOOL USE:";
+    firstPassPrompt += "\n- Review any 'ADDITIONAL CONTEXT FROM KNOWLEDGE BASE' provided below before making a tool decision.";
+    firstPassPrompt += "\n- If the 'ADDITIONAL CONTEXT FROM KNOWLEDGE BASE' fully and accurately answers the 'User query', choose 'none' for the tool.";
+    firstPassPrompt += "\n- Otherwise, if your general knowledge is sufficient, choose 'none'.";
+    firstPassPrompt += "\n- Use tools like 'search_engine' for time-sensitive information (e.g., current prices, news), real-time data, or specifics not in your training or the provided context.";
 
-        if (geminiRawResponse === null) {
-            console.error("REACT_PROCESSOR: Failed to get response from LLM for tool decision.");
+    if (ragContext) {
+        firstPassPrompt += "\n\nADDITIONAL CONTEXT FROM KNOWLEDGE BASE (Consider this before deciding on a tool):\n---\n" + ragContext + "\n---";
+    }
+
+    firstPassPrompt += "\n\nUser query: \"" + originalUserQuery + "\"";
+    firstPassPrompt += "\n\nConsidering the user query, tools, instructions, and any additional context, do you need to use a tool? Or is the provided context/your general knowledge sufficient?";
+    firstPassPrompt += "\nRespond ONLY with a JSON object specifying the \"tool_name\" (e.g., \"search_engine\", or \"none\" if no tool is needed) and, if a tool is chosen, an \"arguments\" object for that tool. Example for tool use: {\"tool_name\": \"search_engine\", \"arguments\": {\"query\": \"latest Bitcoin news\"}}. Example for no tool: {\"tool_name\": \"none\"}.";
+    console.log("REACT_PROCESSOR: First pass prompt for tool decision:", firstPassPrompt);
+    
+    const geminiRawResponse = await getVertexAiResponse(firstPassPrompt, context);
+
+    if (geminiRawResponse === null) {
+        console.error("REACT_PROCESSOR: Failed to get response from LLM for tool decision.");
             return {
                 status: 500,
                 body: { error: "llm_tool_decision_failed", reply: "Sorry, I encountered an error trying to decide on an action." },
@@ -232,7 +236,7 @@ export async function executeInProcessReActLoop(originalUserQuery, queryForLLMSy
                 headers: { 'Content-Type': 'application/json' },
             };
         }
-    }
+    // The extra closing brace that was here has been removed.
 
     // This outer try-catch handles errors in the main ReAct logic (tool execution, final synthesis)
     try {
@@ -453,25 +457,41 @@ export async function executeInProcessReActLoop(originalUserQuery, queryForLLMSy
             }
         }
 
-        let promptForFinalAISynthesis;
-        if (toolOutput && effectiveToolName && effectiveToolName !== "none") {
-            promptForFinalAISynthesis = `User query: "${originalUserQuery}"\\nI used the '${effectiveToolName}' tool and received the following information:\\n${JSON.stringify(toolOutput)}\\nBased on this information, please provide a concise answer to the user's query. If the information is an error message, explain the error. If the information is complex, summarize it. Respond directly to the user.`;
-            console.log("REACT_PROCESSOR: Synthesizing response based on tool output.");
-        } else {
-            promptForFinalAISynthesis = queryForLLMSynthesis;
-            if (!queryForLLMSynthesis.includes("Context from Knowledge Base:") && !queryForLLMSynthesis.startsWith("SYSTEM INSTRUCTION:")) {
-                promptForFinalAISynthesis = `SYSTEM INSTRUCTION: You are hermitAI. Please provide a helpful and concise answer to the following user query.\nUser Query:\n${queryForLLMSynthesis}`;
-            }
-            if (toolDecision && toolDecision.tool_name === "none") {
-                 console.log("REACT_PROCESSOR: Tool name is 'none' (or RAG forced 'none'). Proceeding to direct synthesis with queryForLLMSynthesis.");
-            } else if (toolDecision && toolDecision.tool_name && toolDecision.tool_name !== "none" && !toolOutput) {
-                console.warn(`REACT_PROCESSOR: Tool '${toolDecision.tool_name}' was chosen but failed to produce output. Proceeding to direct synthesis with queryForLLMSynthesis.`);
-            } else {
-                console.log("REACT_PROCESSOR: Proceeding to direct synthesis with queryForLLMSynthesis (no tool involved or tool path led to no output).");
-            }
-        }
+        let finalSynthesisPrompt;
+        let finalAiResponse;
 
-        const finalAiResponse = await getVertexAiResponse(promptForFinalAISynthesis, context);
+        if (toolDecision && toolDecision.tool_name === "none") {
+            if (ragContext) { // LLM decided 'none' tool, and RAG context was available
+                finalSynthesisPrompt = `SYSTEM INSTRUCTION: You are in STRICT CONTEXT-ONLY MODE. Your primary goal is to answer the user's query using ONLY the "Context from Knowledge Base" provided. Do not use any external knowledge or your general training data. If the context does not contain the answer, explicitly state that the information is not available in the provided context.
+ROLE: You are hermitAI, an assistant that answers strictly from the provided text.
+Context from Knowledge Base:
+---
+${ragContext}
+---
+Original Query:
+${originalUserQuery}
+Your answer (ONLY from the context provided):`;
+                console.log("REACT_PROCESSOR_NO_TOOL: Using RAG context for synthesis (tool_name was 'none').");
+            } else { // No RAG context was passed, and tool_name is 'none'
+                finalSynthesisPrompt = `SYSTEM INSTRUCTION: You are hermitAI. Please provide a helpful and concise answer to the following user query based on your general knowledge.
+User Query:
+"${originalUserQuery}"
+
+Based on this, provide a direct answer.`;
+                console.log("REACT_PROCESSOR_NO_TOOL: Using original query for general synthesis (no RAG, no tool).");
+            }
+            finalAiResponse = await getVertexAiResponse(finalSynthesisPrompt, context);
+        } else if (toolOutput && effectiveToolName && effectiveToolName !== "none") {
+            // A tool was chosen and executed successfully
+            finalSynthesisPrompt = `User query: "${originalUserQuery}"\nI used the '${effectiveToolName}' tool and received the following information:\n${JSON.stringify(toolOutput)}\nBased on this information, please provide a concise answer to the user's query. If the information is an error message, explain the error. If the information is complex, summarize it. Respond directly to the user.`;
+            console.log("REACT_PROCESSOR: Synthesizing response based on tool output.");
+            finalAiResponse = await getVertexAiResponse(finalSynthesisPrompt, context);
+        } else {
+            // Tool was chosen but failed, or some other unexpected state. Fallback to a general response.
+            console.warn(`REACT_PROCESSOR: Tool '${effectiveToolName || toolDecision?.tool_name}' might have been chosen but failed or produced no output. Falling back to general response for original query.`);
+            finalSynthesisPrompt = `SYSTEM INSTRUCTION: You are hermitAI. An attempt to use a tool to answer the query "${originalUserQuery}" did not yield a specific result. Please provide a general answer to the query based on your knowledge, or state if you cannot answer.`;
+            finalAiResponse = await getVertexAiResponse(finalSynthesisPrompt, context);
+        }
         
         const updatedUser = await usersCollection.findOne({ _id: userIdToUpdate });
         

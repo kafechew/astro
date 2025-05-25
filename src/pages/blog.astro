@@ -382,7 +382,9 @@ import BlogList from '../components/BlogList';
         // Here you would typically send this to your newsletter service
         // For now, just show a success message
         alert(`Thank you for subscribing with ${email}! We'll keep you updated.`);
-        newsletterForm.reset();
+        if (newsletterForm) { // Explicit null check for reset, though covered by outer scope
+            newsletterForm.reset();
+        }
       }
     });
   }

@@ -500,11 +500,15 @@ const lastUpdated = formatDateTime(user.updatedAt);
     if (!statusDiv) {
       statusDiv = document.createElement('div');
       statusDiv.setAttribute('role', 'alert');
-      const header = document.querySelector('header');
-      if (header && header.nextElementSibling) {
+      const header = document.querySelector('header') as HTMLElement | null;
+      if (header && header.parentNode && header.nextElementSibling) {
         header.parentNode.insertBefore(statusDiv, header.nextElementSibling);
       } else {
-        document.querySelector('.container').insertBefore(statusDiv, document.querySelector('.profile-container'));
+        const container = document.querySelector('.container') as HTMLElement | null;
+        const profileContainer = document.querySelector('.profile-container') as HTMLElement | null;
+        if (container && profileContainer) {
+            container.insertBefore(statusDiv, profileContainer);
+        }
       }
     }
     
@@ -573,24 +577,30 @@ const lastUpdated = formatDateTime(user.updatedAt);
 
   // Update profile form
   if (form) {
-    form.addEventListener('submit', async (event) => {
+    form.addEventListener('submit', async (event: SubmitEvent) => {
       event.preventDefault();
+      const formElement = event.target as HTMLFormElement;
       
-      const submitButton = form.querySelector('button[type="submit"]');
-      const originalButtonContent = submitButton.innerHTML;
+      const submitButton = formElement.querySelector('button[type="submit"]') as HTMLButtonElement | null;
+      let originalButtonContent = '';
       
-      submitButton.disabled = true;
-      submitButton.innerHTML = `
+      if (submitButton) {
+        originalButtonContent = submitButton.innerHTML;
+        submitButton.disabled = true;
+        submitButton.innerHTML = `
         <svg class="animate-spin -ml-1 mr-2 h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
           <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
           <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
         </svg>
         Saving...
       `;
+      }
       
-      messageArea.classList.add('hidden');
+      if (messageArea) {
+        messageArea.classList.add('hidden');
+      }
 
-      const formData = new FormData(form);
+      const formData = new FormData(formElement);
       const displayName = formData.get('displayName');
       const bio = formData.get('bio');
 
@@ -606,27 +616,46 @@ const lastUpdated = formatDateTime(user.updatedAt);
         const result = await response.json();
 
         if (response.ok) {
-          messageArea.classList.remove('hidden');
-          showFormMessage(messageArea, result.message || 'Profile updated successfully!', 'success');
+          if (messageArea) {
+            messageArea.classList.remove('hidden');
+            showFormMessage(messageArea, result.message || 'Profile updated successfully!', 'success');
+          }
           
           // Update displayed values
-          if (result.user && result.user.profile) {
-            currentDisplayNameElement.textContent = result.user.profile.displayName || result.user.username;
-            currentBioElement.textContent = result.user.profile.bio || 'No bio set yet. Tell us about yourself!';
-          } else if (result.user) {
-            currentDisplayNameElement.textContent = result.user.username;
+          if (result.user) {
+            if (result.user.profile) { // Check if profile exists
+              if (currentDisplayNameElement) {
+                currentDisplayNameElement.textContent = result.user.profile.displayName || result.user.username;
+              }
+              if (currentBioElement) {
+                currentBioElement.textContent = result.user.profile.bio || 'No bio set yet. Tell us about yourself!';
+              }
+            } else { // result.user exists, but result.user.profile is falsy
+              if (currentDisplayNameElement) {
+                currentDisplayNameElement.textContent = result.user.username;
+              }
+              if (currentBioElement) { // If profile is gone, bio should reflect that
+                currentBioElement.textContent = 'No bio set yet. Tell us about yourself!';
+              }
+            }
           }
         } else {
-          messageArea.classList.remove('hidden');
-          showFormMessage(messageArea, `Error: ${result.message || 'Failed to update profile.'}`, 'error');
+          if (messageArea) {
+            messageArea.classList.remove('hidden');
+            showFormMessage(messageArea, `Error: ${result.message || 'Failed to update profile.'}`, 'error');
+          }
         }
       } catch (error) {
         console.error('Update profile error:', error);
-        messageArea.classList.remove('hidden');
-        showFormMessage(messageArea, 'An unexpected error occurred. Please try again.', 'error');
+        if (messageArea) {
+          messageArea.classList.remove('hidden');
+          showFormMessage(messageArea, 'An unexpected error occurred. Please try again.', 'error');
+        }
       } finally {
-        submitButton.disabled = false;
-        submitButton.innerHTML = originalButtonContent;
+        if (submitButton) {
+          submitButton.disabled = false;
+          submitButton.innerHTML = originalButtonContent;
+        }
       }
     });
   }

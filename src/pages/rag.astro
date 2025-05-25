@@ -313,7 +313,7 @@ if (!Astro.locals.user) {
   const tabButtons = document.querySelectorAll('.tab-button');
   const tabContents = document.querySelectorAll('.tab-content');
 
-  function setActiveTab(tabId) {
+  function setActiveTab(tabId: string) {
     // Hide all tab contents
     tabContents.forEach(content => {
       content.classList.add('hidden');

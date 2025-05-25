@@ -462,14 +462,14 @@ const conversations = [
     conversationList.insertBefore(newConversation, conversationList.firstChild);
     
     // Add click event to the new conversation
-    newConversation.addEventListener('click', () => selectConversation(newId));
+    newConversation.addEventListener('click', () => selectConversation(String(newId)));
     
     // Add click event to the menu button
-    const menuButton = newConversation.querySelector('.conversation-menu');
+    const menuButton = newConversation.querySelector('.conversation-menu') as HTMLElement | null;
     if (menuButton) {
       menuButton.addEventListener('click', (e) => {
         e.stopPropagation();
-        showConversationMenu(newId, menuButton);
+        showConversationMenu(String(newId), menuButton);
       });
     }
   }
@@ -579,10 +579,12 @@ const conversations = [
     const conversations = document.querySelectorAll('.conversation-item');
     conversations.forEach(item => {
       const id = (item as HTMLElement).dataset.id;
-      item.addEventListener('click', () => selectConversation(id));
+      if (id) {
+        item.addEventListener('click', () => selectConversation(id));
+      }
       
-      const menuButton = item.querySelector('.conversation-menu');
-      if (menuButton) {
+      const menuButton = item.querySelector('.conversation-menu') as HTMLElement | null;
+      if (menuButton && id) {
         menuButton.addEventListener('click', (e) => {
           e.stopPropagation();
           showConversationMenu(id, menuButton);
@@ -617,10 +619,11 @@ const conversations = [
   });
   
   // Update credits display when it changes
-  document.addEventListener('creditsUpdated', (e: CustomEvent<{ credits: number }>) => {
+  document.addEventListener('creditsUpdated', (event: Event) => {
+    const e = event as CustomEvent<{ credits: number }>; // Cast here
     const sidebarCreditDisplay = document.getElementById('sidebar-credit-display');
     if (sidebarCreditDisplay && e.detail && typeof e.detail.credits === 'number') {
-      sidebarCreditDisplay.textContent = e.detail.credits;
+      sidebarCreditDisplay.textContent = String(e.detail.credits);
     }
   });
 </script>

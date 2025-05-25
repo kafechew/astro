@@ -43,7 +43,7 @@ const imageAlt = typeof image === 'object' ? image.alt : `Cover image for ${titl
         <img 
           src={`/images/authors/${slugify(author)}.jpg`}
           alt={`Avatar of ${author}`}
-          onerror="this.onerror=null; this.src='/images/authors/default-avatar.jpg';"
+          onerror={(event: Event) => { const img = event.target as HTMLImageElement; if (img) { img.onerror = null; img.src = '/images/authors/default-avatar.jpg'; }}}
         />
       </div>
       <div class="author-meta">

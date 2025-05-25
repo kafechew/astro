@@ -6,15 +6,32 @@ import ShareButtons from "../components/ShareButtons.astro";
 import RelatedPosts from "../components/RelatedPosts.astro";
 import AuthorBio from "../components/AuthorBio.astro";
 import TableOfContents from "../components/TableOfContents.astro";
-import blogsData from "../utils/blogs";
+import blogsDataUntyped from "../utils/blogs";
+
+interface BlogItem {
+  title: string;
+  description: string;
+  "created by": string;
+  frontmatter: {
+    category: string;
+    // Other properties like date, image could be added if present in blogsData items' frontmatter
+  };
+}
+const blogsData = blogsDataUntyped as BlogItem[];
 
 // Get post data
-const { frontmatter, headings } = Astro.props;
-const { index, date, category, image, minutesRead } = frontmatter;
-const { title, description } = blogsData[index];
-const author = blogsData[index]["created by"];
+const { frontmatter, headings } = Astro.props; // This is Astro's frontmatter for the current page
+const { index, date, category, image, minutesRead } = frontmatter; // 'category' used in filter's RHS is from here
+
+// These are from the specific blogsData[index] element for the current page
+const currentPostData = blogsData[index]; // currentPostData is now BlogItem
+const title = currentPostData.title;
+const description = currentPostData.description;
+const author = currentPostData["created by"];
 
 // Get related posts (posts with the same category, excluding current post)
+// 'post' in the filter is an element from 'blogsData' (now typed as BlogItem[])
+// 'category' on the right side of comparison is from Astro.props.frontmatter of the current page
 const relatedPosts = blogsData
   .filter((post, i) => i !== index && post.frontmatter.category === category)
   .slice(0, 3); // Limit to 3 related posts

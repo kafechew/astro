@@ -1,15 +1,17 @@
 ---
 // Props for the component
+export interface SocialLinks {
+  twitter?: string;
+  linkedin?: string;
+  github?: string;
+  website?: string;
+}
+
 export interface Props {
   author: string;
   bio?: string;
   avatar?: string;
-  social?: {
-    twitter?: string;
-    linkedin?: string;
-    github?: string;
-    website?: string;
-  };
+  social?: SocialLinks;
 }
 
 // Author data - in a real app, this would come from a database or CMS
@@ -21,7 +23,7 @@ const authorData = {
       twitter: "johndoe",
       linkedin: "johndoe",
       github: "johndoe"
-    }
+    } as SocialLinks
   },
   "Jane Smith": {
     bio: "Jane is a tech writer and AI enthusiast who specializes in making complex topics accessible to everyone.",
@@ -29,7 +31,7 @@ const authorData = {
     social: {
       twitter: "janesmith",
       linkedin: "janesmith"
-    }
+    } as SocialLinks
   }
 } as const; // Use 'as const' for stricter type
 type AuthorName = keyof typeof authorData;

@@ -1,209 +1,151 @@
-import pdfParse from 'pdf-parse';
-import { connectToDatabase } from '../../../../lib/mongodb'; // Corrected path
-import { v4 as uuidv4 } from 'uuid';
-import { ObjectId } from 'mongodb'; // Needed for userId
+// import pdfParse from 'pdf-parse';
+import { connectToDatabase } from '../../../../lib/mongodb';
+import { ObjectId } from 'mongodb';
 import { getEmbeddingForQuery } from '../../../../services/ragService.js';
+import crypto from 'crypto'; // Added for crypto.randomUUID()
 
+// Helper function to process PDF buffer and create structured chunks (updated based on example)
+/*
+async function processPDFChunks(pdfBuffer, originalFilename) {
+    try {
+        // const data = await pdfParse(pdfBuffer); // Use the buffer
 
-// Helper function for text chunking
-function chunkText(text, chunkSize = 1500, chunkOverlap = 150) {
-  const chunks = [];
-  let i = 0;
-  while (i < text.length) {
-    const end = Math.min(i + chunkSize, text.length);
-    chunks.push(text.substring(i, end));
-    i += chunkSize - chunkOverlap;
-    if (i + chunkOverlap >= text.length && end === text.length) break; // Avoid tiny last chunk if overlap makes it so
-  }
-  // Ensure the last part of the text is included if the loop condition misses it
-  if (i < text.length && !chunks.includes(text.substring(i))) {
-      const lastChunkStart = Math.max(0, text.length - chunkSize);
-      const lastChunk = text.substring(lastChunkStart);
-      if (chunks.length === 0 || chunks[chunks.length -1] !== lastChunk) { // Avoid duplicate if last chunk was already added
-        // Check if the new last chunk significantly overlaps with the previous one
-        const previousChunk = chunks.length > 0 ? chunks[chunks.length -1] : "";
-        const overlapWithPrevious = previousChunk.length > 0 ? Math.max(0, (previousChunk.length + lastChunk.length - (text.length - (i - (chunkSize - chunkOverlap)) ))) : 0;
+        // if (!data.text || !data.text.trim()) {
+        //     console.warn(`No text extracted from PDF ${originalFilename} by processPDFChunks.`);
+        //     return [];
+        // }
 
-        if (text.length <= chunkSize) { // If total text is smaller than chunksize, it's one chunk
-            if (chunks.length === 0) chunks.push(text);
-        } else if (chunks.length === 0 || (lastChunk.length > chunkOverlap && overlapWithPrevious < lastChunk.length * 0.8 )) {
-             // Add if it's a new substantial chunk or the only chunk
-            chunks.push(lastChunk);
-        } else if (chunks.length > 0 && (text.length - (i-(chunkSize-chunkOverlap))) > chunkOverlap ) {
-            // If the remaining part is larger than overlap, add it as a new chunk.
-            chunks.push(text.substring(i-(chunkSize-chunkOverlap)));
-        }
-      }
-  }
-  return chunks.filter(chunk => chunk.trim() !== ""); // Remove empty chunks
+        // const MAX_CHUNK_SIZE = 1000; // characters, from example
+        // const chunks = [];
+        // const pagesText = data.text.split(/\f/); // Split by form feed (new page)
+
+        // for (let i = 0; i < pagesText.length; i++) {
+        //     const pageText = pagesText[i].replace(/\s+/g, ' ').trim();
+        //     if (!pageText) continue;
+
+        //     for (let j = 0; j < pageText.length; j += MAX_CHUNK_SIZE) {
+        //         chunks.push({
+        //             content: pageText.substring(j, j + MAX_CHUNK_SIZE),
+        //             metadata: {
+        //                 page_number: i + 1,
+        //                 originalSourceId: originalFilename,
+        //             }
+        //         });
+        //     }
+        // }
+        // return chunks;
+        return []; // Return empty array as the function is commented out
+    } catch (error) {
+        console.error(`Error parsing PDF ${originalFilename}:`, error);
+        throw new Error(`Failed to parse PDF "${originalFilename}": ${error.message}`);
+    }
 }
-
+*/
 
 export async function POST({ request, locals }) {
-  if (!locals.user || !locals.user.id) {
-    return new Response(JSON.stringify({ message: 'Unauthorized or user ID missing' }), { status: 401 });
-  }
-  const userId = locals.user.id; // Store for later use
-
-  let formData;
-  try {
-    formData = await request.formData();
-  } catch (error) {
-    console.error('Error parsing form data:', error);
-    return new Response(JSON.stringify({ message: 'Error processing request: Invalid form data.' }), { status: 400 });
-  }
-
-  const file = formData.get('file');
-
-  if (!file) {
-    return new Response(JSON.stringify({ message: 'No file uploaded.' }), { status: 400 });
-  }
-
-  if (!(file instanceof File)) {
-    return new Response(JSON.stringify({ message: 'Uploaded data is not a file.' }), { status: 400 });
-  }
-
-  const fileName = file.name;
-  const fileType = file.type;
-  let extractedText = '';
-
-  try {
-    if (fileType === 'application/pdf') {
-      const arrayBuffer = await file.arrayBuffer();
-      const pdfData = await pdfParse(Buffer.from(arrayBuffer));
-      extractedText = pdfData.text;
-      console.log(`Extracted text length from PDF ${fileName}: ${extractedText.length}`);
-    } else if (fileType === 'text/plain' || fileType === 'text/markdown') {
-      extractedText = await file.text();
-      console.log(`Extracted text length from ${fileName}: ${extractedText.length}`);
-    } else {
-      return new Response(
-        JSON.stringify({
-          message: `Unsupported file type: ${fileType}. Please upload a PDF, TXT, or MD file.`,
-        }),
-        { status: 415 }
-      );
+    if (!locals.user || !locals.user.id) {
+        return new Response(JSON.stringify({ success: false, message: 'Unauthorized or user ID missing' }), { status: 401, headers: { 'Content-Type': 'application/json' } });
     }
+    const userId = locals.user.id;
 
-    if (!extractedText.trim()) {
-        console.warn(`No text extracted from ${fileName} (type: ${fileType}). File might be empty or unparseable.`);
-        return new Response(
-            JSON.stringify({ message: `No text could be extracted from ${fileName}. The file might be empty, corrupted, or in an unparseable format.` }),
-            { status: 400 }
-        );
-    }
-
-    const chunks = chunkText(extractedText);
-    if (chunks.length === 0 && extractedText.trim().length > 0) {
-        console.warn(`Text was present but chunking resulted in zero chunks for ${fileName}. Text length: ${extractedText.length}`);
-        // This might happen if text is very short and only whitespace after trimming in chunker
-        chunks.push(extractedText.trim()); // Add the whole text as one chunk if it's not empty
-    }
-    console.log(`Text from ${fileName} split into ${chunks.length} chunks.`);
-
-    const embeddingsData = []; // Changed variable name for clarity, was 'embeddings'
-    let generatedEmbeddingsCount = 0;
-
-    if (chunks.length > 0) {
-      for (const chunk of chunks) {
-        if (!chunk.trim()) continue; // Skip empty chunks
-        try {
-          const embedding = await getEmbeddingForQuery(chunk); // taskType removed
-          embeddingsData.push({
-            chunkText: chunk,
-            embedding: embedding,
-          });
-          generatedEmbeddingsCount++;
-        } catch (embeddingError) {
-          console.error(`RAG_INGEST_UPLOAD: Failed to generate embedding for chunk from ${fileName}. Chunk: "${chunk.substring(0, 100)}...". Error: ${embeddingError.message}`, embeddingError);
-          return new Response(
-            JSON.stringify({
-              message: `Failed to generate embeddings for the uploaded file '${fileName}'. Error for chunk: "${chunk.substring(0,50)}..."`,
-              error: embeddingError.message
-            }),
-            { status: 500 }
-          );
-        }
-      }
-      console.log(`RAG_INGEST_UPLOAD: Successfully generated ${generatedEmbeddingsCount} embeddings for ${chunks.length} chunks from ${fileName}.`);
-    } else {
-      console.log(`RAG_INGEST_UPLOAD: No chunks to process for ${fileName}.`);
-      // If no chunks from a successfully parsed file, it's not an error, but nothing to store.
-      return new Response(
-        JSON.stringify({ message: `File processed, but no text chunks were generated from ${fileName}. Nothing to store.`, fileName }),
-        { status: 200 }
-      );
-    }
-    
-    // If we've reached here, all embeddings for all chunks were generated successfully.
-    if (embeddingsData.length > 0) {
-      let sourceType = 'txt'; // default
-      if (fileType === 'application/pdf') sourceType = 'pdf';
-      else if (fileType === 'text/markdown') sourceType = 'md';
-
-      const documentsToStore = embeddingsData.map((item, index) => ({
-        userId: new ObjectId(userId),
-        sourceType: sourceType,
-        originalFilename: fileName,
-        content: item.chunkText,
-        embedding: item.embedding,
-        chunkId: uuidv4(),
-        metadata: {
-          chunkOrder: index,
-          originalSourceId: fileName,
-        },
-        createdAt: new Date(),
-        updatedAt: new Date(),
-        title: fileName,
-        sourceUrl: null,
-      }));
-
-      if (documentsToStore.length > 0) {
-        try {
-          const { db } = await connectToDatabase();
-          const result = await db.collection('knowledge_documents').insertMany(documentsToStore);
-          console.log(`RAG_INGEST_UPLOAD: ${result.insertedCount} chunks inserted into knowledge_documents for user ${userId} from file ${fileName}`);
-          
-          const responseMessage = `File processed and content ingested successfully. ${result.insertedCount} chunks added to knowledge base.`;
-          return new Response(
-            JSON.stringify({
-              message: responseMessage,
-              fileName,
-              chunksAdded: result.insertedCount,
-              embeddingsGenerated: generatedEmbeddingsCount, // Should equal chunksAdded
-            }),
-            { status: 201 }
-          );
-        } catch (dbError) {
-          console.error(`RAG_INGEST_UPLOAD: Database error storing chunks for ${fileName}:`, dbError);
-          return new Response(
-            JSON.stringify({ message: `File processed and embeddings generated, but failed to store content for '${fileName}' in knowledge base: ${dbError.message}` }),
-            { status: 500 }
-          );
-        }
-      } else {
-        console.warn(`RAG_INGEST_UPLOAD: No documents were prepared for storage from ${fileName}, though embeddings were generated.`);
-        return new Response(
-          JSON.stringify({ message: "File processed, embeddings generated, but no content was prepared for storage.", fileName }),
-          { status: 200 }
-        );
-      }
-    } else if (chunks.length > 0 && embeddingsData.length === 0) {
-      console.log(`RAG_INGEST_UPLOAD: File ${fileName} contained chunks, but none resulted in embeddings (e.g., all empty after trim).`);
-      return new Response(
-        JSON.stringify({ message: `File ${fileName} processed, but no valid content found in chunks to generate embeddings.`, fileName }),
-        { status: 200 }
-      );
-    }
-    // If chunks.length was 0 initially, that's handled by the text extraction logic returning 400 or the no chunks to process log.
-
-  } catch (error) {
-    // Ensure fileName is defined for the error log, even if error happens early
-    const currentFileName = typeof fileName !== 'undefined' ? fileName : 'unknown file';
-    console.error(`Error processing file ${currentFileName}:`, error);
+    // PDF upload functionality is temporarily disabled.
     return new Response(
-      JSON.stringify({ message: `Error processing file: ${error.message}` }),
-      { status: 500 }
+        JSON.stringify({
+            success: false,
+            message: "PDF upload functionality is temporarily disabled."
+        }),
+        { status: 503, headers: { 'Content-Type': 'application/json' } } // 503 Service Unavailable
     );
-  }
+
+    /*
+    try {
+        const formData = await request.formData();
+        const file = formData.get('file');
+        const title = formData.get('title'); // New: get title from form data
+
+        if (!file || !(file instanceof File)) {
+            return new Response(JSON.stringify({ success: false, message: "No file uploaded or invalid file data." }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+        }
+
+        const originalFilename = file.name;
+
+        // PDF Upload functionality is temporarily disabled.
+        // if (file) { // If any file is uploaded, return the disabled message.
+        //     return new Response(JSON.stringify({ success: false, message: "PDF upload functionality is temporarily disabled. Please try again later." }), { status: 503, headers: { 'Content-Type': 'application/json' } });
+        // }
+        
+        // This endpoint will now focus on PDF processing as per the conceptual change.
+        // For other file types, separate endpoints or logic would be needed if this is a replacement.
+        // if (file.type !== 'application/pdf') {
+        //     return new Response(JSON.stringify({ success: false, message: "Unsupported file type. This endpoint currently only supports PDF files." }), { status: 415, headers: { 'Content-Type': 'application/json' } });
+        // }
+
+        // const fileBuffer = await file.arrayBuffer();
+        // const pdfNodeBuffer = Buffer.from(fileBuffer);
+
+        // const chunks = await processPDFChunks(pdfNodeBuffer, originalFilename); // This will now use the commented out version
+
+        // if (!chunks || chunks.length === 0) {
+        //     // If processPDFChunks is fully commented out and returns [], this will always be true.
+        //     // We've already returned a 503 if a file was present.
+        //     // This path should ideally not be reached if a file was uploaded.
+        //     // However, to be safe, if it somehow is, let's indicate no processing occurred.
+        //      return new Response(JSON.stringify({ success: false, message: "No content processed. PDF functionality disabled." }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+        // }
+
+        // const { db } = await connectToDatabase();
+        // const knowledgeDocumentsCollection = db.collection('knowledge_documents');
+        // let processedCount = 0;
+
+        // for (const chunk of chunks) {
+        //     if (!chunk.content || !chunk.content.trim()) {
+        //         console.warn(`RAG_INGEST_UPLOAD: Skipping empty chunk from ${originalFilename}.`);
+        //         continue;
+        //     }
+        //     const embedding = await getEmbeddingForQuery(chunk.content, "RETRIEVAL_DOCUMENT");
+        //     if (embedding) {
+        //         await knowledgeDocumentsCollection.insertOne({
+        //             userId: new ObjectId(userId),
+        //             sourceType: 'pdf', // Hardcoded to 'pdf' as per conceptual change focus
+        //             originalFilename: originalFilename,
+        //             title: title || originalFilename, // Use form title or fallback to filename
+        //             content: chunk.content,
+        //             embedding: embedding,
+        //             metadata: chunk.metadata,
+        //             chunkId: crypto.randomUUID(),
+        //             createdAt: new Date(),
+        //             updatedAt: new Date(),
+        //         });
+        //         processedCount++;
+        //     } else {
+        //         console.warn(`RAG_INGEST_UPLOAD: Failed to generate embedding for a chunk from ${originalFilename}. Skipping chunk.`);
+        //     }
+        // }
+        
+        // if (processedCount === 0 && chunks.length > 0) { // chunks will be []
+        //      return new Response(JSON.stringify({ success: false, message: "Extracted content but failed to generate embeddings for any chunk (PDF disabled)." }), { status: 500, headers: { 'Content-Type': 'application/json' } });
+        // }
+        // if (processedCount === 0 && chunks.length === 0) {
+        //     return new Response(JSON.stringify({ success: false, message: "No content was extracted or processed (PDF disabled)." }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+        // }
+
+        // console.log(`RAG_INGEST_UPLOAD: Successfully ingested ${processedCount} chunks from ${originalFilename} for user ${userId}.`);
+        // return new Response(JSON.stringify({ success: true, message: `${processedCount} chunks from ${originalFilename} ingested successfully (PDF processing part is disabled).` }), { status: 201, headers: { 'Content-Type': 'application/json' } });
+        // Fallback if no file was provided in the first place (should be caught by earlier check on line 53)
+        return new Response(JSON.stringify({ success: false, message: "No file provided or PDF processing is disabled." }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+
+    } catch (error) {
+        console.error("RAG_INGEST_UPLOAD: Error processing file upload:", error);
+        // Try to get filename for logging, if available
+        let fName = "unknown file";
+        try {
+            const tempFormData = await request.clone().formData(); // Clone request to read formData again if needed
+            const tempFile = tempFormData.get('file');
+            if (tempFile && typeof tempFile !== 'string') fName = tempFile.name;
+        } catch (e) { // ignore if can't get filename
+ }
+
+        return new Response(JSON.stringify({ success: false, message: error.message || `Server error during file upload for ${fName}.` }), { status: 500, headers: { 'Content-Type': 'application/json' } });
+    }
+    */
 }

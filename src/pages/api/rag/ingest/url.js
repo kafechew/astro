@@ -42,6 +42,21 @@ function extractTitleFromMarkdown(markdown) {
 
 
 export async function POST({ request, locals }) {
+  const BRIGHTDATA_API_TOKEN = import.meta.env.BRIGHTDATA_API_TOKEN;
+
+  if (!BRIGHTDATA_API_TOKEN) {
+    console.error("RAG_INGEST_URL: BrightData API token is not configured in environment variables.");
+    return new Response(
+        JSON.stringify({
+            success: false,
+            message: "URL ingestion service is not configured. Missing API token."
+        }),
+        { status: 503, headers: { 'Content-Type': 'application/json' } } // 503 Service Unavailable
+    );
+  }
+
+  const BRIGHTDATA_WEB_UNLOCKER_ZONE = import.meta.env.BRIGHTDATA_WEB_UNLOCKER_ZONE || 'mcp_unlocker'; // Fallback zone
+
   if (!locals.user || !locals.user.userId) { // Corrected to locals.user.userId
     return new Response(JSON.stringify({ message: 'Unauthorized or user ID missing' }), { status: 401 });
   }
@@ -70,18 +85,10 @@ export async function POST({ request, locals }) {
     return new Response(JSON.stringify({ message: 'Invalid URL format. Must be a valid HTTP/HTTPS URL.' }), { status: 400 });
   }
 
-  const brightDataApiToken = process.env.BRIGHTDATA_API_TOKEN;
-  const brightDataZone = process.env.BRIGHTDATA_WEB_UNLOCKER_ZONE || 'mcp_unlocker'; // Fallback zone
-
-  if (!brightDataApiToken) {
-    console.error("BrightData API token not configured for URL ingestion.");
-    return new Response(JSON.stringify({ message: 'Scraping service not configured (missing API token).' }), { status: 503 });
-  }
-
   let scrapedMarkdown = '';
   try {
     console.log(`Attempting to scrape URL: ${targetUrl}`);
-    scrapedMarkdown = await executeScrapeMarkdown(targetUrl, brightDataApiToken, brightDataZone);
+    scrapedMarkdown = await executeScrapeMarkdown(targetUrl, BRIGHTDATA_API_TOKEN, BRIGHTDATA_WEB_UNLOCKER_ZONE);
     if (scrapedMarkdown.startsWith('Error:')) {
         console.error(`Scraping failed for ${targetUrl}: ${scrapedMarkdown}`);
         return new Response(JSON.stringify({ message: `Failed to scrape content from URL: ${scrapedMarkdown}` }), { status: 502 }); // Bad Gateway

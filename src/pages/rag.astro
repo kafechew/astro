@@ -1,0 +1,226 @@
+---
+import MainLayout from '../layouts/MainLayout.astro';
+
+// Authentication Check
+if (!Astro.locals.user) {
+  return Astro.redirect('/login');
+}
+
+const { user } = Astro.locals;
+---
+<MainLayout title="RAG Management">
+  <div class="container">
+    <h1>Knowledge Base Ingestion</h1>
+    <p>Manage your RAG data sources here.</p>
+
+    <!-- RAG Ingestion Section -->
+    <div class="max-w-md mx-auto bg-white shadow-md rounded-lg p-6 mt-8">
+      <h2 class="text-2xl font-semibold mb-4">Add to Knowledge Base</h2>
+
+      <!-- File Upload Form - Temporarily Disabled
+      <form id="fileUploadForm" class="space-y-4 mb-6">
+        <h3 class="text-xl font-medium mb-2">Upload File</h3>
+        <div>
+          <label for="knowledgeFile" class="block text-sm font-medium text-gray-700">Knowledge File:</label>
+          <input type="file" id="knowledgeFile" name="knowledgeFile" class="mt-1 block w-full text-sm text-gray-900 border border-gray-300 rounded-lg cursor-pointer bg-gray-50 focus:outline-none">
+          <p class="mt-1 text-sm text-gray-500">Upload a file to add its content to the knowledge base.</p>
+        </div>
+        <div>
+          <button type="submit" class="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-sky-600 hover:bg-sky-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-sky-500">
+            Upload File
+          </button>
+        </div>
+        <div id="fileUploadMessage" class="mt-2 text-sm"></div>
+      </form>
+      -->
+
+      <!-- URL Ingestion Form -->
+      <form id="urlIngestionForm" class="space-y-4 mb-6">
+        <h3 class="text-xl font-medium mb-2">Ingest from URL</h3>
+        <div>
+          <label for="knowledgeUrl" class="block text-sm font-medium text-gray-700">Knowledge URL:</label>
+          <input type="url" id="knowledgeUrl" name="knowledgeUrl" placeholder="https://example.com/article" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
+        </div>
+        <div>
+          <button type="submit" class="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-sky-600 hover:bg-sky-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-sky-500">
+            Ingest URL
+          </button>
+        </div>
+        <div id="urlIngestionMessage" class="mt-2 text-sm"></div>
+      </form>
+
+      <!-- Text Input Form -->
+      <form id="textIngestionForm" class="space-y-4">
+        <h3 class="text-xl font-medium mb-2">Ingest Text</h3>
+        <div>
+          <label for="knowledgeTitle" class="block text-sm font-medium text-gray-700">Title (Optional):</label>
+          <input type="text" id="knowledgeTitle" name="knowledgeTitle" placeholder="My Document Title" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
+        </div>
+        <div>
+          <label for="knowledgeText" class="block text-sm font-medium text-gray-700">Text Content:</label>
+          <textarea id="knowledgeText" name="knowledgeText" rows="5" placeholder="Paste your text content here..." class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"></textarea>
+        </div>
+        <div>
+          <button type="submit" class="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-sky-600 hover:bg-sky-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-sky-500">
+            Ingest Text
+          </button>
+        </div>
+        <div id="textIngestionMessage" class="mt-2 text-sm"></div>
+      </form>
+    </div>
+  </div>
+</MainLayout>
+
+<style>
+  .container {
+    max-width: 800px;
+    margin: 2rem auto;
+    padding: 1rem;
+    /* Removed background-color and box-shadow to match profile page style for forms */
+    /* background-color: #f9f9f9; */
+    /* border-radius: 8px; */
+    /* box-shadow: 0 2px 4px rgba(0,0,0,0.1); */
+  }
+  h1 {
+    color: #333;
+    text-align: center;
+    margin-bottom: 1.5rem;
+  }
+  /* Ensure form elements have consistent styling if needed */
+  .max-w-md.mx-auto.bg-white { /* Copied from profile page for consistency */
+    background-color: #fff;
+    box-shadow: 0 1px 3px 0 rgba(0,0,0,.1), 0 1px 2px 0 rgba(0,0,0,.06);
+    border-radius: .5rem;
+    padding: 1.5rem;
+  }
+</style>
+
+<script>
+  // RAG Ingestion Forms
+  const fileUploadForm = document.getElementById('fileUploadForm');
+  const fileUploadMessage = document.getElementById('fileUploadMessage');
+  const urlIngestionForm = document.getElementById('urlIngestionForm');
+  const urlIngestionMessage = document.getElementById('urlIngestionMessage');
+  const textIngestionForm = document.getElementById('textIngestionForm');
+  const textIngestionMessage = document.getElementById('textIngestionMessage');
+
+  // Helper to display messages for RAG forms
+  function showRagMessage(element, message, type = 'info') {
+    if (!element) return; // Guard clause if element is not found
+    element.textContent = message;
+    element.className = 'mt-2 text-sm'; // Reset classes
+    if (type === 'success') {
+      element.classList.add('text-green-600');
+    } else if (type === 'error') {
+      element.classList.add('text-red-600');
+    } else { // info or default
+      element.classList.add('text-blue-700');
+    }
+  }
+
+  /* PDF Upload Client-Side Script - Temporarily Disabled
+  if (fileUploadForm) {
+    fileUploadForm.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      showRagMessage(fileUploadMessage, 'Uploading...', 'info');
+      const formData = new FormData(fileUploadForm);
+      const submitButton = fileUploadForm.querySelector('button[type="submit"]');
+      if(submitButton) submitButton.disabled = true;
+
+      try {
+        const response = await fetch('/api/rag/ingest/upload', {
+          method: 'POST',
+          body: formData,
+        });
+        const result = await response.json();
+        if (response.ok) {
+          showRagMessage(fileUploadMessage, result.message || 'File uploaded successfully!', 'success');
+          fileUploadForm.reset();
+        } else {
+          showRagMessage(fileUploadMessage, `Error: ${result.message || 'File upload failed.'}`, 'error');
+        }
+      } catch (error) {
+        console.error('File upload error:', error);
+        showRagMessage(fileUploadMessage, 'An unexpected error occurred.', 'error');
+      } finally {
+        if(submitButton) submitButton.disabled = false;
+      }
+    });
+  }
+  */
+
+  if (urlIngestionForm) {
+    urlIngestionForm.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      const knowledgeUrlInput = document.getElementById('knowledgeUrl');
+      const knowledgeUrl = knowledgeUrlInput ? knowledgeUrlInput.value : '';
+
+      if (!knowledgeUrl) {
+        showRagMessage(urlIngestionMessage, 'Please enter a URL.', 'error');
+        return;
+      }
+      showRagMessage(urlIngestionMessage, 'Ingesting URL...', 'info');
+      const submitButton = urlIngestionForm.querySelector('button[type="submit"]');
+      if(submitButton) submitButton.disabled = true;
+
+      try {
+        const response = await fetch('/api/rag/ingest/url', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ url: knowledgeUrl }),
+        });
+        const result = await response.json();
+        if (response.ok) {
+          showRagMessage(urlIngestionMessage, result.message || 'URL ingested successfully!', 'success');
+          urlIngestionForm.reset();
+        } else {
+          showRagMessage(urlIngestionMessage, `Error: ${result.message || 'URL ingestion failed.'}`, 'error');
+        }
+      } catch (error) {
+        console.error('URL ingestion error:', error);
+        showRagMessage(urlIngestionMessage, 'An unexpected error occurred.', 'error');
+      } finally {
+        if(submitButton) submitButton.disabled = false;
+      }
+    });
+  }
+
+  if (textIngestionForm) {
+    textIngestionForm.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      const knowledgeTitleInput = document.getElementById('knowledgeTitle');
+      const knowledgeTextInput = document.getElementById('knowledgeText');
+      const knowledgeTitle = knowledgeTitleInput ? knowledgeTitleInput.value : '';
+      const knowledgeText = knowledgeTextInput ? knowledgeTextInput.value : '';
+
+
+      if (!knowledgeText) {
+        showRagMessage(textIngestionMessage, 'Please enter text content.', 'error');
+        return;
+      }
+      showRagMessage(textIngestionMessage, 'Ingesting text...', 'info');
+      const submitButton = textIngestionForm.querySelector('button[type="submit"]');
+      if(submitButton) submitButton.disabled = true;
+
+      try {
+        const response = await fetch('/api/rag/ingest/text', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ title: knowledgeTitle, text: knowledgeText }),
+        });
+        const result = await response.json();
+        if (response.ok) {
+          showRagMessage(textIngestionMessage, result.message || 'Text ingested successfully!', 'success');
+          textIngestionForm.reset();
+        } else {
+          showRagMessage(textIngestionMessage, `Error: ${result.message || 'Text ingestion failed.'}`, 'error');
+        }
+      } catch (error) {
+        console.error('Text ingestion error:', error);
+        showRagMessage(textIngestionMessage, 'An unexpected error occurred.', 'error');
+      } finally {
+        if(submitButton) submitButton.disabled = false;
+      }
+    });
+  }
+</script>

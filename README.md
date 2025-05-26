@@ -388,7 +388,6 @@ The Vercel Astro app can function independently using its in-process ReAct loop 
 *   [BrightData SERP API Documentation](https://brightdata.com/products/serp-api)
 *   [Google AI Gemini Documentation](https://ai.google.dev/docs) (for general Gemini model info)
 *   [Astro (Vercel) Documentation](https://docs.astro.build/en/guides/integrations-guide/vercel/)
-*   [How I Added llms.txt to My Astro Blog](https://alexop.dev/posts/how-i-added-llms-txt-to-my-astro-blog/) (example of Astro project modification)
 
 ## TypeScript and Code Quality Notes
 
